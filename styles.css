@@ -315,6 +315,60 @@ label.lbl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1
 .parse-status{background:#1a1a2e;color:white;border-radius:10px;padding:12px 16px;font-size:12px;margin-top:10px;display:none;}
 .parse-status.show{display:block;}
 
+/* ═══════════════════════════════════════════════
+   MORNING BRIEFING
+════════════════════════════════════════════════ */
+.briefing-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px;}
+.briefing-header{background:var(--charcoal);color:var(--cream);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+.briefing-header-title{font-family:'DM Serif Display',serif;font-size:17px;}
+.briefing-header-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px;}
+.briefing-item{display:flex;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border);align-items:flex-start;transition:background .15s;}
+.briefing-item:last-child{border-bottom:none;}
+.briefing-item:hover{background:var(--cream);}
+.briefing-danger{border-left:3px solid var(--rust);background:#fff8f8;}
+.briefing-warn{border-left:3px solid var(--gold);background:#fffdf0;}
+.briefing-ok{border-left:3px solid var(--sage);background:#f0fdf4;}
+.briefing-signal{border-left:3px solid var(--blue);background:#f0f7ff;}
+.briefing-overview{border-left:3px solid var(--charcoal);background:var(--cream);}
+.briefing-icon{font-size:1.4em;flex-shrink:0;width:28px;text-align:center;margin-top:2px;}
+.briefing-body{flex:1;}
+.briefing-title{font-weight:700;font-size:13px;margin-bottom:4px;color:var(--charcoal);}
+.briefing-desc{font-size:12px;color:var(--dusty);line-height:1.65;}
+.briefing-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.briefing-kpi{background:white;border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center;}
+.briefing-kpi-val{font-family:'DM Serif Display',serif;font-size:17px;color:var(--charcoal);}
+.briefing-kpi-lbl{font-size:10px;color:var(--dusty);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
+
+/* ═══════════════════════════════════════════════
+   SKU FUNNEL
+════════════════════════════════════════════════ */
+.sku-funnel{display:flex;align-items:center;gap:4px;background:var(--cream);border-radius:8px;padding:8px 10px;margin-bottom:4px;flex-wrap:wrap;}
+.funnel-step{display:flex;flex-direction:column;align-items:center;flex:1;min-width:50px;}
+.funnel-lbl{font-size:9px;color:var(--dusty);text-transform:uppercase;letter-spacing:.6px;font-weight:600;}
+.funnel-val{font-size:12px;font-weight:700;color:var(--charcoal);margin-top:2px;}
+.funnel-arrow{color:var(--dusty);font-size:10px;flex-shrink:0;}
+
+/* ═══════════════════════════════════════════════
+   SKU SHOPEE SIGNALS
+════════════════════════════════════════════════ */
+.sku-signal{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700;}
+.signal-ads{background:#FFF3CD;color:#856404;}
+.signal-ok{background:#D1FAE5;color:#065F46;}
+.signal-warn{background:#FEE2E2;color:#991B1B;}
+
+/* ═══════════════════════════════════════════════
+   SKU DEAD FLAG
+════════════════════════════════════════════════ */
+.sku-flag.flag-dead{background:#F3E8FF;color:#6B21A8;}
+.sku-card.demand-dead::before{background:linear-gradient(90deg,#7C3AED,#A855F7);}
+
+/* ═══════════════════════════════════════════════
+   SUMMARY BAR — 6 TILES
+════════════════════════════════════════════════ */
+.summary-bar-6{grid-template-columns:repeat(6,1fr)!important;}
+@media(max-width:768px){.summary-bar-6{grid-template-columns:repeat(3,1fr)!important;}}
+@media(max-width:480px){.summary-bar-6{grid-template-columns:repeat(2,1fr)!important;}}
+
 /* ═══ SCROLLBAR ═══ */
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:var(--cream);}
