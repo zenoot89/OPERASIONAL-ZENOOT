@@ -358,4 +358,7 @@ html{scroll-behavior:smooth;}
   .grid4{grid-template-columns:1fr 1fr;}
   .summary-bar{grid-template-columns:1fr 1fr;}
   .sidebar-toggle-btn{display:none;}
+  /* Restock layout — stack on mobile */
+  #page-restock > div[style*="grid-template-columns"]{grid-template-columns:1fr!important;}
+  #cloud-indicator-fixed{left:8px;bottom:8px;}
 }
