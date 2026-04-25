@@ -26,18 +26,33 @@ let teData = {
   shopeeRows:    [],
   salesRows:     [],
   processedSKUs: [],
-  shopeeSheets:  {},      // semua sheet dari XLSX
-  shopeeSignals: {        // dari sheet rekomendasi Shopee
+  shopeeSheets:  {},
+  shopeeSignals: {
     iklankan:         [],
     hargaKompetitif:  [],
     hargaBelumKomp:   [],
     produkBaru:       [],
   },
-  shopeeAdminPct: 0.085,
-  adsBudget:      0,
+  shopeeAdminPct: 0.085, // auto-pull dari DB jika ada, fallback ke 8.5%
+  adsBudget:      0,     // auto-pull dari rkData jika ada
   lastFile:       null,
   periodeLabel:   '',
+  parseError:     null,  // error handling CSV/XLSX
 };
+
+// Auto-pull settings dari DB dan rkData
+function _autoLoadTESettings() {
+  // Admin fee dari DB jika ada field adminFee
+  if (typeof DB !== 'undefined' && DB.settings && DB.settings.adminFeePct) {
+    teData.shopeeAdminPct = DB.settings.adminFeePct / 100;
+  }
+  // Ads budget dari rkData jika sudah diupload
+  if (typeof rkData !== 'undefined' && rkData.iklanTotal > 0) {
+    teData.adsBudget = rkData.iklanTotal;
+    const el = document.getElementById('te-ads-info');
+    if (el) el.innerHTML = `📣 Budget iklan otomatis dari Rasio Keuangan: <strong>Rp ${Math.round(rkData.iklanTotal).toLocaleString('id-ID')}</strong>`;
+  }
+}
 
 const TE_NAV_TITLES = {
   'te-upload':    'AI Strategy <span>Upload</span>',
@@ -95,6 +110,8 @@ function initDropZones() {
       if (files[0]) handleTEFile(files[0], zone.dataset.type);
     });
   });
+  // Auto-load settings dari DB & rkData
+  _autoLoadTESettings();
   setTimeout(() => {
     if (reuseRKDataForTE()) runTrendAnalysis();
   }, 500);
@@ -110,7 +127,8 @@ function handleTEFileInput(input, type) {
 
 function handleTEFile(file, type) {
   teData.lastFile = file.name;
-  // Coba ambil periode dari nama file (misal: parentskudetail_20260301_20260331.xlsx)
+  teData.parseError = null;
+  // Coba ambil periode dari nama file
   const periodMatch = file.name.match(/(\d{8})_(\d{8})/);
   if (periodMatch) {
     const fmt = s => `${s.slice(6,8)}/${s.slice(4,6)}/${s.slice(0,4)}`;
@@ -121,23 +139,46 @@ function handleTEFile(file, type) {
   const statusEl = document.getElementById('te-parse-status');
   if (statusEl) { statusEl.classList.add('show'); statusEl.textContent = `⏳ Membaca ${file.name}...`; }
 
+  // Validasi format file
+  if (!['csv','xlsx','xls'].includes(ext)) {
+    teData.parseError = `❌ Format file tidak didukung: .${ext}. Gunakan file CSV atau XLSX dari Shopee Seller Center.`;
+    if (statusEl) { statusEl.textContent = teData.parseError; statusEl.style.background='var(--rust)'; }
+    toast('Format file tidak didukung! Gunakan CSV atau XLSX dari Shopee.', 'err');
+    return;
+  }
+
+  // Auto-load settings dari DB sebelum proses
+  _autoLoadTESettings();
+
   if (ext === 'csv') {
     const reader = new FileReader();
-    reader.onload = e => parseShopeeCsv(e.target.result, type);
+    reader.onload = e => {
+      try { parseShopeeCsv(e.target.result, type); }
+      catch(err) { _handleParseError(err, statusEl); }
+    };
     reader.readAsText(file, 'UTF-8');
-  } else if (ext === 'xlsx' || ext === 'xls') {
+  } else {
     loadSheetJSRK(() => {
       const reader = new FileReader();
       reader.onload = e => {
-        const wb = XLSX.read(e.target.result, { type: 'binary' });
-        parseShopeeXlsxMultiSheet(wb);   // baca semua sheet sekaligus
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'binary' });
+          // Validasi apakah ini file Shopee
+          if (wb.SheetNames.length === 0) { _handleParseError(new Error('File kosong'), statusEl); return; }
+          parseShopeeXlsxMultiSheet(wb);
+        } catch(err) { _handleParseError(err, statusEl); }
       };
       reader.readAsBinaryString(file);
     });
-  } else {
-    toast('Format file tidak didukung. Gunakan CSV atau XLSX dari Shopee.', 'err');
-    if (statusEl) statusEl.classList.remove('show');
   }
+}
+
+function _handleParseError(err, statusEl) {
+  const msg = `❌ Gagal membaca file. Pastikan file adalah Laporan Performa Produk dari Shopee Seller Center (bukan file yang sudah diedit di Excel).`;
+  teData.parseError = msg;
+  if (statusEl) { statusEl.textContent = msg; statusEl.style.background='var(--rust)'; statusEl.classList.add('show'); }
+  toast('File tidak valid! Cek format file Shopee.', 'err');
+  console.error('TE Parse Error:', err);
 }
 
 // ═══════════════════════════════════════════════════════

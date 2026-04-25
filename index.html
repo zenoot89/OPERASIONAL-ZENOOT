@@ -12,6 +12,10 @@
 <!-- ══════ SIDEBAR ══════ -->
 <nav class="sidebar">
   <div class="logo">
+    <div class="logo-icon-wrap">
+      <img src="logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'">
+      <div id="logo-fallback" style="display:flex;width:42px;height:42px;border-radius:50%;background:var(--brown);align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🏷️</div>
+    </div>
     <div class="logo-text"><h1>zenOt</h1><p>Operasional V2</p></div>
   </div>
 
@@ -45,23 +49,24 @@
   <div class="nav-item" onclick="go('daily',this)"><span>✅</span><span>Daily Checklist</span></div>
 
   <div style="margin-top:auto;"></div>
-  <!-- Backup badge -->
-  <div style="padding:8px 14px;display:flex;align-items:center;gap:6px;">
-    <div id="backup-badge" style="display:none;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid;"></div>
-    <span id="save-indicator" style="display:none;font-size:10px;color:var(--sage);font-weight:600;"></span>
-  </div>
 
   <div class="sidebar-footer-bar">
     <div style="padding:10px 14px;flex:1;">
       <span class="footer-v">V2.0</span>
       <span class="footer-by">by</span>
-      <span class="footer-name">zenOt System</span>
+      <span class="footer-name">BURHANMOLOGY</span>
     </div>
     <button class="sidebar-toggle-btn" onclick="toggleSidebarCollapse()">
       <span id="sidebar-toggle-icon">◀</span>
     </button>
   </div>
 </nav>
+
+<!-- Cloud Indicator — Fixed pojok kiri bawah -->
+<div id="cloud-indicator-fixed">
+  <div id="backup-badge-fixed">☁️ Cloud Aktif</div>
+  <span id="save-indicator" style="display:none;font-size:10px;color:var(--sage);font-weight:600;margin-left:6px;"></span>
+</div>
 
 <!-- ══════ MAIN ══════ -->
 <div class="main" id="main-content">
@@ -223,10 +228,12 @@
      PAGE: PRICE LIST
 ════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-harga">
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-    <input class="search-bar" style="margin:0;flex:1;max-width:280px" placeholder="🔍 Cari SKU..." oninput="filterHarga(this.value)">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+    <input class="search-bar" style="margin:0;flex:1;max-width:280px" placeholder="🔍 Cari SKU / Induk..." oninput="filterHarga(this.value)" id="harga-search">
+    <select class="sel" id="harga-fil-induk" style="max-width:180px" onchange="filterHargaFromDropdown()"><option value="">Semua Produk</option></select>
+    <select class="sel" id="harga-fil-supplier" style="max-width:160px" onchange="filterHargaFromDropdown()"><option value="">Semua Supplier</option></select>
+    <button class="btn btn-o btn-sm" onclick="resetHargaFilter()">↺ Reset</button>
   </div>
-  <div class="ftabs" id="harga-ftabs"></div>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>#</th><th>Induk</th><th>Variasi</th><th>HPP</th><th>NPM</th><th>Harga Jual</th><th>Reseller</th><th>GM%</th></tr></thead>
@@ -501,38 +508,32 @@
         <p style="font-size:11px;color:var(--dusty);margin-top:8px;">Data qty & SKU dari pesanan yang sudah diupload di Rasio Keuangan</p>
       </div>
     </div>
-    <!-- Settings -->
+    <!-- Settings — Auto dari DB -->
     <div style="background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚙️ Financial Guard Settings</div>
+      <div id="te-ads-info" style="font-size:12px;color:var(--sage);margin-bottom:10px;padding:8px 12px;background:var(--success-bg);border-radius:8px;display:none;"></div>
       <div class="form-row">
         <div class="fg">
-          <label class="lbl">Admin Fee Shopee (%)</label>
+          <label class="lbl">Admin Fee Shopee (%) — override jika perlu</label>
           <input class="inp" type="number" id="te-admin-pct" value="8.5" min="0" max="30" step="0.1" placeholder="8.5">
-        </div>
-        <div class="fg">
-          <label class="lbl">Total Budget Iklan (Rp)</label>
-          <input class="inp" id="te-ads-budget" placeholder="Rp 0" oninput="formatRKRibuan(this)">
         </div>
         <div class="fg" style="display:flex;align-items:flex-end;">
           <button class="btn btn-p btn-full" onclick="updateTESettings()">🔄 Update &amp; Analisis Ulang</button>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--dusty);margin-top:6px;">💡 Budget iklan otomatis diambil dari tab <strong>Rasio Keuangan → Upload & Data</strong> jika sudah diisi.</div>
     </div>
     <div id="te-parse-status" class="parse-status"></div>
     <div style="background:var(--warn-bg);border:1px solid #FDE68A;border-radius:10px;padding:10px 14px;font-size:12px;margin-top:10px;line-height:1.7;">
       <strong>💡 Tips:</strong> Pastikan kolom <strong>"Nomor Referensi SKU"</strong> di file Shopee sama persis dengan <strong>SKU Variasi</strong> di Kelola Produk untuk auto-match HPP dan stok.
     </div>
   </div>
-  <!-- Morning Briefing -->
-  <div id="te-morning-briefing"></div>
-
   <!-- Summary Bar -->
-  <div id="te-summary-bar" class="summary-bar summary-bar-6" style="display:none;"></div>
-
+  <div id="te-summary-bar" class="summary-bar" style="display:none;"></div>
   <!-- SKU Cards -->
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div class="card-title" style="margin:0">📦 Breakdown Analisis Per SKU</div>
+      <div class="card-title" style="margin:0">📦 Analisis Per SKU</div>
       <button class="btn btn-s btn-sm" onclick="goTE('te-blueprint',null);document.getElementById('ph').innerHTML='AI Strategy &lt;span&gt;Blueprint&lt;/span&gt;'">📋 Lihat Action Plan →</button>
     </div>
     <div id="te-sku-grid" class="sku-grid">

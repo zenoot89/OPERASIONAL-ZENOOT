@@ -10,6 +10,48 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxeSFiZ8FTBxFn2qibfWjBiNley0jVEJthvdSGQ_mPCmvTZBJcZy1iQ7VjdrAsb9d-T/exec';
 const DB_KEY  = 'zenot_v5_cache';
 
+/* ================================================================
+   DATA LAYER ABSTRACTION — Supabase Ready
+   Untuk migrasi ke Supabase: ganti hanya isi fungsi di bawah ini.
+   Logika aplikasi lain tidak perlu diubah sama sekali.
+================================================================ */
+const DataLayer = {
+  // Simpan seluruh DB ke cloud
+  async save(data) {
+    try {
+      await fetch(GAS_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data) });
+      return true;
+    } catch(e) { return false; }
+  },
+  // Ambil data dari cloud
+  async fetch() {
+    return new Promise((resolve) => {
+      const callbackName = 'zenot_cb_' + Date.now();
+      const timeout = setTimeout(() => { delete window[callbackName]; if(script.parentNode)script.parentNode.removeChild(script); resolve(null); }, 8000);
+      window[callbackName] = function(data) { clearTimeout(timeout);delete window[callbackName];if(script.parentNode)script.parentNode.removeChild(script);resolve(data); };
+      const script = document.createElement('script');
+      script.src = GAS_URL + '?callback=' + callbackName + '&t=' + Date.now();
+      script.onerror = () => { clearTimeout(timeout);delete window[callbackName];resolve(null); };
+      document.head.appendChild(script);
+    });
+  },
+  // Simpan ke localStorage (cache lokal)
+  saveLocal(data) {
+    try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
+  },
+  // Ambil dari localStorage
+  loadLocal() {
+    try { const raw = localStorage.getItem(DB_KEY); return raw ? JSON.parse(raw) : null; } catch(e) { return null; }
+  },
+  // Hapus cache lokal
+  clearLocal() {
+    try { localStorage.removeItem(DB_KEY); } catch(e) {}
+  }
+};
+/* ================================================================
+   END DATA LAYER — untuk upgrade Supabase ganti isi DataLayer saja
+================================================================ */
+
 let _cloudConnected = false;
 let _saveQueue = null;
 let _backupModeActive = false;
@@ -17,16 +59,25 @@ let _currentPage = 'dashboard';
 
 function setCloudStatus(ok) {
   _cloudConnected = ok;
-  const badge = document.getElementById('backup-badge');
-  if (!badge) return;
-  badge.style.display = 'flex';
-  if (ok) { badge.style.background='#EFF7F3';badge.style.borderColor='#A8D5BE';badge.style.color='#2D6A4F';badge.innerHTML='☁️ Cloud Aktif'; }
-  else { badge.style.background='#FFF3CD';badge.style.borderColor='#FFEAA7';badge.style.color='#856404';badge.innerHTML='⚠️ Mode Offline'; }
+  // Badge baru — fixed pojok kiri bawah
+  const badge = document.getElementById('backup-badge-fixed');
+  const indicator = document.getElementById('cloud-indicator-fixed');
+  if (badge) {
+    badge.innerHTML = ok ? '☁️ Cloud Aktif' : '⚠️ Offline';
+    if (indicator) indicator.classList.toggle('offline', !ok);
+  }
+  // Legacy badge (fallback)
+  const legacyBadge = document.getElementById('backup-badge');
+  if (legacyBadge) {
+    legacyBadge.style.display = 'flex';
+    if (ok) { legacyBadge.style.background='#EFF7F3';legacyBadge.style.borderColor='#A8D5BE';legacyBadge.style.color='#2D6A4F';legacyBadge.innerHTML='☁️ Cloud Aktif'; }
+    else { legacyBadge.style.background='#FFF3CD';legacyBadge.style.borderColor='#FFEAA7';legacyBadge.style.color='#856404';legacyBadge.innerHTML='⚠️ Mode Offline'; }
+  }
 }
 function setBackupMode(on) { _backupModeActive = on; }
 
 function saveDB() {
-  try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e) {}
+  DataLayer.saveLocal(DB);
   const ind = document.getElementById('save-indicator');
   if (ind) {
     ind.textContent = _cloudConnected ? '☁️ Menyimpan...' : '💾 Cache lokal';
@@ -40,31 +91,25 @@ function saveDB() {
 
 async function pushToCloud() {
   if (!GAS_URL) return;
-  try {
-    await fetch(GAS_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(DB) });
-    setCloudStatus(true);
-    const ind = document.getElementById('save-indicator');
-    if (ind) { ind.textContent='☁️ Tersimpan di Cloud';ind.style.color='var(--sage)';ind.style.display='block';clearTimeout(window._saveTimer);window._saveTimer=setTimeout(()=>{ind.style.display='none';},2000); }
-  } catch(e) { setCloudStatus(false); }
+  const ok = await DataLayer.save(DB);
+  setCloudStatus(ok);
+  const ind = document.getElementById('save-indicator');
+  if (ind && ok) {
+    ind.textContent='☁️ Tersimpan di Cloud';ind.style.color='var(--sage)';
+    ind.style.display='block';clearTimeout(window._saveTimer);
+    window._saveTimer=setTimeout(()=>{ind.style.display='none';},2000);
+  }
 }
 
 function loadFromCloud() {
-  return new Promise((resolve) => {
-    const callbackName = 'zenot_cb_' + Date.now();
-    const timeout = setTimeout(() => { delete window[callbackName]; if(script.parentNode)script.parentNode.removeChild(script); resolve(null); }, 8000);
-    window[callbackName] = function(data) { clearTimeout(timeout);delete window[callbackName];if(script.parentNode)script.parentNode.removeChild(script);resolve(data); };
-    const script = document.createElement('script');
-    script.src = GAS_URL + '?callback=' + callbackName + '&t=' + Date.now();
-    script.onerror = () => { clearTimeout(timeout);delete window[callbackName];resolve(null); };
-    document.head.appendChild(script);
-  });
+  return DataLayer.fetch();
 }
 
 async function loadDB() {
   if (GAS_URL) {
     try {
       showLoadingOverlay('☁️ Memuat data dari cloud...');
-      const result = await loadFromCloud();
+      const result = await DataLayer.fetch();
       if (result && result.ok && result.data) {
         const saved = result.data;
         if (saved.produk)  DB.produk  = saved.produk;
@@ -72,25 +117,22 @@ async function loadDB() {
         if (saved.jurnal)  DB.jurnal  = saved.jurnal;
         if (saved.restock) DB.restock = saved.restock;
         if (saved.channel) DB.channel = saved.channel;
-        localStorage.setItem(DB_KEY, JSON.stringify(DB));
+        DataLayer.saveLocal(DB);
         setCloudStatus(true);
         hideLoadingOverlay(); return;
       }
     } catch(e) { console.warn('Cloud load gagal:', e.message); }
     setCloudStatus(false); hideLoadingOverlay();
   }
-  try {
-    const raw = localStorage.getItem(DB_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      if (saved.produk)  DB.produk  = saved.produk;
-      if (saved.stok)    DB.stok    = saved.stok;
-      if (saved.jurnal)  DB.jurnal  = saved.jurnal;
-      if (saved.restock) DB.restock = saved.restock;
-      if (saved.channel) DB.channel = saved.channel;
-      setCloudStatus(false);
-    }
-  } catch(e) {}
+  const saved = DataLayer.loadLocal();
+  if (saved) {
+    if (saved.produk)  DB.produk  = saved.produk;
+    if (saved.stok)    DB.stok    = saved.stok;
+    if (saved.jurnal)  DB.jurnal  = saved.jurnal;
+    if (saved.restock) DB.restock = saved.restock;
+    if (saved.channel) DB.channel = saved.channel;
+    setCloudStatus(false);
+  }
 }
 
 function _applyCloudData(d) {
@@ -133,7 +175,7 @@ async function syncHargaManual() {
 async function resetDB() {
   if (!confirm('⚠️ RESET semua data? Data di cloud dan lokal akan HILANG!')) return;
   DB.produk=[];DB.stok=[];DB.jurnal=[];DB.restock=[];
-  localStorage.removeItem(DB_KEY);
+  DataLayer.clearLocal();
   await pushToCloud(); location.reload();
 }
 
@@ -695,27 +737,52 @@ function syncStokDanRender() {
 }
 
 // ================================================================
-// HARGA / PRICE LIST
+// HARGA / PRICE LIST — Filter Sinkron
 // ================================================================
-let hargaQ='', hargaFil='Semua';
-function filterHarga(v){hargaQ=v;renderHarga();}
+let hargaQ='', hargaFilInduk='', hargaFilSupplier='';
+
+function populateHargaFilters() {
+  const indukList=[...new Set(DB.produk.map(r=>r.induk))].sort();
+  const supplierList=[...new Set(DB.produk.map(r=>r.suplaier||'').filter(Boolean))].sort();
+  const indukSel=document.getElementById('harga-fil-induk');
+  const supSel=document.getElementById('harga-fil-supplier');
+  if(indukSel){const cur=indukSel.value;indukSel.innerHTML='<option value="">Semua Produk</option>'+indukList.map(s=>`<option>${s}</option>`).join('');if(cur)indukSel.value=cur;}
+  if(supSel){const cur=supSel.value;supSel.innerHTML='<option value="">Semua Supplier</option>'+supplierList.map(s=>`<option>${s}</option>`).join('');if(cur)supSel.value=cur;}
+}
+
+function filterHarga(v){ hargaQ=v; renderHarga(); }
+function filterHargaFromDropdown() {
+  hargaFilInduk=(document.getElementById('harga-fil-induk')||{}).value||'';
+  hargaFilSupplier=(document.getElementById('harga-fil-supplier')||{}).value||'';
+  renderHarga();
+}
+function resetHargaFilter() {
+  hargaQ=''; hargaFilInduk=''; hargaFilSupplier='';
+  const sb=document.getElementById('harga-search'); if(sb)sb.value='';
+  const fi=document.getElementById('harga-fil-induk'); if(fi)fi.value='';
+  const fs=document.getElementById('harga-fil-supplier'); if(fs)fs.value='';
+  renderHarga();
+}
+
 function renderHarga() {
-  const indukList=['Semua',...new Set(DB.produk.map(r=>r.induk))];
-  const tabs=document.getElementById('harga-ftabs');
-  if(tabs)tabs.innerHTML=indukList.map(s=>`<div class="ftab ${s===hargaFil?'active':''}" onclick="setHargaFil('${s}',this)">${s}</div>`).join('');
+  populateHargaFilters();
   const q=hargaQ.toLowerCase();
-  const rows=DB.produk.filter(r=>(hargaFil==='Semua'||r.induk===hargaFil)&&(r.var.toLowerCase().includes(q)||r.induk.toLowerCase().includes(q)));
+  const rows=DB.produk.filter(r=>{
+    if(hargaFilInduk && r.induk!==hargaFilInduk) return false;
+    if(hargaFilSupplier && (r.suplaier||'')!==hargaFilSupplier) return false;
+    if(q && !r.var.toLowerCase().includes(q) && !r.induk.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>a.induk.localeCompare(b.induk)||a.var.localeCompare(b.var));
   const body=document.getElementById('harga-body');
-  if(body)body.innerHTML=rows.map((r,i)=>`<tr>
+  if(body)body.innerHTML=rows.length?rows.map((r,i)=>`<tr>
     <td class="mono">${i+1}</td><td><strong>${r.induk}</strong></td><td>${r.var}</td>
     <td class="mono">${fmt(r.hpp)}</td>
     <td><span class="badge bb">${r.npm}%</span></td>
     <td class="mono" style="color:var(--sage);font-weight:600">${fmt(r.jual)}</td>
     <td class="mono">${fmt(r.reseller)}</td>
     <td><span class="badge ${r.gm>=60?'bg':'bo'}">${r.gm}%</span></td>
-  </tr>`).join('');
+  </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada produk sesuai filter</td></tr>`;
 }
-function setHargaFil(v,el){hargaFil=v;document.querySelectorAll('#harga-ftabs .ftab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderHarga();}
 
 // ================================================================
 // IMPORT DARI SHEETS
