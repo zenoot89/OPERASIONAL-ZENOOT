@@ -121,23 +121,54 @@ function handleRasioUpload(type, input) {
     const r = new FileReader();
     r.onload = e => {
       const lines = e.target.result.split('\n');
-      let isiSaldoOtomatis = 0, isiSaldoDariPgh = 0, saldoIklan = 0;
+      // Yang kita hitung: "Iklan Produk Otomatis" = pengeluaran nyata (nilai negatif di CSV)
+      let totalSpend = 0;
       let dataStart = false;
+      let detailRows = { iklanOtomatis: 0, iklanManual: 0, topUp: 0, isiSaldo: 0 };
+
       lines.forEach(l => {
-        const cols = l.split(',');
-        if (!dataStart) { if ((cols[0]||'').toString().trim().toLowerCase() === 'urutan') { dataStart = true; } return; }
+        // Bersihkan BOM & whitespace
+        const raw = l.replace(/^\uFEFF/, '').trim();
+        if (!raw) return;
+        const cols = raw.split(',');
+        // Deteksi header baris "Urutan,Waktu,Deskripsi,Jumlah,Catatan"
+        if (!dataStart) {
+          if ((cols[0]||'').toString().trim().toLowerCase() === 'urutan') { dataStart = true; }
+          return;
+        }
         const deskripsi = (cols[2]||'').toString().trim();
-        const jumlah = parseInt((cols[3]||'').toString().replace(/[^\\d\\-]/g,'')) || 0;
-        if (deskripsi.includes('Isi Saldo Otomatis (dari Penghasilan)')) isiSaldoDariPgh += Math.abs(jumlah);
-        else if (deskripsi.includes('Isi Saldo Otomatis')) isiSaldoOtomatis += Math.abs(jumlah);
-        else if (deskripsi.includes('Saldo Iklan')) saldoIklan += Math.abs(jumlah);
+        // Ambil nilai — bisa negatif untuk pengeluaran
+        const rawNum = (cols[3]||'').toString().replace(/[^\d\-]/g,'');
+        const jumlah = parseInt(rawNum) || 0;
+
+        // "Iklan Produk Otomatis" = actual spend, nilainya NEGATIF di file
+        if (deskripsi.includes('Iklan Produk Otomatis') || deskripsi.includes('Iklan Produk Manual')) {
+          totalSpend += Math.abs(jumlah);
+          if (deskripsi.includes('Manual')) detailRows.iklanManual += Math.abs(jumlah);
+          else detailRows.iklanOtomatis += Math.abs(jumlah);
+        }
+        // Top-Up manual (kas keluar dari kantong sendiri) juga biaya nyata
+        else if (deskripsi.includes('Saldo Iklan dan Bonus Saldo Iklan') && jumlah > 0) {
+          // Ini top-up, tapi bonus bukan biaya — ambil hanya nominal top-up
+          // Dari catatan: "voucher Saldo Iklan: X.XX Bonus: Y.YY"
+          // Ambil angka sebelum Bonus
+          const match = (cols[4]||'').match(/Saldo Iklan[^:]*:\s*([\d.]+)/);
+          const topUpAmt = match ? parseFloat(match[1]) : jumlah;
+          detailRows.topUp += topUpAmt;
+          totalSpend += topUpAmt;
+        }
       });
-      const totalCashflow = isiSaldoOtomatis + isiSaldoDariPgh + saldoIklan;
-      const totalPPN = Math.round(totalCashflow * 1.11);
-      rkData.iklanTotal = totalPPN; rkData.ads = totalPPN;
-      setBoxUploaded(document.getElementById('boxAds'), `✅ Rp ${totalPPN.toLocaleString('id-ID')}`);
-      const s = document.getElementById('statusAds'); if (s) s.textContent = `Rp ${totalPPN.toLocaleString('id-ID')} (incl. PPN 11%)`;
-      toast(`✅ Ads: Rp ${totalPPN.toLocaleString('id-ID')}`);
+
+      // Tidak perlu kali PPN karena ini sudah pengeluaran nyata (Rp aktual yang dipakai iklan)
+      rkData.iklanTotal = totalSpend;
+      rkData.ads = totalSpend;
+
+      const detail = `Otomatis: Rp ${detailRows.iklanOtomatis.toLocaleString('id-ID')}${detailRows.iklanManual > 0 ? ` · Manual: Rp ${detailRows.iklanManual.toLocaleString('id-ID')}` : ''}${detailRows.topUp > 0 ? ` · Top-Up: Rp ${detailRows.topUp.toLocaleString('id-ID')}` : ''}`;
+
+      setBoxUploaded(document.getElementById('boxAds'), `✅ Rp ${totalSpend.toLocaleString('id-ID')}`);
+      const s = document.getElementById('statusAds');
+      if (s) s.textContent = `Rp ${totalSpend.toLocaleString('id-ID')} (actual spend)`;
+      toast(`✅ Ads parsed! Total spend: Rp ${totalSpend.toLocaleString('id-ID')}`);
       updateRasioDashboard();
     };
     r.readAsText(file, 'UTF-8'); return;

@@ -541,7 +541,29 @@ function renderLowStock() {
 // JURNAL
 // ================================================================
 let jurnalQ='';
-function populateJInduk() { const indukList=[...new Set(DB.produk.map(p=>p.induk))];document.getElementById('j-sku-induk').innerHTML=indukList.map(s=>`<option>${s}</option>`).join('');populateJVariasi(); }
+function populateJInduk() {
+  const indukList=[...new Set(DB.produk.map(p=>p.induk))];
+  document.getElementById('j-sku-induk').innerHTML=indukList.map(s=>`<option>${s}</option>`).join('');
+  populateJVariasi();
+  // Sync channel dropdown dari DB.channel
+  _syncChannelDropdowns();
+}
+
+function _syncChannelDropdowns() {
+  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const defaultCh = ['SHP.ZENOOT','SHP. ALLEY','SHP.ELENZ','LAZ.ZENOOT','TT.ALLEY','OFFLEN'];
+  // Gabungkan: dari DB dulu, tambahkan default yang belum ada
+  const allCh = [...new Set([...channels, ...defaultCh])];
+  const opts = allCh.map(c=>`<option>${c}</option>`).join('');
+  // Update semua dropdown channel
+  ['j-ch','ej-ch'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    const cur=el.value;
+    el.innerHTML=opts;
+    // Pertahankan pilihan sebelumnya jika masih ada
+    if([...el.options].find(o=>o.value===cur)) el.value=cur;
+  });
+}
 function populateJVariasi() { const induk=document.getElementById('j-sku-induk').value;document.getElementById('j-sku-variasi').innerHTML=DB.produk.filter(p=>p.induk===induk).map(p=>`<option>${p.var}</option>`).join(''); }
 
 function addJurnal() {
@@ -791,9 +813,16 @@ function tambahChannel() {
   if (DB.channel.find(c=>c.nama===nama)) { toast('Channel sudah ada!','err'); return; }
   DB.channel.push({nama,platform,status});
   document.getElementById('ch-nama').value='';
-  saveDB(); closeModal('modal-tambah-channel'); renderChannel(); toast(`✅ Channel ${nama} ditambahkan!`);
+  saveDB(); closeModal('modal-tambah-channel'); renderChannel();
+  _syncChannelDropdowns(); // langsung sync ke dropdown jurnal
+  toast(`✅ Channel ${nama} ditambahkan!`);
 }
-function toggleChannelStatus(idx) { if(!DB.channel[idx])return;DB.channel[idx].status=DB.channel[idx].status==='Aktif'?'Nonaktif':'Aktif';saveDB();renderChannel(); }
+function toggleChannelStatus(idx) {
+  if(!DB.channel[idx])return;
+  DB.channel[idx].status=DB.channel[idx].status==='Aktif'?'Nonaktif':'Aktif';
+  saveDB(); renderChannel();
+  _syncChannelDropdowns();
+}
 function hapusChannel(idx) { if(!confirm(`Hapus channel "${DB.channel[idx]?.nama}"?`))return;DB.channel.splice(idx,1);saveDB();renderChannel(); }
 
 // ================================================================

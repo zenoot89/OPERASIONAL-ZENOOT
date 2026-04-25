@@ -39,6 +39,34 @@ function goTE(id, el) {
 }
 
 // ═══════════════════════════════════════════════════════
+// RE-USE DATA DARI RK MODULE
+// ═══════════════════════════════════════════════════════
+function reuseRKDataForTE() {
+  // Cek apakah data order sudah ada di rkData (dari tab Upload & Data)
+  if (typeof rkData !== 'undefined' && rkData.order1 && Object.keys(rkData.varianCount||{}).length > 0) {
+    // Convert varianCount dari RK ke format teData.salesRows
+    teData.salesRows = Object.entries(rkData.varianCount).map(([skuRef, salesQty]) => ({
+      name: skuRef,
+      skuRef: skuRef.toUpperCase(),
+      views: 0,
+      salesQty,
+      salesRev: 0,
+      prevQty: 0,
+    }));
+
+    // Update status UI
+    const zone2 = document.getElementById('te-reuse-status');
+    if (zone2) {
+      zone2.innerHTML = `✅ Re-use data dari Upload & Data: <strong>${Object.keys(rkData.varianCount).length} SKU</strong> · ${rkData.totalOrder} pesanan`;
+      zone2.style.color = 'var(--sage)';
+    }
+    toast(`✅ Data pesanan (${rkData.totalOrder} order) diambil dari tab Upload & Data!`);
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════
 // DRAG & DROP ZONE SETUP
 // ═══════════════════════════════════════════════════════
 function initDropZones() {
@@ -53,6 +81,12 @@ function initDropZones() {
       if (files[0]) handleTEFile(files[0], zone.dataset.type);
     });
   });
+  // Auto re-use RK data jika sudah ada
+  setTimeout(() => {
+    if (reuseRKDataForTE()) {
+      runTrendAnalysis();
+    }
+  }, 500);
 }
 
 // ═══════════════════════════════════════════════════════
