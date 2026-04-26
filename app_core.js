@@ -749,7 +749,9 @@ function resetJurnalFilter(){
 function _populateJurnalChannelFilter(){
   const sel=document.getElementById('j-fil-ch'); if(!sel)return;
   const cur=sel.value;
-  const channels=[...new Set(DB.jurnal.map(j=>j.ch))].sort();
+  const fromDB=(DB.channel||[]).map(c=>c.nama);
+  const fromJurnal=DB.jurnal.map(j=>j.ch);
+  const channels=[...new Set([...fromDB,...fromJurnal])].filter(Boolean).sort();
   sel.innerHTML='<option value="">Semua Channel</option>'+channels.map(c=>`<option>${c}</option>`).join('');
   if(cur)sel.value=cur;
 }
