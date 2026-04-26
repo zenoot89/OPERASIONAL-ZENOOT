@@ -117,6 +117,7 @@ async function loadDB() {
         if (saved.jurnal)  DB.jurnal  = saved.jurnal;
         if (saved.restock) DB.restock = saved.restock;
         if (saved.channel) DB.channel = saved.channel;
+        _normalizeJurnalChannel();
         DataLayer.saveLocal(DB);
         setCloudStatus(true);
         hideLoadingOverlay(); return;
@@ -131,8 +132,13 @@ async function loadDB() {
     if (saved.jurnal)  DB.jurnal  = saved.jurnal;
     if (saved.restock) DB.restock = saved.restock;
     if (saved.channel) DB.channel = saved.channel;
+    _normalizeJurnalChannel();
     setCloudStatus(false);
   }
+}
+
+function _normalizeJurnalChannel() {
+  DB.jurnal.forEach(r => { if (r.ch) r.ch = _normalizeCh(r.ch); });
 }
 
 function _applyCloudData(d) {
