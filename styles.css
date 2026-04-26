@@ -697,6 +697,17 @@ html{scroll-behavior:smooth;}
   .grid4{grid-template-columns:repeat(4,1fr);}
   /* Sembunyikan label section kecil (UTAMA, INVENTORI dll) di landscape */
   .sidebar .nav-sec{display:none!important;}
+  /* Kecilkan header logo di landscape */
+  .sidebar .logo{padding:8px 12px!important;}
+  .sidebar .logo-icon-wrap{width:32px!important;height:32px!important;}
+  .sidebar .logo-img{width:32px!important;height:32px!important;}
+  .sidebar .logo-text h1{font-size:14px!important;}
+  .sidebar .logo-text p{font-size:8px!important;}
+  /* Kecilkan footer di landscape */
+  .sidebar-footer-bar{padding:6px 12px!important;min-height:36px!important;}
+  .sidebar-footer-bar .footer-v{font-size:8px!important;margin-bottom:1px!important;}
+  .sidebar-footer-bar .footer-by{font-size:8px!important;margin-bottom:0!important;}
+  .sidebar-footer-bar .footer-name{font-size:9px!important;}
 }
 
 @media(max-width:480px){
