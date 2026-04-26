@@ -664,7 +664,6 @@ function renderLowStock() {
 // ================================================================
 // JURNAL
 // ================================================================
-let jurnalQ='';
 function populateJInduk() {
   const indukList=[...new Set(DB.produk.map(p=>p.induk))];
   document.getElementById('j-sku-induk').innerHTML=indukList.map(s=>`<option>${s}</option>`).join('');
@@ -778,7 +777,6 @@ function deleteJurnal(idx) {
   const r=DB.jurnal[idx]; const s=DB.stok.find(x=>x.var===r.var); if(s)s.keluar=Math.max(0,(s.keluar||0)-r.qty);
   DB.jurnal.splice(idx,1); saveDB(); renderJurnal(); renderDashboard(); toast('Transaksi dihapus');
 }
-function filterJurnal(v){jurnalQ=v;renderJurnal();}
 
 // ================================================================
 // KELOLA PRODUK
