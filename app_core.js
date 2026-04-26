@@ -785,7 +785,7 @@ function renderJurnal() {
   document.getElementById('j-rev').textContent=fmt(modal);
   document.getElementById('j-tot-qty').textContent=qty;
   document.getElementById('j-trx').textContent=rows.length;
-  document.getElementById('j-avg').textContent=fmt(rows.length?modal/rows.length:0);
+  document.getElementById('j-avg').textContent=fmt(rows.length?Math.round(modal/rows.length):0);
   document.getElementById('jurnal-body').innerHTML=rows.length?rows.map((r,i)=>{
     const modalKeluar=r.hpp*r.qty;
     const idx=DB.jurnal.indexOf(r);
