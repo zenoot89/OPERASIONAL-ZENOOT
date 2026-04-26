@@ -622,21 +622,36 @@ html{scroll-behavior:smooth;}
 /* ── Landscape Mobile: 70:30 — SKU Restock besar, Input kecil ── */
 @media(max-width:900px) and (orientation:landscape) {
   .restock-grid {
-    grid-template-columns: 70fr 30fr !important;
-    gap: 10px;
+    grid-template-columns: 78fr 22fr !important;
+    gap: 8px;
     overflow-x: hidden;
   }
-  /* SKU Restock — font sedikit lebih kecil agar muat */
+  /* SKU Restock kiri — pastikan nama panjang tidak terpotong */
   .restock-left .card-title { font-size: 13px; }
-  #low-stock-list .sku-nama { font-size: 12px; }
-  /* Input form — kompak */
-  .restock-right .card-title { font-size: 12px; }
-  .restock-right .lbl { font-size: 10px; }
+  #low-stock-list .sku-nama {
+    font-size: 12px;
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+  }
+  /* Input form kanan — super kompak karena hanya 22% */
+  .restock-right .card { padding: 10px 8px; }
+  .restock-right .card-title { font-size: 11px; margin-bottom: 8px !important; }
+  .restock-right .lbl { font-size: 9px; letter-spacing: 0.3px; }
   .restock-right .inp,
-  .restock-right .sel { font-size: 12px; padding: 6px 8px; }
-  /* Log restock scroll horizontal di dalam container */
+  .restock-right .sel {
+    font-size: 11px;
+    padding: 5px 6px;
+    min-height: unset;
+  }
+  .restock-right .form-row { gap: 6px; margin-bottom: 6px; }
+  .restock-right .btn-full { font-size: 11px; padding: 7px 6px; }
+  /* Tombol Massal lebih kecil */
+  .restock-right .btn-o { font-size: 10px !important; padding: 4px 7px !important; }
+  /* Log restock — tabel minimal */
   .restock-right .tbl-wrap { overflow-x: auto; }
-  .restock-right table { min-width: 340px; font-size: 11px; }
+  .restock-right table { min-width: 260px; font-size: 10px; }
+  .restock-right th, .restock-right td { padding: 4px 5px; }
   /* Page scroll vertikal lancar */
   #page-restock {
     overflow-y: auto;

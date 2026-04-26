@@ -184,22 +184,22 @@
      PAGE: RE-STOCK
 ════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-restock">
-  <!-- Layout: 65% kiri (SKU Restock) : 35% kanan (Input + Log) -->
   <div class="restock-grid">
 
-    <!-- KIRI 65% — SKU Perlu Restock -->
+    <!-- KIRI — SKU Perlu Restock -->
     <div class="card restock-left">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div class="card-title" style="margin:0">⚠️ SKU Perlu Restock</div>
         <span id="low-stock-counter" style="font-size:11px;color:var(--dusty);font-weight:600;"></span>
       </div>
-      <div style="font-size:11px;color:var(--dusty);margin-bottom:10px;background:var(--warn-bg);border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;line-height:1.6;">
+      <div id="low-stock-list"></div>
+      <!-- Info box di bawah list -->
+      <div style="font-size:11px;color:var(--dusty);margin-top:12px;background:var(--warn-bg);border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;line-height:1.6;">
         💡 Hanya menampilkan SKU yang <strong>pernah terjual</strong> — biar kas tidak terkuras untuk stok yang belum terbukti laku.
       </div>
-      <div id="low-stock-list"></div>
     </div>
 
-    <!-- KANAN 35% — Input + Log Restock -->
+    <!-- KANAN — Input + Log Restock -->
     <div class="restock-right">
 
       <!-- Input Stok Masuk -->
@@ -223,9 +223,10 @@
         </div>
         <div class="form-row">
           <div class="fg"><label class="lbl">Jumlah Masuk (pcs)</label><input class="inp" type="number" id="rs-qty" placeholder="0" min="1"></div>
-          <div class="fg"><label class="lbl">Catatan</label><input class="inp" id="rs-catatan" placeholder="Opsional"></div>
         </div>
-        <button class="btn btn-p btn-full" style="margin-top:4px;" onclick="inputRestock()">✅ Simpan Restock</button>
+        <!-- rs-catatan hidden, tetap ada untuk JS -->
+        <input type="hidden" id="rs-catatan" value="">
+        <button class="btn btn-p btn-full" style="margin-top:8px;" onclick="inputRestock()">✅ Simpan Restock</button>
       </div>
 
       <!-- Log Restock -->
@@ -233,7 +234,7 @@
         <div class="card-title">📋 Log Restock</div>
         <div class="tbl-wrap" style="margin:0;max-height:380px;overflow-y:auto;">
           <table>
-            <thead><tr><th>Tanggal</th><th>SKU Variasi</th><th>Supplier</th><th>+Masuk</th><th>Catatan</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Tanggal</th><th>SKU Variasi</th><th>Supplier</th><th>+Masuk</th><th>Aksi</th></tr></thead>
             <tbody id="restock-body"></tbody>
           </table>
         </div>
