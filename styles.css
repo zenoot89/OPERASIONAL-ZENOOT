@@ -555,17 +555,17 @@ html{scroll-behavior:smooth;}
 /* ═══════════════════════════════════════════════
    MOBILE & RESPONSIVE
 ════════════════════════════════════════════════ */
-@media(max-width:768px){
-  /* Sidebar — off canvas mobile Shopee style */
+@media(max-width:900px){
+  /* Sidebar — off canvas mobile Shopee style — SEMUA ukuran mobile */
   .sidebar{
-    transform:translateX(-100%);
+    transform:translateX(-100%) !important;
     transition:transform .28s cubic-bezier(.4,0,.2,1);
     width:260px!important;
     z-index:400;
     box-shadow:4px 0 24px rgba(0,0,0,.35);
   }
-  .sidebar.open{transform:translateX(0);}
-  .sidebar.collapsed{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0) !important;}
+  .sidebar.collapsed{transform:translateX(-100%) !important;}
   .sidebar-overlay{
     transition:opacity .28s ease;
     opacity:0;
@@ -622,14 +622,9 @@ html{scroll-behavior:smooth;}
 /* Landscape mobile — sidebar tetap off canvas */
 @media(max-width:900px) and (orientation:landscape){
   .sidebar{
-    position:fixed;
-    transform:translateX(-100%);
-    width:220px!important;
-    z-index:400;
-    transition:transform .28s cubic-bezier(.4,0,.2,1);
-    box-shadow:4px 0 24px rgba(0,0,0,.35);
+    transform:translateX(-100%) !important;
   }
-  .sidebar.open{transform:translateX(0);}
+  .sidebar.open{transform:translateX(0) !important;}
   .main{
     margin-left:0!important;
     padding-top:50px;
