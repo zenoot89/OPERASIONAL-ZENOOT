@@ -158,17 +158,31 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--charcoa
 }
 .sidebar-toggle-btn:hover{background:rgba(255,255,255,.1);color:var(--cream);}
 
-/* ═══ HAMBURGER (MOBILE) ═══ */
+/* ═══ HAMBURGER (MOBILE) — bottom fixed ═══ */
 .hamburger-fixed{
-  display:none;position:fixed;top:12px;left:12px;z-index:300;
-  background:var(--charcoal);border:none;border-radius:8px;
-  padding:10px;cursor:pointer;flex-direction:column;gap:5px;
-  box-shadow:0 2px 12px rgba(0,0,0,.3);
+  display:none;
+  position:fixed;
+  bottom:0;
+  left:0;
+  z-index:300;
+  background:var(--charcoal);
+  border:none;
+  border-top:1px solid rgba(255,255,255,.08);
+  border-right:1px solid rgba(255,255,255,.08);
+  border-radius:0 8px 0 0;
+  padding:12px 16px;
+  cursor:pointer;
+  flex-direction:column;
+  gap:5px;
+  align-items:center;
+  justify-content:center;
+  min-width:52px;
+  min-height:48px;
 }
-.hamburger-fixed span{display:block;width:20px;height:2px;background:var(--cream);border-radius:2px;}
+.hamburger-fixed span{display:block;width:20px;height:2px;background:var(--cream);border-radius:2px;transition:all .2s;}
 .sidebar-overlay{
   display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.5);z-index:99;
+  background:rgba(0,0,0,.5);z-index:199;
   backdrop-filter:blur(2px);
 }
 .sidebar-overlay.open{display:block;}
@@ -208,8 +222,8 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--charcoa
 .stat-ico{float:right;font-size:20px;margin-top:-2px;}
 
 /* ═══ TABLE ═══ */
-.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:580px;}
 thead th{background:var(--cream);padding:9px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;}
 tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
 tbody tr:last-child{border-bottom:none;}
@@ -465,7 +479,7 @@ html{scroll-behavior:smooth;}
   .sidebar.open{transform:translateX(0);}
   .sidebar.collapsed{transform:translateX(-100%);}
   .sidebar-overlay.open{display:block;}
-  .hamburger-fixed{display:flex;}
+  .hamburger-fixed{display:flex!important;}
   .sidebar-toggle-btn{display:none;}
 
   /* Main area — full width mobile */

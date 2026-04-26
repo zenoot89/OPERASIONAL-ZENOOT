@@ -455,7 +455,22 @@ function populateStokFilters() {
     if(cur) indukSel.value=cur; // preserve pilihan
   }
 }
-function onSupplierFilterChange() { const sel=document.getElementById('stok-fil-supplier');if(sel&&sel.value){const varNames=DB.produk.filter(p=>(p.suplaier||'')==sel.value).map(p=>p.var);const indukSel=document.getElementById('stok-fil-induk');if(indukSel){const indukList=[...new Set(DB.produk.filter(p=>(p.suplaier||'')==sel.value).map(p=>p.induk))];indukSel.innerHTML='<option value="">Semua Produk</option>'+indukList.map(s=>`<option>${s}</option>`).join('');}}renderStok(); }
+function onSupplierFilterChange() {
+  const supVal = (document.getElementById('stok-fil-supplier')||{}).value || '';
+  const indukSel = document.getElementById('stok-fil-induk');
+  if (indukSel) {
+    const filtered = supVal
+      ? DB.produk.filter(p => (p.suplaier||'') === supVal)
+      : DB.produk;
+    const indukList = [...new Set(filtered.map(p => p.induk))].sort();
+    const cur = indukSel.value;
+    indukSel.innerHTML = '<option value="">Semua Produk</option>' + indukList.map(s=>`<option>${s}</option>`).join('');
+    // Reset pilihan induk kalau supplier berubah
+    if (!indukList.includes(cur)) indukSel.value = '';
+    else indukSel.value = cur;
+  }
+  renderStok();
+}
 function applyStokFilter() { renderStok(); }
 function resetStokFilter() { ['stok-fil-supplier','stok-fil-induk','stok-fil-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});stokQ='';const sb=document.getElementById('stok-search');if(sb)sb.value='';renderStok(); }
 function sortStok(col) { if(_stokSortCol===col){_stokSortDir*=-1;}else{_stokSortCol=col;_stokSortDir=1;}renderStok(); }
@@ -691,9 +706,44 @@ function addJurnal() {
   toast(`Transaksi ${qty} pcs ${varName} disimpan!`);
 }
 
+// ═══ JURNAL FILTER STATE ═══
+let jurnalQ='', jurnalDateFrom='', jurnalDateTo='', jurnalChFil='';
+
+function filterJurnal(v){ jurnalQ=v; renderJurnal(); }
+function filterJurnalDate(){
+  jurnalDateFrom=(document.getElementById('j-fil-from')||{}).value||'';
+  jurnalDateTo=(document.getElementById('j-fil-to')||{}).value||'';
+  renderJurnal();
+}
+function filterJurnalChannel(){
+  jurnalChFil=(document.getElementById('j-fil-ch')||{}).value||'';
+  renderJurnal();
+}
+function resetJurnalFilter(){
+  jurnalQ=''; jurnalDateFrom=''; jurnalDateTo=''; jurnalChFil='';
+  ['j-search','j-fil-from','j-fil-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const ch=document.getElementById('j-fil-ch');if(ch)ch.value='';
+  renderJurnal();
+}
+
+function _populateJurnalChannelFilter(){
+  const sel=document.getElementById('j-fil-ch'); if(!sel)return;
+  const cur=sel.value;
+  const channels=[...new Set(DB.jurnal.map(j=>j.ch))].sort();
+  sel.innerHTML='<option value="">Semua Channel</option>'+channels.map(c=>`<option>${c}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+
 function renderJurnal() {
+  _populateJurnalChannelFilter();
   const q=jurnalQ.toLowerCase();
-  const rows=DB.jurnal.filter(r=>r.var.toLowerCase().includes(q)||r.ch.toLowerCase().includes(q));
+  const rows=DB.jurnal.filter(r=>{
+    if(q && !r.var.toLowerCase().includes(q) && !r.ch.toLowerCase().includes(q)) return false;
+    if(jurnalChFil && r.ch !== jurnalChFil) return false;
+    if(jurnalDateFrom && r.tgl < jurnalDateFrom) return false;
+    if(jurnalDateTo && r.tgl > jurnalDateTo) return false;
+    return true;
+  });
   let modal=0,qty=0;
   rows.forEach(r=>{modal+=r.hpp*r.qty;qty+=r.qty;});
   document.getElementById('j-rev').textContent=fmt(modal);
@@ -704,10 +754,8 @@ function renderJurnal() {
     const modalKeluar=r.hpp*r.qty;
     const idx=DB.jurnal.indexOf(r);
     return `<tr><td class="mono">${i+1}</td><td class="mono">${r.tgl}</td><td>${chTag(r.ch)}</td><td>${r.var}</td><td class="mono" style="text-align:center">${r.qty}</td><td class="mono">${fmt(r.hpp)}</td><td class="mono" style="color:var(--brown);font-weight:600">${fmt(modalKeluar)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="openEditJurnal(${idx})">✏️</button><button class="btn btn-d btn-sm" onclick="deleteJurnal(${idx})">🗑</button></td></tr>`;
-  }).join(''):`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada transaksi</td></tr>`;
+  }).join(''):`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada transaksi sesuai filter</td></tr>`;
 }
-
-function openEditJurnal(idx) {
   const r=DB.jurnal[idx];
   ['ej-idx','ej-tgl','ej-ch','ej-sku','ej-qty','ej-harga','ej-hpp'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
@@ -1042,20 +1090,22 @@ function initDate(){
   const rsTgl=document.getElementById('rs-tgl'); if(rsTgl)rsTgl.value=d.toISOString().split('T')[0];
 }
 
-// Hamburger mobile
-(function(){
-  const hamburger=document.createElement('button');
-  hamburger.className='hamburger-fixed';hamburger.setAttribute('aria-label','Toggle Menu');
-  hamburger.innerHTML='<span></span><span></span><span></span>';
-  document.body.appendChild(hamburger);
-  const overlay=document.createElement('div');overlay.className='sidebar-overlay';document.body.appendChild(overlay);
-  const sidebar=document.querySelector('.sidebar');
-  const openSidebar=()=>{sidebar.classList.add('open');overlay.classList.add('open');};
-  const closeSidebar=()=>{sidebar.classList.remove('open');overlay.classList.remove('open');};
-  hamburger.addEventListener('click',()=>sidebar.classList.contains('open')?closeSidebar():openSidebar());
-  overlay.addEventListener('click',closeSidebar);
-  document.querySelectorAll('.nav-item').forEach(item=>item.addEventListener('click',()=>{if(window.innerWidth<=768)closeSidebar();}));
-})();
+// ═══ MOBILE SIDEBAR TOGGLE ═══
+function toggleSidebarMobile() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (!sidebar) return;
+  const isOpen = sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', !isOpen);
+  if (overlay) overlay.classList.toggle('open', !isOpen);
+}
+
+// Auto-close sidebar saat nav item diklik di mobile
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (window.innerWidth <= 900) toggleSidebarMobile();
+  });
+});
 
 // Main init
 initDate();
@@ -1068,7 +1118,6 @@ initDate();
   renderChecks();
   populateJInduk();
   populateRsInduk();
-  // Restore sidebar collapse preference
   if (localStorage.getItem('zenot_sidebar_collapsed')==='1') toggleSidebarCollapse();
   startAutoRefreshHarga(2);
 })();
