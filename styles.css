@@ -605,7 +605,7 @@ html{scroll-behavior:smooth;}
   .sidebar-footer-bar{
     flex-shrink:0!important;
     border-top:1px solid rgba(255,255,255,.10)!important;
-    background:var(--charcoal)!important;
+    background:#000000!important;
     padding:12px 14px!important;
     display:flex!important;
     align-items:center!important;
