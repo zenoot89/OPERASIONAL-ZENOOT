@@ -620,7 +620,7 @@ function renderStok() {
     return true;
   });
   if (_stokSortCol) {
-    rows=rows.sort((a,b)=>{\
+    rows=rows.sort((a,b)=>{
       const va=_stokSortCol==='akhir'?getAkhir(a):(a.keluar||0);
       const vb=_stokSortCol==='akhir'?getAkhir(b):(b.keluar||0);
       return (va-vb)*_stokSortDir;
@@ -629,7 +629,7 @@ function renderStok() {
   // Update sort arrow Shopee style
   const arrowEl = document.getElementById('sort-arrow-akhir');
   if (arrowEl) arrowEl.textContent = _stokSortCol==='akhir' ? (_stokSortDir===1 ? '▲' : '▼') : '↕';
-  document.getElementById('stok-body').innerHTML=rows.length?rows.map((r,i)=>{\
+  document.getElementById('stok-body').innerHTML=rows.length?rows.map((r,i)=>{
     const akhir=getAkhir(r), induk=getIndukOf(r.var);
     const p=DB.produk.find(x=>x.var===r.var);
     return `<tr>
