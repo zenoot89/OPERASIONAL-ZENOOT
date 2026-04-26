@@ -141,6 +141,12 @@ function _normalizeJurnalChannel() {
   DB.jurnal.forEach(r => { if (r.ch) r.ch = _normalizeCh(r.ch); });
 }
 
+async function cleanChannelData() {
+  _normalizeJurnalChannel();
+  saveDB();
+  toast('✅ Data channel dibersihkan!');
+}
+
 function _applyCloudData(d) {
   if (d.produk)  DB.produk  = d.produk;
   if (d.stok)    DB.stok    = d.stok;
@@ -1142,6 +1148,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 initDate();
 (async () => {
   await loadDB();
+  await cleanChannelData();
   syncStokFromProduk();
   renderDashboard();
   renderStok();
