@@ -34,15 +34,39 @@ const INTEL_TITLES = {
 };
 
 function goIntel(id, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // ── 1. Aktifkan main page intel (hanya page-intel-dashboard yg real) ──
+  const mainPage = document.getElementById('page-intel-dashboard');
+  if (mainPage && !mainPage.classList.contains('active')) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    mainPage.classList.add('active');
+  }
+
+  // ── 2. Update active state sidebar nav-item ──
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const page = document.getElementById('page-' + id);
-  if (page) page.classList.add('active');
-  if (el) el.classList.add('active');
+  // cari nav-item yang memiliki onclick mengandung id ini
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) {
+      n.classList.add('active');
+    }
+  });
+
+  // ── 3. Switch intel tab buttons ──
+  document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+  const tabBtn = document.getElementById('itab-' + id);
+  if (tabBtn) tabBtn.classList.add('active');
+  // jika dipanggil dari quick-action button (el bukan nav-item/intel-tab), tidak perlu set active
+  if (el && el.classList.contains('intel-tab')) el.classList.add('active');
+
+  // ── 4. Switch intel subpages ──
+  document.querySelectorAll('.intel-subpage').forEach(p => p.classList.remove('active'));
+  const subPage = document.getElementById('ipage-' + id);
+  if (subPage) subPage.classList.add('active');
+
+  // ── 5. Update page title topbar ──
   const ph = document.getElementById('ph');
   if (ph) ph.innerHTML = INTEL_TITLES[id] || id;
 
-  // Render sesuai halaman
+  // ── 6. Render konten sesuai tab ──
   if (id === 'intel-dashboard')  renderIntelDashboard();
   if (id === 'intel-sku')        renderSKUAnalisis();
   if (id === 'intel-revenue')    renderRevenueIntel();
@@ -50,6 +74,19 @@ function goIntel(id, el) {
   if (id === 'intel-unit-econ')  renderUnitEcon();
   if (id === 'intel-flashsale')  renderFlashSaleROI();
   if (id === 'intel-cashflow')   renderCashflow();
+}
+
+// Helper: dipanggil dari sidebar — juga close sidebar di mobile
+function goIntelFromSidebar(id, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  goIntel(id, null);
+  const overlay = document.querySelector('.sidebar-overlay');
+  const sidebar = document.getElementById('sidebar');
+  if (overlay && overlay.classList.contains('open')) {
+    overlay.classList.remove('open');
+    if (sidebar) sidebar.classList.remove('open');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1314,9 +1351,16 @@ function calcCashflow() {
 // INIT
 // ═══════════════════════════════════════════════════════
 window.addEventListener('load', () => {
-  // Render intel dashboard jika halaman aktif
+  // Render intel dashboard jika halaman intel aktif
   const activePage = document.querySelector('.page.active');
   if (activePage && activePage.id === 'page-intel-dashboard') {
+    // Pastikan tab dashboard aktif
+    document.querySelectorAll('.intel-subpage').forEach(p => p.classList.remove('active'));
+    const dashSub = document.getElementById('ipage-intel-dashboard');
+    if (dashSub) dashSub.classList.add('active');
+    document.querySelectorAll('.intel-tab').forEach(t => t.classList.remove('active'));
+    const dashTab = document.getElementById('itab-intel-dashboard');
+    if (dashTab) dashTab.classList.add('active');
     renderIntelDashboard();
   }
 });

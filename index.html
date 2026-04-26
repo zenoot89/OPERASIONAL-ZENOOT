@@ -76,13 +76,13 @@
         <span class="nav-acc-chevron">&#8964;</span>
       </div>
       <div class="nav-acc-body open">
-        <div class="nav-item" onclick="goIntel('intel-dashboard',this)"><span>🧠</span><span>Intel Dashboard</span></div>
-        <div class="nav-item" onclick="goIntel('intel-sku',this)"><span>🔬</span><span>SKU Breakdown</span></div>
-        <div class="nav-item" onclick="goIntel('intel-revenue',this)"><span>💰</span><span>Revenue Intel</span></div>
-        <div class="nav-item" onclick="goIntel('intel-inventory',this)"><span>📦</span><span>Inventory Intel</span></div>
-        <div class="nav-item" onclick="goIntel('intel-unit-econ',this)"><span>📈</span><span>Unit Economics</span></div>
-        <div class="nav-item" onclick="goIntel('intel-flashsale',this)"><span>⚡</span><span>Flash Sale ROI</span></div>
-        <div class="nav-item" onclick="goIntel('intel-cashflow',this)"><span>🔮</span><span>Cash Flow</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-dashboard',this)"><span>🧠</span><span>Intel Dashboard</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-sku',this)"><span>🔬</span><span>SKU Breakdown</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-revenue',this)"><span>💰</span><span>Revenue Intel</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-inventory',this)"><span>📦</span><span>Inventory Intel</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-unit-econ',this)"><span>📈</span><span>Unit Economics</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-flashsale',this)"><span>⚡</span><span>Flash Sale ROI</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-cashflow',this)"><span>🔮</span><span>Cash Flow</span></div>
       </div>
     </div>
 
@@ -958,68 +958,88 @@
      INTELLIGENCE MODULE PAGES
 ══════════════════════════════════════════════ -->
 
-<!-- Intel Dashboard -->
+<!-- ═══════════════════════════════════════════════════
+     INTELLIGENCE — SINGLE PAGE WITH INTERNAL TAB NAV
+════════════════════════════════════════════════════ -->
 <div class="page" id="page-intel-dashboard">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+
+  <!-- Intel Tab Navigation Bar -->
+  <div class="intel-tab-bar">
+    <button class="intel-tab active" id="itab-intel-dashboard"  onclick="goIntel('intel-dashboard',this)">
+      <span class="intel-tab-icon">🧠</span><span class="intel-tab-label">Dashboard</span>
+    </button>
+    <button class="intel-tab" id="itab-intel-sku"       onclick="goIntel('intel-sku',this)">
+      <span class="intel-tab-icon">🔬</span><span class="intel-tab-label">SKU Breakdown</span>
+    </button>
+    <button class="intel-tab" id="itab-intel-revenue"   onclick="goIntel('intel-revenue',this)">
+      <span class="intel-tab-icon">💰</span><span class="intel-tab-label">Revenue Intel</span>
+    </button>
+    <button class="intel-tab" id="itab-intel-inventory" onclick="goIntel('intel-inventory',this)">
+      <span class="intel-tab-icon">📦</span><span class="intel-tab-label">Inventory Intel</span>
+    </button>
+    <button class="intel-tab" id="itab-intel-unit-econ" onclick="goIntel('intel-unit-econ',this)">
+      <span class="intel-tab-icon">📈</span><span class="intel-tab-label">Unit Economics</span>
+    </button>
+    <button class="intel-tab" id="itab-intel-flashsale" onclick="goIntel('intel-flashsale',this)">
+      <span class="intel-tab-icon">⚡</span><span class="intel-tab-label">Flash Sale ROI</span>
+    </button>
+    <button class="intel-tab" id="itab-intel-cashflow"  onclick="goIntel('intel-cashflow',this)">
+      <span class="intel-tab-icon">🔮</span><span class="intel-tab-label">Cash Flow</span>
+    </button>
+  </div>
+
+  <!-- Intel Sub-Pages (shown/hidden by goIntel) -->
+  <div class="intel-subpage active" id="ipage-intel-dashboard">
     <div id="intel-dash-content">
       <div class="intel-empty">Memuat Intelligence Dashboard...</div>
     </div>
   </div>
-</div>
 
-<!-- SKU Breakdown Analisis -->
-<div class="page" id="page-intel-sku">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+  <div class="intel-subpage" id="ipage-intel-sku">
     <div id="intel-sku-content">
       <div class="intel-empty">Memuat SKU Analisis...</div>
     </div>
   </div>
-</div>
 
-<!-- Revenue Intelligence -->
-<div class="page" id="page-intel-revenue">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+  <div class="intel-subpage" id="ipage-intel-revenue">
     <div id="intel-revenue-content">
       <div class="intel-empty">Memuat Revenue Intelligence...</div>
     </div>
   </div>
-</div>
 
-<!-- Inventory Intelligence -->
-<div class="page" id="page-intel-inventory">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+  <div class="intel-subpage" id="ipage-intel-inventory">
     <div id="intel-inventory-content">
       <div class="intel-empty">Memuat Inventory Intelligence...</div>
     </div>
   </div>
-</div>
 
-<!-- Unit Economics -->
-<div class="page" id="page-intel-unit-econ">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+  <div class="intel-subpage" id="ipage-intel-unit-econ">
     <div id="intel-unit-econ-content">
       <div class="intel-empty">Memuat Unit Economics...</div>
     </div>
   </div>
-</div>
 
-<!-- Flash Sale ROI Calculator -->
-<div class="page" id="page-intel-flashsale">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+  <div class="intel-subpage" id="ipage-intel-flashsale">
     <div id="intel-flashsale-content">
       <div class="intel-empty">Memuat Flash Sale Calculator...</div>
     </div>
   </div>
-</div>
 
-<!-- Cash Flow Projection -->
-<div class="page" id="page-intel-cashflow">
-  <div class="card" style="padding:0;border:none;background:transparent;box-shadow:none;">
+  <div class="intel-subpage" id="ipage-intel-cashflow">
     <div id="intel-cashflow-content">
       <div class="intel-empty">Memuat Cash Flow Projection...</div>
     </div>
   </div>
+
 </div>
+
+<!-- Ghost pages untuk backward-compat dengan sidebar nav -->
+<div id="page-intel-sku"       style="display:none!important"></div>
+<div id="page-intel-revenue"   style="display:none!important"></div>
+<div id="page-intel-inventory" style="display:none!important"></div>
+<div id="page-intel-unit-econ" style="display:none!important"></div>
+<div id="page-intel-flashsale" style="display:none!important"></div>
+<div id="page-intel-cashflow"  style="display:none!important"></div>
 
 <!-- ══════ SCRIPTS — ORDER MATTERS ══════ -->
 <script src="app_core.js"></script>

@@ -854,3 +854,150 @@ html{scroll-behavior:smooth;}
 
 /* ── btn-sm override ── */
 .btn.btn-sm { padding:5px 10px; font-size:11px; }
+
+/* ═══════════════════════════════════════════════════════
+   INTEL TAB BAR — Internal navigation inside Intelligence page
+   ════════════════════════════════════════════════════════ */
+
+/* Tab bar container */
+.intel-tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 0 18px 0;
+  margin-bottom: 4px;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+
+/* Individual tab button */
+.intel-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 30px;
+  background: var(--card);
+  color: var(--charcoal);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+.intel-tab:hover {
+  border-color: var(--brown);
+  color: var(--brown);
+  background: #faf7f3;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(92,61,46,.1);
+}
+.intel-tab.active {
+  background: var(--brown);
+  border-color: var(--brown);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(92,61,46,.25);
+}
+.intel-tab-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.intel-tab-label {
+  letter-spacing: 0.1px;
+}
+
+/* Sub-pages — hidden by default */
+.intel-subpage {
+  display: none;
+  animation: fadeIn .2s ease;
+  padding-top: 18px;
+}
+.intel-subpage.active {
+  display: block;
+}
+
+/* ── Responsive tab bar ── */
+@media (max-width: 768px) {
+  .intel-tab-bar {
+    gap: 5px;
+    padding: 10px 0 14px 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .intel-tab-bar::-webkit-scrollbar { display: none; }
+  .intel-tab {
+    padding: 7px 11px;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .intel-tab-label {
+    display: none;
+  }
+  .intel-tab-icon {
+    font-size: 16px;
+  }
+  .intel-tab.active .intel-tab-label {
+    display: inline;
+  }
+}
+@media (max-width: 480px) {
+  .intel-tab {
+    padding: 7px 10px;
+  }
+}
+
+/* ── Fix intel-card margin di dalam subpage ── */
+.intel-subpage .intel-card {
+  margin-bottom: 16px;
+}
+.intel-subpage > div > .intel-card:first-child,
+.intel-subpage > .intel-card:first-child {
+  margin-top: 0;
+}
+
+/* ── mini-bar util (Revenue Intel table) ── */
+.mini-bar {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  background: #f0ebe3;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 6px;
+  overflow: hidden;
+}
+
+/* ── Badge variants ── */
+.badge { display:inline-block; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700; }
+.badge.bg { background:#d1fae5; color:#065f46; }
+.badge.bo { background:#fef3c7; color:#92400e; }
+.badge.br { background:#fee2e2; color:#991b1b; }
+.badge.bd { background:#f3f4f6; color:#374151; }
+
+/* ── Channel tag ── */
+.chtag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+.chtag.ch-s { background:#ee4d2d20; color:#ee4d2d; }
+.chtag.ch-l { background:#0f146b20; color:#0f146b; }
+.chtag.ch-t { background:#00000015; color:#333; }
+.chtag.ch-o { background:#5A7A6A20; color:#5A7A6A; }
+
+/* ── inv-sku-row border-left ── */
+.inv-sku-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-left: 4px solid #C9A84C;
+  background: #faf7f3;
+  border-radius: 0 10px 10px 0;
+  margin-bottom: 10px;
+}
