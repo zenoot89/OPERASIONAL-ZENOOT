@@ -422,11 +422,7 @@ let DB = {
   ],
   restock: [],
   channel: [
-    {nama:'SHP.ZENOOT', platform:'Shopee', status:'Aktif'},
-    {nama:'SHP.ALLEY',  platform:'Shopee', status:'Aktif'},
-    {nama:'LAZ.ZENOOT', platform:'Lazada', status:'Aktif'},
-    {nama:'TT.ALLEY',   platform:'TikTok Shop', status:'Aktif'},
-    {nama:'OFFLEN',     platform:'Offline', status:'Aktif'},
+    // Channel diambil dari Supabase — tidak ada hardcode
   ],
 };
 
@@ -831,11 +827,9 @@ function populateJInduk() {
 function _normalizeCh(s){ return (s||'').trim().replace(/\.\s+/g,'.').toUpperCase(); }
 
 function _syncChannelDropdowns() {
-  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama));
-  const defaultCh = ['SHP.ZENOOT','SHP.ALLEY','SHP.ELENZ','LAZ.ZENOOT','TT.ALLEY','OFFLEN'];
-  // Gabungkan: dari DB dulu, tambahkan default yang belum ada
-  const allCh = [...new Set([...channels, ...defaultCh])];
-  const opts = allCh.map(c=>`<option>${c}</option>`).join('');
+  // SINGLE SOURCE OF TRUTH: hanya dari DB.channel (Supabase)
+  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama)).sort();
+  const opts = channels.map(c=>`<option>${c}</option>`).join('');
   // Update semua dropdown channel
   ['j-ch','ej-ch'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
@@ -886,9 +880,8 @@ function resetJurnalFilter(){
 function _populateJurnalChannelFilter(){
   const sel=document.getElementById('j-fil-ch'); if(!sel)return;
   const cur=sel.value;
-  const fromDB=(DB.channel||[]).map(c=>_normalizeCh(c.nama));
-  const fromJurnal=DB.jurnal.map(j=>_normalizeCh(j.ch));
-  const channels=[...new Set([...fromDB,...fromJurnal])].filter(Boolean).sort();
+  // SINGLE SOURCE: hanya dari DB.channel (Supabase)
+  const channels=(DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama)).sort();
   sel.innerHTML='<option value="">Semua Channel</option>'+channels.map(c=>`<option>${c}</option>`).join('');
   if(cur)sel.value=cur;
 }
