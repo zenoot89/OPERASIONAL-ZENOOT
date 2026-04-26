@@ -439,36 +439,35 @@ function getStokStatus3(akhir,safety){
   return 'Aman';
 }
 
+function _updateIndukDropdown(supVal, resetCur) {
+  const indukSel=document.getElementById('stok-fil-induk');
+  if(!indukSel) return;
+  const cur = resetCur ? '' : indukSel.value;
+  const norm = s => (s||'').toUpperCase().trim();
+  const filtered = supVal
+    ? DB.produk.filter(p => norm(p.suplaier) === norm(supVal))
+    : DB.produk;
+  const indukList=[...new Set(filtered.map(p=>p.induk))].sort();
+  // Fallback: kalau tidak ada hasil, tetap tampilkan semua
+  const finalList = indukList.length ? indukList : [...new Set(DB.produk.map(p=>p.induk))].sort();
+  indukSel.innerHTML='<option value="">Semua Produk</option>'+finalList.map(s=>`<option>${s}</option>`).join('');
+  if(cur && finalList.includes(cur)) indukSel.value=cur;
+  else indukSel.value='';
+}
 function populateStokFilters() {
   const suppliers=[...new Set(DB.produk.map(p=>p.suplaier||'').filter(Boolean))].sort();
   const supSel=document.getElementById('stok-fil-supplier');
   if(supSel){
     const cur=supSel.value;
     supSel.innerHTML='<option value="">Semua Supplier</option>'+suppliers.map(s=>`<option>${s}</option>`).join('');
-    if(cur) supSel.value=cur; // preserve pilihan
-  }
-  const indukList=[...new Set(DB.produk.map(p=>p.induk))].sort();
-  const indukSel=document.getElementById('stok-fil-induk');
-  if(indukSel){
-    const cur=indukSel.value;
-    indukSel.innerHTML='<option value="">Semua Produk</option>'+indukList.map(s=>`<option>${s}</option>`).join('');
-    if(cur) indukSel.value=cur; // preserve pilihan
+    if(cur) supSel.value=cur;
+    // Update induk sesuai supplier aktif (tanpa reset)
+    _updateIndukDropdown(cur, false);
   }
 }
 function onSupplierFilterChange() {
-  const supVal = (document.getElementById('stok-fil-supplier')||{}).value || '';
-  const indukSel = document.getElementById('stok-fil-induk');
-  if (indukSel) {
-    const filtered = supVal
-      ? DB.produk.filter(p => (p.suplaier||'') === supVal)
-      : DB.produk;
-    const indukList = [...new Set(filtered.map(p => p.induk))].sort();
-    const cur = indukSel.value;
-    indukSel.innerHTML = '<option value="">Semua Produk</option>' + indukList.map(s=>`<option>${s}</option>`).join('');
-    // Reset pilihan induk kalau supplier berubah
-    if (!indukList.includes(cur)) indukSel.value = '';
-    else indukSel.value = cur;
-  }
+  const supVal=(document.getElementById('stok-fil-supplier')||{}).value||'';
+  _updateIndukDropdown(supVal, true); // reset induk saat ganti supplier
   renderStok();
 }
 function applyStokFilter() { renderStok(); }
@@ -481,10 +480,11 @@ function renderStok() {
   const supFil=(document.getElementById('stok-fil-supplier')||{}).value||'';
   const indukFil=(document.getElementById('stok-fil-induk')||{}).value||'';
   const statusFil=(document.getElementById('stok-fil-status')||{}).value||'';
+  const normStr = s => (s||'').toUpperCase().trim();
   let rows=DB.stok.filter(r=>{
     if (q && !r.var.toLowerCase().includes(q) && !getIndukOf(r.var).toLowerCase().includes(q)) return false;
-    if (supFil) { const p=DB.produk.find(x=>x.var===r.var); if(!p||(p.suplaier||'')!==supFil) return false; }
-    if (indukFil) { const p=DB.produk.find(x=>x.var===r.var); if(!p||p.induk!==indukFil) return false; }
+    if (supFil) { const p=DB.produk.find(x=>normStr(x.var)===normStr(r.var)); if(!p||normStr(p.suplaier)!==normStr(supFil)) return false; }
+    if (indukFil) { const p=DB.produk.find(x=>normStr(x.var)===normStr(r.var)); if(!p||p.induk!==indukFil) return false; }
     if (statusFil) { const s=getStokStatus3(getAkhir(r),r.safety||4); if(s!==statusFil) return false; }
     return true;
   });
@@ -667,16 +667,16 @@ function renderLowStock() {
       <span style="background:#EFF7F3;color:#2D6A4F;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">📦 Total: ${lows.length} SKU</span>
       <span style="font-size:10px;color:var(--dusty);align-self:center;">* Hanya SKU dengan riwayat penjualan</span>
     </div>
-    <div style="max-height:600px;overflow-y:auto;padding-right:4px;">
+    <div style="max-height:520px;overflow-y:auto;padding-right:4px;">
       ${restockRows.map(({ r, akhir, restockSaran, induk, statusColor, statusLabel, totalTerjual }) => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;margin-bottom:6px;background:white;border-radius:10px;border:1px solid var(--border);border-left:3px solid ${statusColor};">
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.var}</div>
-            <div style="font-size:10px;color:var(--dusty);">${induk} · Terjual ${totalTerjual} pcs</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 14px;margin-bottom:7px;background:white;border-radius:10px;border:1px solid var(--border);border-left:4px solid ${statusColor};">
+          <div style="flex:1;min-width:0;margin-right:10px;">
+            <div style="font-weight:700;font-size:13px;white-space:normal;word-break:break-word;line-height:1.35;">${r.var}</div>
+            <div style="font-size:11px;color:var(--dusty);margin-top:3px;">${induk} · Terjual ${totalTerjual} pcs</div>
           </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:8px;">
-            <div style="font-weight:700;color:${statusColor};font-size:12px;">${statusLabel}</div>
-            <div style="font-size:10px;color:var(--dusty);">Saran: +${restockSaran} pcs</div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-weight:800;color:${statusColor};font-size:13px;">${statusLabel}</div>
+            <div style="font-size:11px;color:var(--dusty);margin-top:2px;">Saran: +${restockSaran} pcs</div>
           </div>
         </div>`).join('')}
     </div>`;

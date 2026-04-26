@@ -184,10 +184,11 @@
      PAGE: RE-STOCK
 ════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-restock">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+  <!-- Layout: 65% kiri (SKU Restock) : 35% kanan (Input + Log) -->
+  <div class="restock-grid">
 
-    <!-- KIRI — SKU Stok Rendah (full height, semua SKU dengan riwayat jual) -->
-    <div class="card" style="height:100%;">
+    <!-- KIRI 65% — SKU Perlu Restock -->
+    <div class="card restock-left">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
         <div class="card-title" style="margin:0">⚠️ SKU Perlu Restock</div>
         <span id="low-stock-counter" style="font-size:11px;color:var(--dusty);font-weight:600;"></span>
@@ -198,14 +199,14 @@
       <div id="low-stock-list"></div>
     </div>
 
-    <!-- KANAN — Input + Log Restock stacked vertikal -->
-    <div style="display:flex;flex-direction:column;gap:16px;">
+    <!-- KANAN 35% — Input + Log Restock -->
+    <div class="restock-right">
 
       <!-- Input Stok Masuk -->
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <div class="card-title" style="margin:0">➕ Input Stok Masuk</div>
-          <button class="btn btn-o" style="padding:8px 16px;font-size:13px;font-weight:700;" onclick="openModal('modal-stok-massal')">📋 Input Massal</button>
+          <button class="btn btn-o" style="padding:6px 12px;font-size:12px;font-weight:700;" onclick="openModal('modal-stok-massal')">📋 Massal</button>
         </div>
         <div class="form-row">
           <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="rs-tgl"></div>
@@ -228,7 +229,7 @@
       </div>
 
       <!-- Log Restock -->
-      <div class="card">
+      <div class="card" style="margin-top:16px;">
         <div class="card-title">📋 Log Restock</div>
         <div class="tbl-wrap" style="margin:0;max-height:380px;overflow-y:auto;">
           <table>
