@@ -5,52 +5,172 @@
 ════════════════════════════════════════════════════════════════════ */
 
 // ================================================================
-// CLOUD STORAGE — Google Apps Script
+// SUPABASE CONFIG — ganti 2 nilai ini setelah buat project
 // ================================================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxeSFiZ8FTBxFn2qibfWjBiNley0jVEJthvdSGQ_mPCmvTZBJcZy1iQ7VjdrAsb9d-T/exec';
-const DB_KEY  = 'zenot_v5_cache';
+const SUPABASE_URL = 'https://wsvsvmfclrlkllryamma.supabase.co';   // contoh: https://abcxyz.supabase.co
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzdnN2bWZjbHJsa2xscnlhbW1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMDc5OTQsImV4cCI6MjA5Mjc4Mzk5NH0.6btOTqkTri8te6eURWmUcQDFIfCdVA210Gw_Wx5UomA';       // dari Settings > API
 
-/* ================================================================
-   DATA LAYER ABSTRACTION — Supabase Ready
-   Untuk migrasi ke Supabase: ganti hanya isi fungsi di bawah ini.
-   Logika aplikasi lain tidak perlu diubah sama sekali.
-================================================================ */
+// ================================================================
+// DATA LAYER — Supabase Implementation
+// ================================================================
 const DataLayer = {
-  // Simpan seluruh DB ke cloud
+
+  // Helper: base headers
+  _headers() {
+    return {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=minimal'
+    };
+  },
+
+  // Helper: fetch dari satu tabel
+  async _getTable(table) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id.asc`, {
+      headers: { ...this._headers(), 'Prefer': 'return=representation' }
+    });
+    if (!res.ok) throw new Error(`Gagal fetch ${table}: ${res.status}`);
+    return res.json();
+  },
+
+  // Helper: upsert (insert or update by unique key)
+  async _upsert(table, rows, onConflict) {
+    if (!rows || rows.length === 0) return;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+      method: 'POST',
+      headers: { ...this._headers(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows)
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Gagal upsert ${table}: ${err}`);
+    }
+  },
+
+  // Helper: hapus semua lalu insert ulang (untuk data yang tidak punya unique key jelas)
+  async _replaceAll(table, rows) {
+    // Delete all
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=gte.0`, {
+      method: 'DELETE',
+      headers: this._headers()
+    });
+    if (!rows || rows.length === 0) return;
+    // Insert fresh
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { ...this._headers(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify(rows)
+    });
+    if (!res.ok) throw new Error(`Gagal insert ${table}`);
+  },
+
+  // ── SAVE: kirim semua DB ke Supabase ──
   async save(data) {
     try {
-      await fetch(GAS_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data) });
+      // Produk — upsert by var (unique)
+      const produkRows = (data.produk || []).map(p => ({
+        induk: p.induk, var: p.var, hpp: p.hpp || 0,
+        suplaier: p.suplaier || '', npm: p.npm || 10,
+        jual: p.jual || 0, pasang: p.pasang || 0,
+        reseller: p.reseller || 0, gm: p.gm || 0
+      }));
+      await this._upsert('produk', produkRows, 'var');
+
+      // Stok — upsert by var (unique)
+      const stokRows = (data.stok || []).map(s => ({
+        var: s.var, awal: s.awal || 0, masuk: s.masuk || 0,
+        keluar: s.keluar || 0, hpp: s.hpp || 0, safety: s.safety || 4,
+        updated_at: new Date().toISOString()
+      }));
+      await this._upsert('stok', stokRows, 'var');
+
+      // Channel — upsert by nama (unique)
+      const channelRows = (data.channel || []).map(c => ({
+        nama: c.nama, platform: c.platform, status: c.status || 'Aktif'
+      }));
+      await this._upsert('channel', channelRows, 'nama');
+
+      // Jurnal & Restock — replace all (tidak ada unique constraint natural)
+      const jurnalRows = (data.jurnal || []).map(j => ({
+        tgl: j.tgl, ch: j.ch, var: j.var,
+        qty: j.qty || 1, harga: j.harga || 0, hpp: j.hpp || 0
+      }));
+      await this._replaceAll('jurnal', jurnalRows);
+
+      const restockRows = (data.restock || []).map(r => ({
+        tgl: r.tgl, var: r.var, supplier: r.supplier || '',
+        qty: r.qty || 0, catatan: r.catatan || ''
+      }));
+      await this._replaceAll('restock', restockRows);
+
       return true;
-    } catch(e) { return false; }
+    } catch(e) {
+      console.error('[DataLayer.save]', e.message);
+      return false;
+    }
   },
-  // Ambil data dari cloud
+
+  // ── FETCH: ambil semua dari Supabase → format DB ──
   async fetch() {
-    return new Promise((resolve) => {
-      const callbackName = 'zenot_cb_' + Date.now();
-      const timeout = setTimeout(() => { delete window[callbackName]; if(script.parentNode)script.parentNode.removeChild(script); resolve(null); }, 8000);
-      window[callbackName] = function(data) { clearTimeout(timeout);delete window[callbackName];if(script.parentNode)script.parentNode.removeChild(script);resolve(data); };
-      const script = document.createElement('script');
-      script.src = GAS_URL + '?callback=' + callbackName + '&t=' + Date.now();
-      script.onerror = () => { clearTimeout(timeout);delete window[callbackName];resolve(null); };
-      document.head.appendChild(script);
-    });
+    try {
+      const [produk, stok, jurnal, restock, channel] = await Promise.all([
+        this._getTable('produk'),
+        this._getTable('stok'),
+        this._getTable('jurnal'),
+        this._getTable('restock'),
+        this._getTable('channel'),
+      ]);
+
+      // Map balik ke format DB yang dipakai app
+      return {
+        ok: true,
+        data: {
+          produk: produk.map(p => ({
+            induk: p.induk, var: p.var, hpp: Number(p.hpp),
+            suplaier: p.suplaier, npm: Number(p.npm),
+            jual: Number(p.jual), pasang: Number(p.pasang),
+            reseller: Number(p.reseller), gm: Number(p.gm)
+          })),
+          stok: stok.map(s => ({
+            var: s.var, awal: s.awal, masuk: s.masuk,
+            keluar: s.keluar, hpp: Number(s.hpp), safety: s.safety
+          })),
+          jurnal: jurnal
+            .sort((a, b) => new Date(b.tgl) - new Date(a.tgl)) // urutkan terbaru dulu
+            .map(j => ({
+              tgl: j.tgl, ch: j.ch, var: j.var,
+              qty: j.qty, harga: Number(j.harga), hpp: Number(j.hpp)
+            })),
+          restock: restock
+            .sort((a, b) => new Date(b.tgl) - new Date(a.tgl))
+            .map(r => ({
+              tgl: r.tgl, var: r.var, supplier: r.supplier,
+              qty: r.qty, catatan: r.catatan
+            })),
+          channel: channel.map(c => ({
+            nama: c.nama, platform: c.platform, status: c.status
+          }))
+        }
+      };
+    } catch(e) {
+      console.error('[DataLayer.fetch]', e.message);
+      return null;
+    }
   },
-  // Simpan ke localStorage (cache lokal)
+
+  // Cache lokal (tetap dipakai sebagai fallback offline)
   saveLocal(data) {
     try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
   },
-  // Ambil dari localStorage
   loadLocal() {
     try { const raw = localStorage.getItem(DB_KEY); return raw ? JSON.parse(raw) : null; } catch(e) { return null; }
   },
-  // Hapus cache lokal
   clearLocal() {
     try { localStorage.removeItem(DB_KEY); } catch(e) {}
   }
 };
-/* ================================================================
-   END DATA LAYER — untuk upgrade Supabase ganti isi DataLayer saja
-================================================================ */
+
 
 let _cloudConnected = false;
 let _saveQueue = null;
