@@ -267,7 +267,7 @@ function _normalizeJurnalChannel() {
 async function cleanChannelData() {
   _normalizeJurnalChannel();
   saveDB();
-  toast('✅ Data channel dibersihkan!');
+  // notif dihilangkan — proses berjalan diam-diam
 }
 
 function _applyCloudData(d) {
