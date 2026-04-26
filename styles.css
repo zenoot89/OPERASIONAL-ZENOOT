@@ -560,12 +560,57 @@ html{scroll-behavior:smooth;}
   .sidebar{
     transform:translateX(-100%) !important;
     transition:transform .28s cubic-bezier(.4,0,.2,1);
-    width:260px!important;
+    width:270px!important;
     z-index:400;
-    box-shadow:4px 0 24px rgba(0,0,0,.35);
+    box-shadow:6px 0 28px rgba(0,0,0,.45);
+    /* Pastikan sidebar penuh tinggi dan footer tidak terpotong */
+    height:100vh!important;
+    display:flex!important;
+    flex-direction:column!important;
+    overflow:hidden!important;
   }
   .sidebar.open{transform:translateX(0) !important;}
   .sidebar.collapsed{transform:translateX(-100%) !important;}
+
+  /* Nav scroll — flex:1 agar footer selalu di bawah */
+  .sidebar .nav-scroll{
+    flex:1!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:0!important;
+  }
+
+  /* Garis separator antar section (seperti laptop/Shopee Seller Center) */
+  .sidebar .nav-accordion{
+    border-bottom:1px solid rgba(255,255,255,.07);
+    margin-bottom:0;
+  }
+  .sidebar .nav-sec{
+    border-top:1px solid rgba(255,255,255,.07);
+    margin-top:0;
+  }
+  .sidebar .nav-sec:first-child{
+    border-top:none;
+  }
+  .sidebar .nav-acc-header{
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+
+  /* Footer sidebar — selalu kelihatan di bawah, tidak terpotong */
+  .sidebar-footer-bar{
+    flex-shrink:0!important;
+    border-top:1px solid rgba(255,255,255,.10)!important;
+    background:var(--charcoal)!important;
+    padding:12px 14px!important;
+    display:flex!important;
+    align-items:center!important;
+    min-height:52px;
+  }
+  .sidebar-footer-bar > div{padding:0!important;flex:1;}
+  .sidebar-toggle-btn{display:none!important;}
+
+  /* Overlay smooth */
   .sidebar-overlay{
     transition:opacity .28s ease;
     opacity:0;
@@ -573,20 +618,26 @@ html{scroll-behavior:smooth;}
   }
   .sidebar-overlay.open{display:block;opacity:1;pointer-events:auto;}
   .hamburger-fixed{display:flex!important;}
-  .sidebar-toggle-btn{display:none;}
 
   /* Main area — full width mobile */
   .main{
     margin-left:0!important;
     padding:20px 14px;
     padding-top:60px;
-    padding-bottom:60px;
+    padding-bottom:80px;
     width:100%;
     overflow-x:hidden;
     -webkit-overflow-scrolling:touch;
     touch-action:pan-y;
   }
   .main.expanded{margin-left:0!important;}
+
+  /* Cloud indicator tidak menghalangi konten */
+  #cloud-indicator-fixed{
+    left:auto!important;
+    right:14px!important;
+    bottom:72px!important;
+  }
 
   /* Fix horizontal scroll — semua konten tidak overflow */
   body{overflow-x:hidden;overflow-y:auto;touch-action:pan-y;}
@@ -607,8 +658,7 @@ html{scroll-behavior:smooth;}
 
   /* Restock layout — handled by .restock-grid CSS */
 
-  /* Cloud indicator */
-  #cloud-indicator-fixed{left:8px;right:auto;bottom:8px;font-size:10px;}
+  /* Cloud indicator — sudah diset di blok sidebar mobile di atas */
 
   /* Form rows stack */
   .form-row{flex-direction:column;gap:10px;}
