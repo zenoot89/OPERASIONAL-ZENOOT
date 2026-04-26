@@ -620,19 +620,23 @@ function renderStok() {
     return true;
   });
   if (_stokSortCol) {
-    rows=rows.sort((a,b)=>{
+    rows=rows.sort((a,b)=>{\
       const va=_stokSortCol==='akhir'?getAkhir(a):(a.keluar||0);
       const vb=_stokSortCol==='akhir'?getAkhir(b):(b.keluar||0);
       return (va-vb)*_stokSortDir;
     });
   }
-  document.getElementById('stok-body').innerHTML=rows.length?rows.map((r,i)=>{
+  // Update sort arrow Shopee style
+  const arrowEl = document.getElementById('sort-arrow-akhir');
+  if (arrowEl) arrowEl.textContent = _stokSortCol==='akhir' ? (_stokSortDir===1 ? '▲' : '▼') : '↕';
+  document.getElementById('stok-body').innerHTML=rows.length?rows.map((r,i)=>{\
     const akhir=getAkhir(r), induk=getIndukOf(r.var);
     const p=DB.produk.find(x=>x.var===r.var);
     return `<tr>
       <td class="mono">${i+1}</td>
       <td><strong>${induk}</strong></td>
       <td>${r.var}</td>
+      <td>${stokStatus(akhir,r.safety||4)}</td>
       <td class="mono" style="text-align:center;font-weight:700">${akhir}</td>
       <td class="mono" style="text-align:center">${r.awal||0}</td>
       <td class="mono" style="text-align:center;color:var(--sage)">${r.masuk||0}</td>
@@ -640,7 +644,6 @@ function renderStok() {
       <td class="mono">${fmt(r.hpp)}</td>
       <td class="mono">${fmt(akhir*r.hpp)}</td>
       <td style="font-size:11px;color:var(--dusty)">${p?p.suplaier||'—':'—'}</td>
-      <td>${stokStatus(akhir,r.safety||4)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-o btn-sm" onclick="openEditStok(${DB.stok.indexOf(r)})">✏️</button>
         <button class="btn btn-d btn-sm" onclick="hapusStok(${DB.stok.indexOf(r)})">🗑</button>
