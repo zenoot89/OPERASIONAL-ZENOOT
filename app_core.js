@@ -749,8 +749,8 @@ function resetJurnalFilter(){
 function _populateJurnalChannelFilter(){
   const sel=document.getElementById('j-fil-ch'); if(!sel)return;
   const cur=sel.value;
-  const fromDB=(DB.channel||[]).map(c=>c.nama);
-  const fromJurnal=DB.jurnal.map(j=>j.ch);
+  const fromDB=(DB.channel||[]).map(c=>c.nama.trim());
+  const fromJurnal=DB.jurnal.map(j=>j.ch?j.ch.trim():'');
   const channels=[...new Set([...fromDB,...fromJurnal])].filter(Boolean).sort();
   sel.innerHTML='<option value="">Semua Channel</option>'+channels.map(c=>`<option>${c}</option>`).join('');
   if(cur)sel.value=cur;
@@ -761,7 +761,7 @@ function renderJurnal() {
   const q=jurnalQ.toLowerCase();
   const rows=DB.jurnal.filter(r=>{
     if(q && !r.var.toLowerCase().includes(q) && !r.ch.toLowerCase().includes(q)) return false;
-    if(jurnalChFil && r.ch !== jurnalChFil) return false;
+    if(jurnalChFil && (r.ch||'').trim() !== jurnalChFil.trim()) return false;
     if(jurnalDateFrom && r.tgl < jurnalDateFrom) return false;
     if(jurnalDateTo && r.tgl > jurnalDateTo) return false;
     return true;

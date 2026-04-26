@@ -273,10 +273,10 @@
       <div style="display:flex;flex-direction:column;gap:6px;">
         <select class="sel" id="j-fil-ch" style="height:36px;width:200px;" onchange="filterJurnalChannel()"><option value="">Semua Channel</option></select>
         <div style="display:flex;align-items:center;gap:4px;">
+          <button class="btn btn-sm" onclick="resetJurnalFilter()" style="height:36px;padding:0 12px;flex-shrink:0;background:rgba(201,168,76,0.18);border:1px solid rgba(201,168,76,0.5);color:var(--brown);">↺ Reset</button>
           <input class="inp" type="date" id="j-fil-from" style="height:36px;width:95px;" onchange="filterJurnalDate()">
           <span style="color:var(--dusty);font-size:12px;font-weight:600;">–</span>
           <input class="inp" type="date" id="j-fil-to" style="height:36px;width:95px;" onchange="filterJurnalDate()">
-          <button class="btn btn-sm" onclick="resetJurnalFilter()" style="height:36px;padding:0 12px;flex-shrink:0;background:rgba(201,168,76,0.18);border:1px solid rgba(201,168,76,0.5);color:var(--brown);">↺ Reset</button>
         </div>
       </div>
 
