@@ -882,29 +882,70 @@ function renderLowStock() {
 // JURNAL
 // ================================================================
 function populateJInduk() {
-  const indukList=[...new Set(DB.produk.map(p=>p.induk))];
-  document.getElementById('j-sku-induk').innerHTML=indukList.map(s=>`<option>${s}</option>`).join('');
-  populateJVariasi();
-  // Sync channel dropdown dari DB.channel
-  _syncChannelDropdowns();
+  const indukList=[...new Set(DB.produk
+    .filter(p=>(p.status_produk||'aktif')!=='arsip')
+    .map(p=>p.induk))].sort();
+  document.getElementById('j-sku-induk').innerHTML=
+    indukList.map(s=>`<option>${s}</option>`).join('');
+  onJIndukChange();
 }
 
 function _normalizeCh(s){ return (s||'').trim().replace(/\.\s+/g,'.').toUpperCase(); }
 
+// Cascade: pilih induk → filter channel & variasi berdasarkan toko
+function onJIndukChange() {
+  const induk = document.getElementById('j-sku-induk')?.value;
+  if (!induk) return;
+
+  // Ambil semua variasi dari induk ini
+  const produkInduk = DB.produk.filter(p=>p.induk===induk && (p.status_produk||'aktif')!=='arsip');
+
+  // Kumpulkan semua toko yang punya produk induk ini
+  const allChannels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama));
+  const tokoSet = new Set();
+  produkInduk.forEach(p => {
+    const t = p.toko||'semua';
+    if (t==='semua') { allChannels.forEach(ch=>tokoSet.add(ch)); }
+    else { t.split(',').map(x=>x.trim()).forEach(ch=>tokoSet.add(_normalizeCh(ch))); }
+  });
+
+  // Update channel dropdown — hanya toko yang punya produk ini
+  const chEl = document.getElementById('j-ch');
+  if (chEl) {
+    const cur = chEl.value;
+    const validCh = allChannels.filter(ch=>tokoSet.has(ch));
+    chEl.innerHTML = validCh.length
+      ? validCh.map(c=>`<option>${c}</option>`).join('')
+      : '<option value="">— Produk belum di-assign ke toko —</option>';
+    if ([...chEl.options].find(o=>o.value===cur)) chEl.value=cur;
+  }
+
+  // Update variasi dropdown
+  const varEl = document.getElementById('j-sku-variasi');
+  if (varEl) {
+    varEl.innerHTML = produkInduk.map(p=>`<option>${p.var}</option>`).join('');
+  }
+}
+
 function _syncChannelDropdowns() {
-  // SINGLE SOURCE OF TRUTH: hanya dari DB.channel (Supabase)
+  // Untuk edit jurnal — tetap tampilkan semua channel
   const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama)).sort();
   const opts = channels.map(c=>`<option>${c}</option>`).join('');
-  // Update semua dropdown channel
-  ['j-ch','ej-ch'].forEach(id=>{
+  ['ej-ch'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
     const cur=el.value;
     el.innerHTML=opts;
-    // Pertahankan pilihan sebelumnya jika masih ada
     if([...el.options].find(o=>o.value===cur)) el.value=cur;
   });
 }
-function populateJVariasi() { const induk=document.getElementById('j-sku-induk').value;document.getElementById('j-sku-variasi').innerHTML=DB.produk.filter(p=>p.induk===induk).map(p=>`<option>${p.var}</option>`).join(''); }
+
+function populateJVariasi() {
+  const induk=document.getElementById('j-sku-induk')?.value;
+  const varEl=document.getElementById('j-sku-variasi');
+  if(varEl && induk) varEl.innerHTML=DB.produk
+    .filter(p=>p.induk===induk&&(p.status_produk||'aktif')!=='arsip')
+    .map(p=>`<option>${p.var}</option>`).join('');
+}
 
 function addJurnal() {
   const tgl=document.getElementById('j-tgl').value;
@@ -1256,12 +1297,13 @@ function doInputMassal() {
 // ════════════════════════════════════════════════════════════════
 // TOKO MANAGER
 // ════════════════════════════════════════════════════════════════
+let _tokoChanged = false;
+
 function renderTokoManager() {
   const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
   const q = (document.getElementById('toko-search')?.value||'').toLowerCase();
   const filterToko = document.getElementById('toko-filter-select')?.value||'semua';
 
-  // Update dropdown toko
   const sel = document.getElementById('toko-filter-select');
   if (sel) {
     const cur = sel.value;
@@ -1269,7 +1311,6 @@ function renderTokoManager() {
       channels.map(c=>`<option value="${c}" ${cur===c?'selected':''}>${c}</option>`).join('');
   }
 
-  // Kartu ringkasan per toko
   const cards = document.getElementById('toko-cards');
   if (cards) {
     cards.innerHTML = channels.map(ch => {
@@ -1282,76 +1323,137 @@ function renderTokoManager() {
       const qty = jurnalToko.reduce((s,j)=>s+j.qty,0);
       return `<div class="card" style="border-left:3px solid var(--brown)">
         <div style="font-weight:700;font-size:15px;margin-bottom:8px">🏪 ${ch}</div>
-        <div style="font-size:12px;color:var(--dusty);margin-bottom:6px">${produkToko.length} produk aktif</div>
+        <div style="font-size:12px;color:var(--dusty);margin-bottom:6px">${produkToko.length} produk</div>
         <div style="font-size:13px">Omset: <strong>${fmt(omset)}</strong></div>
-        <div style="font-size:13px">Terjual: <strong>${qty} pcs</strong> (${jurnalToko.length} transaksi)</div>
+        <div style="font-size:13px">Terjual: <strong>${qty} pcs</strong></div>
       </div>`;
     }).join('');
   }
 
-  // Tabel assign produk
-  let rows = DB.produk.filter(p=>
+  let produkList = DB.produk.filter(p=>
     (p.status_produk||'aktif')!=='arsip' &&
     (p.var.toLowerCase().includes(q) || p.induk.toLowerCase().includes(q))
   );
   if (filterToko!=='semua') {
-    rows = rows.filter(p => {
+    produkList = produkList.filter(p => {
       const t = p.toko||'semua';
       return t==='semua' || t.split(',').map(x=>x.trim()).includes(filterToko);
     });
   }
-  rows.sort((a,b)=>a.induk.localeCompare(b.induk)||a.var.localeCompare(b.var));
+
+  const indukGroups = {};
+  produkList.forEach(p => {
+    if (!indukGroups[p.induk]) indukGroups[p.induk] = [];
+    indukGroups[p.induk].push(p);
+  });
 
   const summary = document.getElementById('toko-summary');
-  if (summary) summary.textContent = `${rows.length} produk`;
+  if (summary) summary.textContent = `${produkList.length} produk · ${Object.keys(indukGroups).length} induk`;
+
+  const thead = document.querySelector('#toko-assign-body')?.closest('table')?.querySelector('thead tr');
+  if (thead) {
+    thead.innerHTML = '<th>#</th><th>SKU Induk</th><th>SKU Variasi</th><th>HPP</th>' +
+      channels.map(ch=>`<th style="font-size:11px;text-align:center">${ch}</th>`).join('');
+  }
 
   const tbody = document.getElementById('toko-assign-body');
   if (!tbody) return;
-  tbody.innerHTML = rows.map((p,i) => {
-    const tokoList = (p.toko||'semua')==='semua' ? channels : (p.toko||'').split(',').map(x=>x.trim());
-    const checks = channels.map(ch =>
-      `<td style="text-align:center"><input type="checkbox" data-var="${p.var}" data-ch="${ch}" ${tokoList.includes(ch)||tokoList.includes('semua')?'checked':''}></td>`
-    ).join('');
-    return `<tr>
-      <td class="mono">${i+1}</td>
-      <td><strong>${p.induk}</strong></td>
-      <td>${p.var}</td>
-      <td class="mono">${fmt(p.hpp)}</td>
-      ${checks}
+
+  let rowNum = 0;
+  let html = '';
+  Object.entries(indukGroups).sort(([a],[b])=>a.localeCompare(b)).forEach(([induk, variants]) => {
+    const indukChecks = channels.map(ch => {
+      const total = variants.length;
+      const checked = variants.filter(p => {
+        const t = p.toko||'semua';
+        return t==='semua' || t.split(',').map(x=>x.trim()).includes(ch);
+      }).length;
+      if (checked === 0) return 'none';
+      if (checked === total) return 'all';
+      return 'partial';
+    });
+
+    html += `<tr style="background:rgba(0,0,0,.04);font-weight:700">
+      <td colspan="3" style="padding:8px 12px">📦 ${induk} <span style="font-weight:400;font-size:12px;color:var(--dusty)">(${variants.length} varian)</span></td>
+      <td></td>
+      ${channels.map((ch,i) => {
+        const state = indukChecks[i];
+        const checked = state==='all' ? 'checked' : '';
+        const style = state==='partial' ? 'style="accent-color:orange"' : '';
+        return `<td style="text-align:center"><input type="checkbox" ${checked} ${style} data-induk="${induk}" data-ch="${ch}" data-type="induk" onchange="onTokoIndukChange(this)"></td>`;
+      }).join('')}
     </tr>`;
-  }).join('') || `<tr><td colspan="${4+channels.length}" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada produk</td></tr>`;
+
+    variants.sort((a,b)=>a.var.localeCompare(b.var)).forEach(p => {
+      rowNum++;
+      const tokoVal = p.toko||'semua';
+      const tokoList = tokoVal==='semua' ? channels : tokoVal.split(',').map(x=>x.trim());
+      html += `<tr>
+        <td class="mono" style="color:var(--dusty)">${rowNum}</td>
+        <td></td>
+        <td style="padding-left:24px;font-size:13px">${p.var}</td>
+        <td class="mono">${fmt(p.hpp)}</td>
+        ${channels.map(ch =>
+          `<td style="text-align:center"><input type="checkbox" data-var="${p.var}" data-ch="${ch}" data-type="var" onchange="onTokoVarChange(this)" ${tokoList.includes(ch)?'checked':''}></td>`
+        ).join('')}
+      </tr>`;
+    });
+  });
+
+  tbody.innerHTML = html || `<tr><td colspan="${4+channels.length}" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada produk</td></tr>`;
+  updateTokoSaveBtn();
+}
+
+function onTokoIndukChange(cb) {
+  const induk = cb.dataset.induk;
+  const ch = cb.dataset.ch;
+  const checked = cb.checked;
+  document.querySelectorAll(`#toko-assign-body input[data-type="var"][data-ch="${ch}"]`).forEach(el => {
+    const p = DB.produk.find(x=>x.var===el.dataset.var);
+    if (p && p.induk===induk) el.checked = checked;
+  });
+  _tokoChanged = true;
+  updateTokoSaveBtn();
+}
+
+function onTokoVarChange() {
+  _tokoChanged = true;
+  updateTokoSaveBtn();
+}
+
+function updateTokoSaveBtn() {
+  const btn = document.getElementById('toko-save-btn');
+  if (!btn) return;
+  btn.textContent = _tokoChanged ? '💾 Simpan Perubahan ●' : '💾 Simpan Semua';
+  btn.style.background = _tokoChanged ? 'var(--brown)' : '';
 }
 
 function saveTokoAssign() {
   const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
-  const checkboxes = document.querySelectorAll('#toko-assign-body input[type=checkbox]');
-  
-  // Group by var
   const tokoMap = {};
-  checkboxes.forEach(cb => {
+  document.querySelectorAll('#toko-assign-body input[data-type="var"]').forEach(cb => {
     const v = cb.dataset.var;
     const ch = cb.dataset.ch;
     if (!tokoMap[v]) tokoMap[v] = [];
     if (cb.checked) tokoMap[v].push(ch);
   });
 
-  // Update DB.produk
   Object.entries(tokoMap).forEach(([varKey, tokoArr]) => {
     const p = DB.produk.find(x=>x.var===varKey);
     if (!p) return;
-    // Kalau semua channel diceklis → simpan 'semua'
     p.toko = tokoArr.length === channels.length ? 'semua' : tokoArr.join(',');
-    // Sync ke Supabase
     if (SUPABASE_URL) {
       DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:p.status_produk||'aktif',toko:p.toko}],'var')
         .catch(e=>console.warn('Sync toko gagal:',e));
     }
   });
 
+  _tokoChanged = false;
   saveDB(); renderTokoManager(); toast('✅ Assignment toko disimpan!');
 }
 
 // CHANNEL PENJUALAN
+
 // ================================================================
 function renderChannel() {
   const body=document.getElementById('channel-body'); if(!body)return;

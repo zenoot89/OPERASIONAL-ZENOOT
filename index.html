@@ -367,7 +367,7 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <strong style="font-size:15px">📋 Assign Produk ke Toko</strong>
-      <button class="btn btn-p btn-sm" onclick="saveTokoAssign()">💾 Simpan Semua</button>
+      <button id="toko-save-btn" class="btn btn-p btn-sm" onclick="saveTokoAssign()">💾 Simpan Semua</button>
     </div>
     <div class="tbl-wrap">
       <table>
@@ -928,23 +928,20 @@
     <div class="modal-hd">➕ Tambah Transaksi <button class="modal-close" onclick="closeModal('modal-tambah-jurnal')">×</button></div>
     <div class="form-row">
       <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="j-tgl"></div>
-      <div class="fg"><label class="lbl">Channel</label>
-        <select class="sel" id="j-ch">
-          <option>SHP.ZENOOT</option><option>SHP. ALLEY</option><option>SHP.ELENZ</option>
-          <option>LAZ.ZENOOT</option><option>TT.ALLEY</option><option>OFFLEN</option>
-        </select>
-      </div>
     </div>
     <div class="form-row">
-      <div class="fg"><label class="lbl">SKU Induk</label><select class="sel" id="j-sku-induk" onchange="populateJVariasi()"></select></div>
+      <div class="fg"><label class="lbl">SKU Induk</label><select class="sel" id="j-sku-induk" onchange="onJIndukChange()"></select></div>
       <div class="fg"><label class="lbl">SKU Variasi</label><select class="sel" id="j-sku-variasi"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="lbl">Channel</label><select class="sel" id="j-ch"></select></div>
     </div>
     <div class="form-row">
       <div class="fg"><label class="lbl">Qty Terjual</label><input class="inp" type="number" id="j-qty" placeholder="0" min="1"></div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:4px;">
-      <button class="btn btn-p btn-full" onclick="addJurnal()">📝 Simpan Transaksi</button>
-      <button class="btn btn-o" onclick="closeModal('modal-tambah-jurnal')">Batal</button>
+    <div style="margin-top:8px;">
+      <button class="btn btn-p btn-full" style="width:100%;margin-bottom:8px" onclick="addJurnal()">📝 Simpan Transaksi</button>
+      <button class="btn btn-o" style="width:100%" onclick="closeModal('modal-tambah-jurnal')">Batal</button>
     </div>
   </div>
 </div>
