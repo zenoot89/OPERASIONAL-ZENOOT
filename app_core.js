@@ -154,21 +154,24 @@ const DataLayer = {
             induk: p.induk, var: p.var, hpp: Number(p.hpp),
             suplaier: p.suplaier, npm: Number(p.npm),
             jual: Number(p.jual), pasang: Number(p.pasang),
-            reseller: Number(p.reseller), gm: Number(p.gm)
+            reseller: Number(p.reseller), gm: Number(p.gm),
+            status_produk: p.status_produk||'aktif'
           })),
           stok: stok.map(s => ({
             var: s.var, awal: s.awal, masuk: s.masuk,
             keluar: s.keluar, hpp: Number(s.hpp), safety: s.safety
           })),
           jurnal: jurnal
-            .sort((a, b) => new Date(b.tgl) - new Date(a.tgl)) // urutkan terbaru dulu
+            .sort((a, b) => new Date(b.tgl) - new Date(a.tgl))
             .map(j => ({
+              sid: j.id, uuid: j.uuid,  // simpan id & uuid dari Supabase
               tgl: j.tgl, ch: j.ch, var: j.var,
               qty: j.qty, harga: Number(j.harga), hpp: Number(j.hpp)
             })),
           restock: restock
             .sort((a, b) => new Date(b.tgl) - new Date(a.tgl))
             .map(r => ({
+              sid: r.id, uuid: r.uuid,  // simpan id & uuid dari Supabase
               tgl: r.tgl, var: r.var, supplier: r.supplier,
               qty: r.qty, catatan: r.catatan
             })),
@@ -792,11 +795,15 @@ function inputRestockQuick() {
 function deleteRestock(idx) {
   const r=DB.restock[idx]; if(!confirm(`Hapus restock "${r?.var}"?`))return;
   const uuid=r?.uuid;
+  const sid=r?.sid;
   DB.restock.splice(idx,1);
   recalcStok();
-  // Sync delete ke Supabase
-  if (uuid && SUPABASE_URL) {
-    DataLayer._deleteByKey('restock','uuid',uuid).catch(e=>console.warn('Delete restock gagal sync:',e));
+  if (SUPABASE_URL) {
+    if (uuid) {
+      DataLayer._deleteByKey('restock','uuid',uuid).catch(e=>console.warn('Delete restock by uuid gagal:',e));
+    } else if (sid) {
+      DataLayer._deleteByKey('restock','id',sid).catch(e=>console.warn('Delete restock by id gagal:',e));
+    } else { saveDB(); }
   }
   saveDB(); renderRestock(); renderDashboard(); toast('✅ Log restock dihapus');
 }
@@ -991,12 +998,21 @@ function saveEditJurnal() {
 
 function deleteJurnal(idx) {
   if (!confirm('Hapus transaksi ini?')) return;
-  const uuid=DB.jurnal[idx]?.uuid;
+  const j=DB.jurnal[idx];
+  const uuid=j?.uuid;
+  const sid=j?.sid; // supabase id jika ada
   DB.jurnal.splice(idx,1);
   recalcStok();
-  // Sync delete ke Supabase
-  if (uuid && SUPABASE_URL) {
-    DataLayer._deleteByKey('jurnal','uuid',uuid).catch(e=>console.warn('Delete jurnal gagal sync:',e));
+  // Sync delete ke Supabase — by uuid atau by id
+  if (SUPABASE_URL) {
+    if (uuid) {
+      DataLayer._deleteByKey('jurnal','uuid',uuid).catch(e=>console.warn('Delete jurnal by uuid gagal:',e));
+    } else if (sid) {
+      DataLayer._deleteByKey('jurnal','id',sid).catch(e=>console.warn('Delete jurnal by id gagal:',e));
+    } else {
+      // Tidak ada key — saveDB akan replace semua jurnal
+      saveDB();
+    }
   }
   saveDB(); renderJurnal(); renderDashboard(); toast('✅ Transaksi dihapus');
 }
