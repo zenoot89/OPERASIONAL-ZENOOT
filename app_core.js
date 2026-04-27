@@ -1005,18 +1005,26 @@ function deleteJurnal(idx) {
 // KELOLA PRODUK
 // ================================================================
 let produkQ='';
-function filterProduk(v){produkQ=v;renderProduk();}
+let produkStatusFilter='semua';
+function filterProdukStatus(v){produkStatusFilter=v;renderProduk();}
+function getProdukStatusBadge(s){
+  const map={aktif:'<span class="badge-status badge-aktif">✅ Aktif</span>',slow:'<span class="badge-status badge-slow">⚠️ Slow</span>',deadstock:'<span class="badge-status badge-dead">🔴 Deadstock</span>',clearance:'<span class="badge-status badge-clearance">🏷️ Clearance</span>',arsip:'<span class="badge-status badge-arsip">📦 Arsip</span>'};
+  return map[s]||map['aktif'];
+}
 function renderProduk() {
   const q=produkQ.toLowerCase();
-  const rows=DB.produk.filter(r=>r.var.toLowerCase().includes(q)||r.induk.toLowerCase().includes(q)).sort((a,b)=>a.induk.localeCompare(b.induk)||a.var.localeCompare(b.var));
+  let rows=DB.produk.filter(r=>r.var.toLowerCase().includes(q)||r.induk.toLowerCase().includes(q));
+  if(produkStatusFilter!=='semua') rows=rows.filter(r=>(r.status_produk||'aktif')===produkStatusFilter);
+  rows=rows.sort((a,b)=>a.induk.localeCompare(b.induk)||a.var.localeCompare(b.var));
   document.getElementById('produk-body').innerHTML=rows.length?rows.map((r,i)=>`<tr>
     <td class="mono">${i+1}</td><td><strong>${r.induk}</strong></td><td>${r.var}</td>
     <td class="mono">${fmt(r.hpp)}</td><td style="font-size:12px;color:var(--dusty)">${r.suplaier||'-'}</td>
+    <td>${getProdukStatusBadge(r.status_produk||'aktif')}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-o btn-sm" onclick="openEditProduk(${DB.produk.indexOf(r)})">✏️ Edit</button>
-      <button class="btn btn-d btn-sm" onclick="deleteProduk(${DB.produk.indexOf(r)})">🗑</button>
+      <button class="btn btn-d btn-sm" onclick="arsipProduk(${DB.produk.indexOf(r)})" title="Arsipkan">📦</button>
     </td>
-  </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada produk</td></tr>`;
+  </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada produk</td></tr>`;
 }
 function tambahProduk() {
   const induk=document.getElementById('np-induk').value.trim().toUpperCase();
@@ -1038,18 +1046,35 @@ function openEditProduk(idx) {
   document.getElementById('ep-variasi').value=r.var;
   document.getElementById('ep-hpp').value=r.hpp;
   document.getElementById('ep-suplaier').value=r.suplaier||'';
+  document.getElementById('ep-status').value=r.status_produk||'aktif';
   openModal('modal-edit-produk');
 }
 function saveEditProduk() {
   const idx=+document.getElementById('ep-idx').value;
   const oldVar=DB.produk[idx].var;
-  DB.produk[idx]={...DB.produk[idx],induk:document.getElementById('ep-induk').value.trim().toUpperCase(),var:document.getElementById('ep-variasi').value.trim().toUpperCase(),hpp:+document.getElementById('ep-hpp').value||0,suplaier:document.getElementById('ep-suplaier').value.trim().toUpperCase()};
+  DB.produk[idx]={...DB.produk[idx],
+    induk:document.getElementById('ep-induk').value.trim().toUpperCase(),
+    var:document.getElementById('ep-variasi').value.trim().toUpperCase(),
+    hpp:+document.getElementById('ep-hpp').value||0,
+    suplaier:document.getElementById('ep-suplaier').value.trim().toUpperCase(),
+    status_produk:document.getElementById('ep-status').value||'aktif'
+  };
   // Sync edit ke Supabase
   if (SUPABASE_URL) {
     const p=DB.produk[idx];
-    DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier}],'var').catch(e=>console.warn('Edit produk gagal sync:',e));
+    DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:p.status_produk}],'var').catch(e=>console.warn('Edit produk gagal sync:',e));
   }
   closeModal('modal-edit-produk'); saveDB(); renderProduk(); renderHarga(); toast('✅ Produk diperbarui!');
+}
+
+function arsipProduk(idx) {
+  if (!confirm(`Arsipkan produk "${DB.produk[idx].var}"? Produk tidak akan tampil di operasional tapi data tetap tersimpan.`)) return;
+  DB.produk[idx].status_produk='arsip';
+  if (SUPABASE_URL) {
+    const p=DB.produk[idx];
+    DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:'arsip'}],'var').catch(e=>console.warn('Arsip produk gagal sync:',e));
+  }
+  saveDB(); renderProduk(); toast('📦 Produk diarsipkan');
 }
 
 function deleteProduk(idx) {

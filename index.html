@@ -314,6 +314,14 @@
 <div class="page" id="page-produk">
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
     <input class="search-bar" style="margin:0;flex:1;max-width:340px" placeholder="🔍 Cari produk..." oninput="filterProduk(this.value)">
+    <select class="inp" style="max-width:160px" onchange="filterProdukStatus(this.value)">
+      <option value="semua">Semua Status</option>
+      <option value="aktif">✅ Aktif</option>
+      <option value="slow">⚠️ Slow Moving</option>
+      <option value="deadstock">🔴 Deadstock</option>
+      <option value="clearance">🏷️ Clearance</option>
+      <option value="arsip">📦 Arsip</option>
+    </select>
     <div style="margin-left:auto;display:flex;gap:8px;">
       <button class="btn btn-p" onclick="openModal('modal-tambah-produk')">➕ Tambah</button>
       <button class="btn btn-o btn-sm" onclick="openModal('modal-import-sheets')">📋 Import Sheets</button>
@@ -322,7 +330,7 @@
   </div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>#</th><th>SKU Induk</th><th>SKU Variasi</th><th>HPP/pc</th><th>Supplier</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>#</th><th>SKU Induk</th><th>SKU Variasi</th><th>HPP/pc</th><th>Supplier</th><th>Status</th><th>Aksi</th></tr></thead>
       <tbody id="produk-body"></tbody>
     </table>
   </div>
@@ -961,6 +969,17 @@
     <div class="form-row">
       <div class="fg"><label class="lbl">HPP / pc</label><input class="inp" type="number" id="ep-hpp"></div>
       <div class="fg"><label class="lbl">Suplaier</label><input class="inp" id="ep-suplaier"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="lbl">Status Produk</label>
+        <select class="inp" id="ep-status">
+          <option value="aktif">✅ Aktif</option>
+          <option value="slow">⚠️ Slow Moving</option>
+          <option value="deadstock">🔴 Deadstock</option>
+          <option value="clearance">🏷️ Clearance</option>
+          <option value="arsip">📦 Arsip</option>
+        </select>
+      </div>
     </div>
     <div style="display:flex;gap:10px;">
       <button class="btn btn-p btn-full" onclick="saveEditProduk()">💾 Simpan</button>

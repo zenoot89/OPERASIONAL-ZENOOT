@@ -1165,3 +1165,11 @@ html{scroll-behavior:smooth;}
 .nav-item.nav-item-action span:first-child {
   font-size: 14px;
 }
+
+/* ═══ PRODUCT LIFECYCLE BADGES ═══ */
+.badge-status{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;}
+.badge-aktif{background:#d1fae5;color:#065f46;}
+.badge-slow{background:#fef3c7;color:#92400e;}
+.badge-dead{background:#fee2e2;color:#991b1b;}
+.badge-clearance{background:#ede9fe;color:#5b21b6;}
+.badge-arsip{background:#f3f4f6;color:#6b7280;}
