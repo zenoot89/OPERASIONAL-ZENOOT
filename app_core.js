@@ -48,6 +48,14 @@ const DataLayer = {
     }
   },
 
+  // Helper: generate UUID unik untuk setiap transaksi
+  _uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  },
+
   // Helper: hapus semua lalu insert ulang (untuk data yang tidak punya unique key jelas)
   async _replaceAll(table, rows) {
     // Delete all rows (id >= 1 covers all bigserial)
@@ -94,18 +102,19 @@ const DataLayer = {
       }));
       await this._upsert('channel', channelRows, 'nama');
 
-      // Jurnal & Restock — replace all (tidak ada unique constraint natural)
+      // Jurnal — upsert by uuid (aman multi device)
       const jurnalRows = (data.jurnal || []).map(j => ({
-        tgl: j.tgl, ch: j.ch, var: j.var,
+        uuid: j.uuid, tgl: j.tgl, ch: j.ch, var: j.var,
         qty: j.qty || 1, harga: j.harga || 0, hpp: j.hpp || 0
-      }));
-      await this._replaceAll('jurnal', jurnalRows);
+      })).filter(j => j.uuid);
+      if (jurnalRows.length > 0) await this._upsert('jurnal', jurnalRows, 'uuid');
 
+      // Restock — upsert by uuid (aman multi device)
       const restockRows = (data.restock || []).map(r => ({
-        tgl: r.tgl, var: r.var, supplier: r.supplier || '',
+        uuid: r.uuid, tgl: r.tgl, var: r.var, supplier: r.supplier || '',
         qty: r.qty || 0, catatan: r.catatan || ''
-      }));
-      await this._replaceAll('restock', restockRows);
+      })).filter(r => r.uuid);
+      if (restockRows.length > 0) await this._upsert('restock', restockRows, 'uuid');
 
       return true;
     } catch(e) {
@@ -715,7 +724,7 @@ function inputRestock() {
   let s=DB.stok.find(x=>x.var===varName);
   if (s) { s.masuk=(s.masuk||0)+qty; }
   else { const p=DB.produk.find(x=>x.var===varName); DB.stok.push({var:varName,awal:0,masuk:qty,keluar:0,hpp:p?p.hpp:0,safety:4}); }
-  DB.restock.unshift({tgl,var:varName,supplier,qty,catatan});
+  DB.restock.unshift({uuid: DataLayer._uuid(), tgl, var:varName, supplier, qty, catatan});
   document.getElementById('rs-qty').value='';
   document.getElementById('rs-catatan').value='';
   saveDB(); renderRestock(); renderLowStock(); renderDashboard();
@@ -731,7 +740,7 @@ function inputRestockQuick() {
   let s=DB.stok.find(x=>x.var===varName);
   if (s) { s.masuk=(s.masuk||0)+qty; }
   else { const p=DB.produk.find(x=>x.var===varName); DB.stok.push({var:varName,awal:0,masuk:qty,keluar:0,hpp:p?p.hpp:0,safety:4}); }
-  DB.restock.unshift({tgl,var:varName,supplier,qty,catatan:'Quick input'});
+  DB.restock.unshift({uuid: DataLayer._uuid(), tgl, var:varName, supplier, qty, catatan:'Quick input'});
   document.getElementById('rq-qty').value='';
   closeModal('modal-restock-quick');
   saveDB(); renderRestock(); renderLowStock(); renderDashboard();
@@ -851,7 +860,7 @@ function addJurnal() {
   const qty=+document.getElementById('j-qty').value||0;
   if (!tgl||!varName||qty<=0) { toast('Lengkapi Tanggal, SKU, dan Qty','err'); return; }
   const p=DB.produk.find(x=>x.var===varName); const hpp=p?p.hpp:0;
-  DB.jurnal.unshift({tgl,ch,var:varName,qty,harga:0,hpp});
+  DB.jurnal.unshift({uuid: DataLayer._uuid(), tgl, ch, var:varName, qty, harga:0, hpp});
   let s=DB.stok.find(x=>x.var===varName);
   if (s) { s.keluar=(s.keluar||0)+qty; }
   else { DB.stok.push({var:varName,awal:0,masuk:0,keluar:qty,hpp,safety:4}); }
