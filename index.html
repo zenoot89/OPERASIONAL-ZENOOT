@@ -93,7 +93,7 @@
       </div>
       <div class="nav-acc-body open">
         <div class="nav-item" onclick="go('daily',this)"><span>✅</span><span>Daily Checklist</span></div>
-        <div class="nav-item nav-item-action" onclick="syncHargaManual()" id="nav-btn-sync"><span>🔄</span><span>Sync Data</span></div>
+        <div class="nav-item nav-item-action" onclick="loadDB().then(()=>{renderDashboard();renderStok();renderJurnal();toast('✅ Data berhasil disync dari Cloud!');})" id="nav-btn-sync"><span>🔄</span><span>Sync Data</span></div>
         <div class="nav-item nav-item-action" onclick="exportDB()"><span>⬇️</span><span>Backup Data</span></div>
       </div>
     </div>
