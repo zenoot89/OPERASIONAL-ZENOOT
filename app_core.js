@@ -774,7 +774,7 @@ function go(id, el) {
   if (id==='produk')  renderProduk();
   if (id==='restock') { populateRsInduk(); renderRestock(); renderLowStock(); }
   if (id==='channel') renderChannel();
-  if (id==='daily')   { if (typeof renderDailyChecklist === 'function') renderDailyChecklist(); }
+  if (id==='daily')   { if (typeof renderDailyChecklist==='function') renderDailyChecklist(); }
 }
 
 // ═══ ACCORDION SIDEBAR — Shopee Style ═══
@@ -1588,43 +1588,55 @@ function openEditProduk(idx) {
   document.getElementById('ep-status').value=r.status_produk||'aktif';
   openModal('modal-edit-produk');
 }
-function saveEditProduk() {
+async function saveEditProduk() {
   const idx=+document.getElementById('ep-idx').value;
-  const oldVar=DB.produk[idx].var;
-  DB.produk[idx]={...DB.produk[idx],
+  const updated={...DB.produk[idx],
     induk:document.getElementById('ep-induk').value.trim().toUpperCase(),
     var:document.getElementById('ep-variasi').value.trim().toUpperCase(),
     hpp:+document.getElementById('ep-hpp').value||0,
     suplaier:document.getElementById('ep-suplaier').value.trim().toUpperCase(),
     status_produk:document.getElementById('ep-status').value||'aktif'
   };
-  // Sync edit ke Supabase
+  if (!updated.var)   { toast('Nama variasi tidak boleh kosong!','err'); return; }
+  if (!updated.induk) { toast('Nama induk tidak boleh kosong!','err'); return; }
+  const btnSave=document.getElementById('ep-btn-save');
+  if (btnSave) { btnSave.disabled=true; btnSave.textContent='Menyimpan...'; }
   if (SUPABASE_URL) {
-    const p=DB.produk[idx];
-    DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:p.status_produk}],'var').catch(e=>console.warn('Edit produk gagal sync:',e));
+    try {
+      await DataLayer._upsert('produk',[{var:updated.var,induk:updated.induk,hpp:updated.hpp,suplaier:updated.suplaier,status_produk:updated.status_produk}],'var');
+    } catch(e) {
+      toast('Gagal simpan ke cloud: '+e.message,'err');
+      if (btnSave) { btnSave.disabled=false; btnSave.textContent='Simpan'; }
+      return;
+    }
   }
-  closeModal('modal-edit-produk'); saveDB(); renderProduk(); renderHarga(); toast('✅ Produk diperbarui!');
+  DB.produk[idx]=updated;
+  closeModal('modal-edit-produk'); saveDB(); renderProduk(); renderHarga();
+  toast('Produk diperbarui!');
 }
-
-function arsipProduk(idx) {
-  if (!confirm(`Arsipkan produk "${DB.produk[idx].var}"? Produk tidak akan tampil di operasional tapi data tetap tersimpan.`)) return;
+async function arsipProduk(idx) {
+  if (!confirm('Arsipkan produk "'+DB.produk[idx].var+'"? Produk tidak akan tampil di operasional tapi data tetap tersimpan.')) return;
+  const p=DB.produk[idx];
+  if (SUPABASE_URL) {
+    try {
+      await DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:'arsip'}],'var');
+    } catch(e) { toast('Gagal arsip ke cloud: '+e.message,'err'); return; }
+  }
   DB.produk[idx].status_produk='arsip';
-  if (SUPABASE_URL) {
-    const p=DB.produk[idx];
-    DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:'arsip'}],'var').catch(e=>console.warn('Arsip produk gagal sync:',e));
-  }
-  saveDB(); renderProduk(); toast('📦 Produk diarsipkan');
+  saveDB(); renderProduk(); toast('Produk diarsipkan');
 }
-
-function deleteProduk(idx) {
-  if (!confirm(`Hapus produk "${DB.produk[idx].var}"?`)) return;
+async function deleteProduk(idx) {
+  if (!confirm('Hapus produk "'+DB.produk[idx].var+'"? Data akan dihapus permanen.')) return;
   const varKey=DB.produk[idx].var;
-  DB.produk.splice(idx,1);
-  // Sync delete ke Supabase
   if (SUPABASE_URL) {
-    DataLayer._deleteByKey('produk','var',varKey).catch(e=>console.warn('Delete produk gagal sync:',e));
+    try {
+      await DataLayer._deleteByKey('produk','var',varKey);
+    } catch(e) { toast('Gagal hapus dari cloud: '+e.message,'err'); return; }
   }
-  saveDB(); renderProduk(); toast('✅ Produk dihapus');
+  const localIdx=DB.produk.findIndex(p=>p.var===varKey);
+  if (localIdx>-1) DB.produk.splice(localIdx,1);
+  saveDB(); renderProduk(); renderHarga();
+  toast('Produk dihapus');
 }
 function resetProdukSaja() {
   DB.produk=[]; saveDB(); setBackupMode(false); closeModal('modal-reset-produk');
