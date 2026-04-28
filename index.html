@@ -992,12 +992,10 @@
       <div class="fg"><label class="lbl">SKU Induk</label><select class="sel" id="j-sku-induk" onchange="onJIndukChange()"></select></div>
       <div class="fg"><label class="lbl">SKU Variasi</label><select class="sel" id="j-sku-variasi"></select></div>
     </div>
-    <!-- Baris 3: Qty full width -->
-    <div class="form-row">
-      <div class="fg" style="flex:1;"><label class="lbl">Qty Terjual</label><input class="inp" type="number" id="j-qty" placeholder="0" min="1"></div>
-    </div>
-    <div style="margin-top:12px;">
-      <button class="btn btn-p btn-full" style="width:100%;" onclick="addJurnal()">📝 Simpan Transaksi</button>
+    <!-- Baris 3: Qty | Simpan sejajar -->
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="fg"><label class="lbl">Qty Terjual</label><input class="inp" type="number" id="j-qty" placeholder="0" min="1"></div>
+      <div class="fg"><button class="btn btn-p btn-full" style="height:42px;" onclick="addJurnal()">📝 Simpan</button></div>
     </div>
   </div>
 </div>
