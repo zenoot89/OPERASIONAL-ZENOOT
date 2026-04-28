@@ -187,10 +187,19 @@ const DataLayer = {
     }
   },
 
-  // localStorage dinonaktifkan — pure Supabase
-  saveLocal(data) { /* disabled */ },
-  loadLocal() { return null; },
-  clearLocal() { /* disabled */ }
+  // localStorage fallback — aktif sebagai backup
+  saveLocal(data) {
+    try { localStorage.setItem('zenot_db_backup', JSON.stringify(data)); } catch(e) {}
+  },
+  loadLocal() {
+    try {
+      const raw = localStorage.getItem('zenot_db_backup');
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  },
+  clearLocal() {
+    try { localStorage.removeItem('zenot_db_backup'); } catch(e) {}
+  }
 };
 
 
@@ -499,6 +508,8 @@ function saveDB() {
     window._saveTimer = setTimeout(() => { ind.style.display='none'; }, 2500);
   }
   clearTimeout(_saveQueue);
+  // Selalu simpan ke localStorage sebagai fallback offline
+  DataLayer.saveLocal(DB);
   _saveQueue = setTimeout(() => { pushToCloud(); }, 800);
 }
 
@@ -546,8 +557,14 @@ function recalcKeluar() { recalcStok(); }
 async function loadDB() {
   if (SUPABASE_URL) {
     try {
-      showLoadingOverlay('☁️ Memuat data dari cloud...');
-      const result = await DataLayer.fetch();
+      showLoadingOverlay("☁️ Memuat data dari cloud...");
+
+      // Timeout 8 detik — kalau cloud lambat/offline, pakai localStorage
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 8000)
+      );
+      const result = await Promise.race([DataLayer.fetch(), timeoutPromise]);
+
       if (result && result.ok && result.data) {
         const saved = result.data;
         if (saved.produk)  DB.produk  = saved.produk;
@@ -555,9 +572,11 @@ async function loadDB() {
         if (saved.jurnal)  DB.jurnal  = saved.jurnal;
         if (saved.restock) DB.restock = saved.restock;
         if (saved.channel) DB.channel = saved.channel;
+        // Simpan ke localStorage sebagai cache
+        DataLayer.saveLocal(DB);
         // Load assignChannel dari localStorage (tidak disimpan ke Supabase)
         try {
-          const ac = localStorage.getItem('zenot_assign_channel');
+          const ac = localStorage.getItem("zenot_assign_channel");
           if (ac) DB.assignChannel = JSON.parse(ac);
         } catch(e){}
         _normalizeJurnalChannel();
@@ -565,8 +584,22 @@ async function loadDB() {
         setCloudStatus(true);
         hideLoadingOverlay(); return;
       }
-    } catch(e) { console.warn('Cloud load gagal:', e.message); }
-    setCloudStatus(false); hideLoadingOverlay();
+    } catch(e) { console.warn("Cloud load gagal:", e.message); }
+
+    // Fallback: coba load dari localStorage
+    const local = DataLayer.loadLocal();
+    if (local) {
+      if (local.produk)  DB.produk  = local.produk;
+      if (local.stok)    DB.stok    = local.stok;
+      if (local.jurnal)  DB.jurnal  = local.jurnal;
+      if (local.restock) DB.restock = local.restock;
+      if (local.channel) DB.channel = local.channel;
+      _normalizeJurnalChannel();
+      recalcKeluar();
+      console.info("Data dimuat dari cache lokal (cloud tidak tersedia)");
+    }
+    setCloudStatus(false);
+    hideLoadingOverlay();
   }
 }
 
@@ -786,6 +819,13 @@ function go(id, el) {
   if (id==='restock') { populateRsInduk(); renderRestock(); renderLowStock(); }
   if (id==='channel') renderChannel();
   if (id==='daily')   { if (typeof renderDailyChecklist==='function') renderDailyChecklist(); }
+  // Auto-close sidebar di mobile setelah navigasi
+  if (window.innerWidth <= 900) {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sidebar-overlay');
+    if (sb) sb.classList.remove('open');
+    if (ov) ov.classList.remove('open');
+  }
 }
 
 // ═══ ACCORDION SIDEBAR — Shopee Style ═══
@@ -2148,11 +2188,7 @@ function toggleSidebarMobile() {
 }
 
 // Auto-close sidebar saat nav item diklik di mobile
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    if (window.innerWidth <= 900) toggleSidebarMobile();
-  });
-});
+// (sudah ditangani di go() — baris ini sengaja dikosongkan)
 
 // Main init
 initDate();
