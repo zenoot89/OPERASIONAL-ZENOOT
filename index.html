@@ -371,7 +371,7 @@
     <table>
       <thead><tr>
         <th style="width:36px;text-align:center;"><input type="checkbox" id="produk-chk-all" onchange="produkToggleAll(this.checked)" title="Pilih Semua" style="cursor:pointer;width:15px;height:15px;"></th>
-        <th>#</th><th>SKU Induk</th><th>SKU Variasi</th><th>HPP/pc</th><th>Supplier</th><th>Status</th><th>Aksi</th>
+        <th>#</th><th>SKU / Variasi</th><th>Supplier / HPP</th><th></th><th>Status</th><th>Aksi</th>
       </tr></thead>
       <tbody id="produk-body"></tbody>
     </table>
@@ -982,20 +982,21 @@
 <div class="overlay" id="modal-tambah-jurnal">
   <div class="modal">
     <div class="modal-hd">➕ Tambah Transaksi <button class="modal-close" onclick="closeModal('modal-tambah-jurnal')">×</button></div>
+    <!-- Baris 1: Tanggal | Channel -->
     <div class="form-row">
       <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="j-tgl"></div>
+      <div class="fg"><label class="lbl">Channel</label><select class="sel" id="j-ch"></select></div>
     </div>
+    <!-- Baris 2: SKU Induk | SKU Variasi -->
     <div class="form-row">
       <div class="fg"><label class="lbl">SKU Induk</label><select class="sel" id="j-sku-induk" onchange="onJIndukChange()"></select></div>
       <div class="fg"><label class="lbl">SKU Variasi</label><select class="sel" id="j-sku-variasi"></select></div>
     </div>
+    <!-- Baris 3: Qty full width -->
     <div class="form-row">
-      <div class="fg"><label class="lbl">Channel</label><select class="sel" id="j-ch"></select></div>
+      <div class="fg" style="flex:1;"><label class="lbl">Qty Terjual</label><input class="inp" type="number" id="j-qty" placeholder="0" min="1"></div>
     </div>
-    <div class="form-row">
-      <div class="fg"><label class="lbl">Qty Terjual</label><input class="inp" type="number" id="j-qty" placeholder="0" min="1"></div>
-    </div>
-    <div style="margin-top:8px;">
+    <div style="margin-top:12px;">
       <button class="btn btn-p btn-full" style="width:100%;margin-bottom:8px" onclick="addJurnal()">📝 Simpan Transaksi</button>
       <button class="btn btn-o" style="width:100%" onclick="closeModal('modal-tambah-jurnal')">Batal</button>
     </div>
