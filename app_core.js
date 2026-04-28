@@ -1439,6 +1439,7 @@ function renderProduk() {
         <td style="white-space:nowrap;">
           <button class="btn btn-o btn-sm" onclick="openEditProduk(${dbIdx})">✏️ Edit</button>
           <button class="btn btn-d btn-sm" onclick="arsipProduk(${dbIdx})" title="Arsipkan">📦</button>
+          <button class="btn btn-d btn-sm" onclick="deleteProduk(${dbIdx})" title="Hapus Permanen" style="background:#c0392b;color:white;">🗑️</button>
         </td>
       </tr>`;
     });
