@@ -555,6 +555,11 @@ async function loadDB() {
         if (saved.jurnal)  DB.jurnal  = saved.jurnal;
         if (saved.restock) DB.restock = saved.restock;
         if (saved.channel) DB.channel = saved.channel;
+        // Load assignChannel dari localStorage (tidak disimpan ke Supabase)
+        try {
+          const ac = localStorage.getItem('zenot_assign_channel');
+          if (ac) DB.assignChannel = JSON.parse(ac);
+        } catch(e){}
         _normalizeJurnalChannel();
         recalcKeluar();
         setCloudStatus(true);
@@ -1622,22 +1627,54 @@ async function saveEditProduk() {
 }
 async function arsipProduk(idx) {
   if (!confirm('Arsipkan produk "'+DB.produk[idx].var+'"? Produk tidak akan tampil di operasional tapi data tetap tersimpan.')) return;
-  const p=DB.produk[idx];
+  DB.produk[idx].status_produk = 'arsip';
   if (SUPABASE_URL) {
     try {
-      await DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:'arsip'}],'var');
-    } catch(e) { toast('Gagal arsip ke cloud: '+e.message,'err'); return; }
+      const produkRows = DB.produk.map(p => ({
+        induk:p.induk, var:p.var, hpp:p.hpp||0,
+        suplaier:p.suplaier||'', npm:p.npm||10,
+        jual:p.jual||0, pasang:p.pasang||0,
+        reseller:p.reseller||0, gm:p.gm||0,
+        status_produk:p.status_produk||'aktif',
+        toko:p.toko||'semua'
+      }));
+      await DataLayer._replaceAll('produk', produkRows);
+    } catch(e) { toast('Gagal arsip ke cloud: '+e.message, 'err'); DB.produk[idx].status_produk='aktif'; return; }
   }
-  DB.produk[idx].status_produk='arsip';
   saveDB(); renderProduk(); toast('Produk diarsipkan');
 }
+
 async function deleteProduk(idx) {
   if (!confirm('Hapus produk "'+DB.produk[idx].var+'"? Data akan dihapus permanen.')) return;
-  const varKey=DB.produk[idx].var;
+  const varKey = DB.produk[idx].var;
+  // Hapus dari local DB dulu
+  const localIdx = DB.produk.findIndex(p => p.var === varKey);
+  if (localIdx > -1) DB.produk.splice(localIdx, 1);
+  // Juga hapus stok entry-nya
+  const stokIdx = DB.stok.findIndex(s => s.var === varKey);
+  if (stokIdx > -1) DB.stok.splice(stokIdx, 1);
+  // Sync ke Supabase: replace all (delete + insert ulang)
   if (SUPABASE_URL) {
     try {
-      await DataLayer._deleteByKey('produk','var',varKey);
-    } catch(e) { toast('Gagal hapus dari cloud: '+e.message,'err'); return; }
+      const produkRows = DB.produk.map(p => ({
+        induk:p.induk, var:p.var, hpp:p.hpp||0,
+        suplaier:p.suplaier||'', npm:p.npm||10,
+        jual:p.jual||0, pasang:p.pasang||0,
+        reseller:p.reseller||0, gm:p.gm||0,
+        status_produk:p.status_produk||'aktif',
+        toko:p.toko||'semua'
+      }));
+      await DataLayer._replaceAll('produk', produkRows);
+    } catch(e) {
+      toast('Gagal hapus dari cloud: '+e.message, 'err');
+      // Rollback local — muat ulang dari cloud
+      loadDB().then(() => { renderProduk(); renderHarga(); });
+      return;
+    }
+  }
+  saveDB(); renderProduk(); renderHarga();
+  toast('Produk '+varKey+' dihapus');
+}
   }
   const localIdx=DB.produk.findIndex(p=>p.var===varKey);
   if (localIdx>-1) DB.produk.splice(localIdx,1);
@@ -2214,7 +2251,8 @@ async function saveAssignChannel() {
   });
   const btn = document.getElementById('btn-save-assign');
   if (btn) { btn.disabled=true; btn.textContent='Menyimpan...'; }
-  saveDB();
+  // Simpan ke localStorage (persist cross-refresh)
+  try { localStorage.setItem('zenot_assign_channel', JSON.stringify(DB.assignChannel)); } catch(e){}
   if (btn) { btn.disabled=false; btn.textContent='Simpan Semua'; }
   const unsaved = document.getElementById('ch-assign-unsaved');
   if (unsaved) unsaved.style.display = 'none';
