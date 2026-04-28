@@ -1715,12 +1715,6 @@ async function deleteProduk(idx) {
   saveDB(); renderProduk(); renderHarga();
   toast('Produk '+varKey+' dihapus');
 }
-  }
-  const localIdx=DB.produk.findIndex(p=>p.var===varKey);
-  if (localIdx>-1) DB.produk.splice(localIdx,1);
-  saveDB(); renderProduk(); renderHarga();
-  toast('Produk dihapus');
-}
 function resetProdukSaja() {
   DB.produk=[]; saveDB(); setBackupMode(false); closeModal('modal-reset-produk');
   renderProduk(); renderHarga(); renderDashboard(); toast('✅ Semua produk dihapus.');

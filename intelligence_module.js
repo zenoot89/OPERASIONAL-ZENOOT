@@ -339,8 +339,6 @@ function _renderIntelDashboardInner(container) {
 // ═══════════════════════════════════════════════════════
 let _skuSelectedVar = null;
 
-}
-
 function renderSKUAnalisis() {
   const container = document.getElementById('intel-sku-content');
   if (!container) return;
