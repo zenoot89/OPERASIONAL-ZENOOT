@@ -560,6 +560,19 @@
       <div class="rk-upload-sub" style="margin-bottom:8px;">Gaji, listrik, internet, dll</div>
       <input type="text" id="rk_oprTotal" placeholder="Rp 0" oninput="formatRKRibuan(this);rkData.oprTotal=parseRKNum('rk_oprTotal');updateRasioDashboard()" style="width:100%;padding:7px 10px;border:1.5px solid #5A7A6A;border-radius:7px;font-size:.9em;font-weight:700;box-sizing:border-box;outline:none;text-align:center;">
     </div>
+    <!-- SKU Performa -->
+    <div class="rk-upload-box" id="boxSkuPerforma" style="cursor:default;border-color:#7c3aed;background:#f5f3ff;">
+      <input type="file" id="fileSkuPerforma" accept=".xlsx" style="display:none" onchange="handleSkuPerformaUpload(this)">
+      <div class="rk-upload-icon">📊</div>
+      <div class="rk-upload-label" style="color:#7c3aed;">Performa SKU</div>
+      <div class="rk-upload-sub" style="margin-bottom:6px;">parentskudetail.xlsx (30 hari)</div>
+      <select id="skuPerformaToko" style="width:100%;font-size:.75em;padding:4px 6px;border:1px solid #7c3aed;border-radius:6px;background:#fff;color:#7c3aed;font-weight:700;margin-bottom:6px;">
+        <option value="">Pilih Toko...</option>
+      </select>
+      <input type="month" id="skuPerformaBulan" style="width:100%;font-size:.75em;padding:4px 6px;border:1px solid #7c3aed;border-radius:6px;background:#fff;color:#333;margin-bottom:6px;box-sizing:border-box;">
+      <button onclick="document.getElementById('fileSkuPerforma').click()" style="width:100%;font-size:.75em;padding:5px;border:1px solid #7c3aed;background:#7c3aed;color:#fff;border-radius:6px;cursor:pointer;font-weight:700;">📁 Upload File</button>
+      <div class="rk-upload-status" id="statusSkuPerforma" style="margin-top:6px;">Belum upload</div>
+    </div>
     <!-- Status -->
     <div class="rk-upload-box" style="cursor:default;border-color:#3730a3;background:#f0f4ff;">
       <div class="rk-upload-icon">📋</div>
@@ -1100,6 +1113,7 @@
 
 
 <!-- ══════ SCRIPTS — ORDER MATTERS ══════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="app_core.js"></script>
 <script src="financial_module.js"></script>
 <script src="trend_engine.js"></script>

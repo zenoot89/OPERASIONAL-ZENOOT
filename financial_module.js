@@ -618,4 +618,123 @@ function renderRekapTable(){
 window.addEventListener('load', () => {
   loadRekap();
   syncRKHppFromZenot();
+  initSkuPerformaToko();
 });
+
+// ═══ SKU PERFORMA — Upload & Parse parentskudetail ═══
+
+function initSkuPerformaToko() {
+  const sel = document.getElementById('skuPerformaToko');
+  if (!sel) return;
+  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  sel.innerHTML = '<option value="">Pilih Toko...</option>' +
+    channels.map(c=>`<option value="${c}">${c}</option>`).join('');
+  // Set bulan default = bulan lalu
+  const d = new Date();
+  d.setMonth(d.getMonth()-1);
+  const bulan = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  const inp = document.getElementById('skuPerformaBulan');
+  if (inp) inp.value = bulan;
+}
+
+function handleSkuPerformaUpload(input) {
+  const toko = document.getElementById('skuPerformaToko')?.value;
+  const bulan = document.getElementById('skuPerformaBulan')?.value;
+  if (!toko) { toast('Pilih toko dulu!','err'); input.value=''; return; }
+  if (!bulan) { toast('Pilih bulan dulu!','err'); input.value=''; return; }
+  if (!input.files[0]) return;
+
+  const statusEl = document.getElementById('statusSkuPerforma');
+  if (statusEl) statusEl.textContent = '⏳ Membaca file...';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      // Parse xlsx dengan SheetJS
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, {type:'array'});
+
+      const hasil = [];
+
+      // Mapping signal dari nama sheet
+      const signalMap = {
+        'Produk dengan Performa Terbaik': 'normal',
+        'Produk yang Baru Ditambahkan': 'baru',
+        'Harga Belum Kompetitif': 'harga_kurang',
+        'Harga Sudah Kompetitif': 'harga_ok',
+        'Tingkatkan dengan Iklan': 'tingkatkan_iklan',
+        'Iklankan': 'iklankan',
+        'Cek Performa Iklan': 'cek_iklan'
+      };
+
+      for (const sheetName of workbook.SheetNames) {
+        const signal = signalMap[sheetName] || 'normal';
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+
+        rows.forEach(row => {
+          const skuInduk = (row['SKU Induk']||'').toString().trim().toUpperCase();
+          const skuVariasi = (row['Kode Variasi.1']||row['Nama Variasi']||'').toString().trim().toUpperCase();
+          if (!skuInduk && !skuVariasi) return;
+
+          const parseNum = (v) => {
+            if (!v) return 0;
+            return parseFloat(v.toString().replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.')) || 0;
+          };
+          const parsePct = (v) => {
+            if (!v) return 0;
+            return parseFloat(v.toString().replace('%','').replace(',','.')) || 0;
+          };
+
+          hasil.push({
+            toko,
+            bulan,
+            sku_induk: skuInduk || skuVariasi.split('_')[0],
+            sku_variasi: skuVariasi,
+            views: parseNum(row['Jumlah Produk Dilihat']),
+            ctr: parsePct(row['Persentase Klik']),
+            konversi: parsePct(row['Tingkat Konversi Pesanan (Pesanan Dibuat)']),
+            pesanan_dibuat: parseNum(row['Pesanan Dibuat']),
+            pesanan_siap: parseNum(row['Pesanan Siap Dikirim']),
+            revenue: parseNum(row['Total Penjualan (Pesanan Dibuat) (IDR)']),
+            keranjang: parseNum(row['Dimasukkan ke Keranjang (Produk)']),
+            signal
+          });
+        });
+      }
+
+      if (!hasil.length) { toast('Tidak ada data valid di file!','err'); return; }
+
+      // Simpan ke Supabase — hapus data toko+bulan lama dulu, lalu insert baru
+      if (SUPABASE_URL) {
+        // Delete existing data for this toko+bulan
+        await fetch(`${SUPABASE_URL}/rest/v1/sku_performa?toko=eq.${encodeURIComponent(toko)}&bulan=eq.${encodeURIComponent(bulan)}`, {
+          method: 'DELETE',
+          headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`}
+        });
+        // Insert baru
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/sku_performa`, {
+          method: 'POST',
+          headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+          body: JSON.stringify(hasil)
+        });
+        if (!res.ok) throw new Error('Gagal simpan ke Supabase');
+      }
+
+      // Simpan ke memory
+      DB.skuPerforma = DB.skuPerforma || [];
+      DB.skuPerforma = DB.skuPerforma.filter(d=>!(d.toko===toko && d.bulan===bulan));
+      DB.skuPerforma.push(...hasil);
+
+      if (statusEl) statusEl.textContent = `✅ ${hasil.length} SKU dari ${toko} (${bulan})`;
+      toast(`✅ ${hasil.length} data SKU ${toko} berhasil diupload!`);
+      input.value = '';
+
+    } catch(err) {
+      console.error(err);
+      toast('Gagal parse file: ' + err.message, 'err');
+      if (statusEl) statusEl.textContent = '❌ Gagal parse';
+    }
+  };
+  reader.readAsArrayBuffer(input.files[0]);
+}
