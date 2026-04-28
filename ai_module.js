@@ -863,10 +863,50 @@ function _injectAIStyles() {
   }
 })();
 
+// ═══════════════════════════════════════════════════════
+// openAISettings — dipanggil dari tombol sidebar
+// Navigasi ke Intelligence Dashboard lalu buka drawer AI
+// ═══════════════════════════════════════════════════════
+function openAISettings() {
+  // 1. Navigasi ke Intel Dashboard
+  const intelNavItem = document.querySelector('.nav-item[onclick*="intel-dashboard"]');
+  if (typeof goIntelFromSidebar === 'function') {
+    goIntelFromSidebar('intel-dashboard', intelNavItem);
+  } else if (typeof goIntel === 'function') {
+    goIntel('intel-dashboard', null);
+  }
+
+  // 2. Tunggu render selesai lalu buka drawer
+  setTimeout(() => {
+    // Render drawer jika belum ada
+    if (typeof renderAIDrawer === 'function') renderAIDrawer();
+
+    // Buka drawer
+    const body = document.getElementById('ai-drawer-body');
+    const chevron = document.getElementById('ai-drawer-chevron');
+    if (body) {
+      body.style.display = 'block';
+      window._aiDrawerOpen = true;
+      if (chevron) chevron.textContent = '▲';
+    }
+
+    // Scroll ke drawer
+    const drawer = document.getElementById('ai-gemini-drawer');
+    if (drawer) drawer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Focus ke input API key
+    setTimeout(() => {
+      const keyInput = document.getElementById('gemini-key-input');
+      if (keyInput) keyInput.focus();
+    }, 300);
+  }, 200);
+}
+
 // Expose global functions
 window.sendAIChat = sendAIChat;
 window.runAIBlueprintAnalysis = runAIBlueprintAnalysis;
 window.runIntelAIAdvisor = runIntelAIAdvisor;
+window.openAISettings = openAISettings;
 
 // Init styles
 window.addEventListener('DOMContentLoaded', () => {
