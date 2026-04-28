@@ -96,7 +96,9 @@ const DataLayer = {
         induk: p.induk, var: p.var, hpp: p.hpp || 0,
         suplaier: p.suplaier || '', npm: p.npm || 10,
         jual: p.jual || 0, pasang: p.pasang || 0,
-        reseller: p.reseller || 0, gm: p.gm || 0
+        reseller: p.reseller || 0, gm: p.gm || 0,
+        status_produk: p.status_produk || 'aktif',
+        toko: p.toko || 'semua'
       }));
       await this._upsert('produk', produkRows, 'var');
 
@@ -1425,18 +1427,31 @@ function saveTokoAssign() {
     if (cb.checked) tokoMap[v].push(ch);
   });
 
+  // Update DB.produk
   Object.entries(tokoMap).forEach(([varKey, tokoArr]) => {
     const p = DB.produk.find(x=>x.var===varKey);
     if (!p) return;
     p.toko = tokoArr.length === channels.length ? 'semua' : tokoArr.join(',');
-    if (SUPABASE_URL) {
-      DataLayer._upsert('produk',[{var:p.var,induk:p.induk,hpp:p.hpp,suplaier:p.suplaier,status_produk:p.status_produk||'aktif',toko:p.toko}],'var')
-        .catch(e=>console.warn('Sync toko gagal:',e));
-    }
   });
 
+  // Batch upsert semua produk sekaligus ke Supabase
+  if (SUPABASE_URL) {
+    const produkRows = DB.produk.map(p => ({
+      var: p.var, induk: p.induk, hpp: p.hpp||0,
+      suplaier: p.suplaier||'', npm: p.npm||10,
+      jual: p.jual||0, pasang: p.pasang||0,
+      reseller: p.reseller||0, gm: p.gm||0,
+      status_produk: p.status_produk||'aktif',
+      toko: p.toko||'semua'
+    }));
+    DataLayer._upsert('produk', produkRows, 'var')
+      .then(() => toast('✅ Assignment toko disimpan!'))
+      .catch(e => { console.warn('Sync toko gagal:', e); toast('❌ Gagal sync ke cloud', 'err'); });
+  }
+
   _tokoChanged = false;
-  saveDB(); renderTokoManager(); toast('✅ Assignment toko disimpan!');
+  updateTokoSaveBtn();
+  renderTokoManager();
 }
 
 // CHANNEL PENJUALAN
