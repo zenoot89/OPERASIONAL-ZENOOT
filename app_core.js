@@ -774,6 +774,7 @@ function go(id, el) {
   if (id==='produk')  renderProduk();
   if (id==='restock') { populateRsInduk(); renderRestock(); renderLowStock(); }
   if (id==='channel') renderChannel();
+  if (id==='daily')   { if (typeof renderDailyChecklist === 'function') renderDailyChecklist(); }
 }
 
 // ═══ ACCORDION SIDEBAR — Shopee Style ═══
