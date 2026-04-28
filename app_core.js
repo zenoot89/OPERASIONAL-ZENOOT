@@ -1439,7 +1439,6 @@ function renderProduk() {
         <td style="white-space:nowrap;">
           <button class="btn btn-o btn-sm" onclick="openEditProduk(${dbIdx})">✏️ Edit</button>
           <button class="btn btn-d btn-sm" onclick="arsipProduk(${dbIdx})" title="Arsipkan">📦</button>
-          <button class="btn btn-d btn-sm" onclick="deleteProduk(${dbIdx})" title="Hapus Permanen" style="background:#c0392b;color:white;">🗑️</button>
         </td>
       </tr>`;
     });
@@ -1610,6 +1609,8 @@ async function produkBulkHapus(){
   DB.produk=DB.produk.filter(r=>!produkSelectedVars.has(r.var));
   if(SUPABASE_URL){
     try{
+      // Hapus stok dulu (foreign key constraint), baru produk
+      await Promise.all(toDelete.map(v=>DataLayer._deleteByKey('stok','var',v)));
       await Promise.all(toDelete.map(v=>DataLayer._deleteByKey('produk','var',v)));
       toast(`🗑️ ${toDelete.length} SKU dihapus & sync ke cloud`);
     }catch(e){toast('⚠️ Dihapus lokal, sync cloud gagal','warn');}
