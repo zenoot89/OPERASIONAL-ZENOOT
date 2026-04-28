@@ -38,7 +38,6 @@
         <div class="nav-item" onclick="go('stok',this)"><span>📦</span><span>Stok Produk</span></div>
         <div class="nav-item" onclick="go('restock',this)"><span>🔄</span><span>Re-Stock</span></div>
         <div class="nav-item" onclick="go('produk',this)"><span>🏷️</span><span>Kelola Produk</span></div>
-        <div class="nav-item" onclick="go('toko',this)"><span>🏪</span><span>Toko Manager</span></div>
         <div class="nav-item" onclick="go('harga',this)"><span>💰</span><span>Price List</span></div>
       </div>
     </div>
@@ -297,7 +296,7 @@
       <!-- Bulk action bar -->
       <div id="produk-bulk-bar" style="display:none;align-items:center;gap:6px;background:#fff8f0;border:1px solid #e2c97e;border-radius:8px;padding:4px 10px;">
         <span id="produk-bulk-count" style="font-size:12px;font-weight:700;color:var(--brown);white-space:nowrap;">0 dipilih</span>
-        <button class="btn btn-sm" style="background:#fff;border:1px solid #ddd;color:#333;font-size:11px;" onclick="produkBulkDeselectAll()">✕ Batal</button>
+        <button class="btn btn-sm" style="background:#fff;border:1px solid #ddd;color:#333;font-size:11px;" onclick="closeProdukEditMode()">✕ Batal</button>
       </div>
       <!-- EDIT dropdown -->
       <div style="position:relative;" id="produk-edit-wrap">
@@ -371,8 +370,8 @@
   <div class="tbl-wrap">
     <table>
       <thead><tr>
-        <th style="width:36px;text-align:center;"><input type="checkbox" id="produk-chk-all" onchange="produkToggleAll(this.checked)" title="Pilih Semua" style="cursor:pointer;width:15px;height:15px;"></th>
-        <th>#</th><th>SKU / Variasi</th><th>Supplier / HPP</th><th></th><th>Status</th><th>Aksi</th>
+        <th style="width:36px;text-align:center;display:none;" class="chk-col"><input type="checkbox" id="produk-chk-all" onchange="produkToggleAll(this.checked)" title="Pilih Semua" style="cursor:pointer;width:15px;height:15px;"></th>
+        <th>#</th><th>SKU / Variasi</th><th>Supplier / HPP</th><th></th><th>Status</th>
       </tr></thead>
       <tbody id="produk-body"></tbody>
     </table>

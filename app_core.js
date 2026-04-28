@@ -1370,6 +1370,7 @@ function deleteJurnal(idx) {
 let produkQ='';
 let produkStatusFilter='semua';
 let produkSelectedVars=new Set(); // Set of selected SKU Variasi
+let _produkEditMode = false; // Checkbox mode aktif/tidak
 let _produkDisplayRows=[]; // current displayed rows (for index lookup)
 
 function filterProdukStatus(v){produkStatusFilter=v;renderProduk();}
@@ -1405,7 +1406,7 @@ function renderProduk() {
 
     // Baris induk (group header)
     html+=`<tr class="produk-group-header">
-      <td style="text-align:center;">
+      <td style="text-align:center;display:${_produkEditMode?'table-cell':'none'}" class="chk-col">
         <input type="checkbox" class="produk-chk-induk" data-induk="${induk}"
           ${allChk?'checked':''} onchange="produkToggleInduk(this,'${induk}')"
           style="cursor:pointer;width:15px;height:15px;"
@@ -1426,7 +1427,7 @@ function renderProduk() {
       const chk=produkSelectedVars.has(r.var);
       const dbIdx=DB.produk.indexOf(r);
       html+=`<tr class="produk-var-row${chk?' produk-row-selected':''}">
-        <td style="text-align:center;">
+        <td style="text-align:center;display:${_produkEditMode?'table-cell':'none'}" class="chk-col">
           <input type="checkbox" class="produk-chk" value="${r.var}" data-induk="${induk}"
             ${chk?'checked':''} onchange="produkOnCheck(this)"
             style="cursor:pointer;width:15px;height:15px;">
@@ -1436,10 +1437,7 @@ function renderProduk() {
         <td class="mono">${fmt(r.hpp)}</td>
         <td></td>
         <td>${getProdukStatusBadge(r.status_produk||'aktif')}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-o btn-sm" onclick="openEditProduk(${dbIdx})">✏️ Edit</button>
-          <button class="btn btn-d btn-sm" onclick="arsipProduk(${dbIdx})" title="Arsipkan">📦</button>
-        </td>
+
       </tr>`;
     });
   });
@@ -1509,7 +1507,19 @@ function _syncProdukBulkBar(){
 function toggleProdukEditMenu(e){
   e.stopPropagation();
   const menu=document.getElementById('produk-edit-menu');
-  menu.style.display=menu.style.display==='none'?'block':'none';
+  const isOpen = menu.style.display==='block';
+  menu.style.display=isOpen?'none':'block';
+  // Aktifkan edit mode saat menu dibuka
+  if(!isOpen && !_produkEditMode){
+    _produkEditMode=true;
+    renderProduk();
+  }
+}
+function closeProdukEditMode(){
+  _produkEditMode=false;
+  produkSelectedVars.clear();
+  renderProduk();
+  _syncProdukBulkBar();
 }
 document.addEventListener('click',()=>{
   const menu=document.getElementById('produk-edit-menu');
