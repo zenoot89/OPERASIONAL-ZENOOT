@@ -351,13 +351,15 @@
     </div>
   </div>
 
-  <!-- Filter Toko -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-    <select class="inp" style="max-width:220px" id="toko-filter-select" onchange="renderTokoManager()">
-      <option value="semua">🏪 Semua Toko</option>
-    </select>
-    <input class="search-bar" style="margin:0;flex:1;max-width:340px" placeholder="🔍 Cari produk..." id="toko-search" oninput="renderTokoManager()">
-    <span id="toko-summary" style="font-size:13px;color:var(--dusty);margin-left:auto"></span>
+  <!-- Filter Toko — Sticky -->
+  <div id="toko-sticky-bar">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <select class="inp" style="max-width:220px" id="toko-filter-select" onchange="renderTokoManager()">
+        <option value="semua">🏪 Semua Toko</option>
+      </select>
+      <input class="search-bar" style="margin:0;flex:1;max-width:340px" placeholder="🔍 Cari produk..." id="toko-search" oninput="renderTokoManager()">
+      <span id="toko-summary" style="font-size:13px;color:var(--dusty);margin-left:auto"></span>
+    </div>
   </div>
 
   <!-- Kartu per Toko -->

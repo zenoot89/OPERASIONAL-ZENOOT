@@ -1402,6 +1402,13 @@ function renderTokoManager() {
 
   tbody.innerHTML = html || `<tr><td colspan="${4+channels.length}" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada produk</td></tr>`;
   updateTokoSaveBtn();
+
+  // Sticky bar shadow saat scroll
+  const mainEl = document.querySelector('.main');
+  const stickyBar = document.getElementById('toko-sticky-bar');
+  if (mainEl && stickyBar) {
+    mainEl.onscroll = () => stickyBar.classList.toggle('scrolled', mainEl.scrollTop > 20);
+  }
 }
 
 function onTokoIndukChange(cb) {

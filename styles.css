@@ -1173,3 +1173,35 @@ html{scroll-behavior:smooth;}
 .badge-dead{background:#fee2e2;color:#991b1b;}
 .badge-clearance{background:#ede9fe;color:#5b21b6;}
 .badge-arsip{background:#f3f4f6;color:#6b7280;}
+
+/* ═══ TOKO MANAGER — STICKY HEADER ═══ */
+#page-toko .card:has(#toko-assign-body) {
+  overflow: visible !important;
+}
+#page-toko .tbl-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+#page-toko thead tr th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--cream, #F5F0E8);
+  box-shadow: 0 2px 4px rgba(0,0,0,.06);
+}
+/* Filter bar sticky */
+#toko-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--cream, #F5F0E8);
+  padding: 10px 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: box-shadow .2s;
+}
+#toko-sticky-bar.scrolled {
+  box-shadow: 0 3px 12px rgba(0,0,0,.10);
+}
