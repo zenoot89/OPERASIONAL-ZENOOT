@@ -55,6 +55,34 @@
       </div>
     </div>
 
+    <!-- INTELLIGENCE — Accordion -->
+    <div class="nav-accordion">
+      <div class="nav-acc-header open" onclick="toggleAcc(this)">
+        <div class="nav-acc-label"><span>🧠</span><span>Intelligence</span></div>
+        <span class="nav-acc-chevron"></span>
+      </div>
+      <div class="nav-acc-body open">
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-dashboard',this)"><span>🧠</span><span>Dashboard</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-sku',this)"><span>🔬</span><span>SKU Breakdown</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-revenue',this)"><span>💰</span><span>Revenue Intel</span></div>
+        <div class="nav-item" onclick="goIntelFromSidebar('intel-cashflow',this)"><span>🔮</span><span>Cash Flow</span></div>
+      </div>
+    </div>
+
+    <!-- AI STRATEGY — Accordion -->
+    <div class="nav-accordion">
+      <div class="nav-acc-header open" onclick="toggleAcc(this)">
+        <div class="nav-acc-label"><span>🤖</span><span>AI Strategy</span></div>
+        <span class="nav-acc-chevron"></span>
+      </div>
+      <div class="nav-acc-body open">
+        <div class="nav-item" onclick="goTE('te-upload',this);document.getElementById('ph').innerHTML='AI Strategy <span>Upload</span>'"><span>📤</span><span>Upload Data</span></div>
+        <div class="nav-item" onclick="goTE('te-blueprint',this);document.getElementById('ph').innerHTML='AI Strategy <span>Blueprint</span>'"><span>📋</span><span>Blueprint</span></div>
+        <div class="nav-item" onclick="goTE('te-profit',this);document.getElementById('ph').innerHTML='AI Strategy <span>Profit Guard</span>'"><span>🛡️</span><span>Profit Guard</span></div>
+        <div class="nav-item nav-item-action" onclick="openAISettings()"><span>⚙️</span><span>AI Settings (API Key)</span></div>
+      </div>
+    </div>
+
     <!-- TOOLS — Accordion -->
     <div class="nav-accordion">
       <div class="nav-acc-header open" onclick="toggleAcc(this)">
