@@ -1180,7 +1180,7 @@ html{scroll-behavior:smooth;}
 }
 #page-toko .tbl-wrap {
   overflow-x: auto;
-  max-height: calc(100vh - 320px);
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
 }
 #page-toko .tbl-wrap thead tr th {
@@ -1191,3 +1191,6 @@ html{scroll-behavior:smooth;}
   box-shadow: 0 2px 4px rgba(0,0,0,.08);
   white-space: nowrap;
 }
+/* Sembunyikan kartu toko dan filter saat scroll dalam tabel */
+#page-toko .tbl-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
+#page-toko .tbl-wrap::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 3px; }
