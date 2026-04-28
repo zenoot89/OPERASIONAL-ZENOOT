@@ -673,22 +673,26 @@ function handleSkuPerformaUpload(input) {
 
         rows.forEach(row => {
           const skuInduk = (row['SKU Induk']||'').toString().trim().toUpperCase();
-          const skuVariasi = (row['Kode Variasi.1']||row['Nama Variasi']||'').toString().trim().toUpperCase();
+          // Variasi: coba Kode Variasi.1, fallback ke nama produk
+          const skuVariasi = (row['Kode Variasi.1']||row['Kode Variasi']||'').toString().trim().toUpperCase();
+          // Skip row kosong
           if (!skuInduk && !skuVariasi) return;
 
           const parseNum = (v) => {
-            if (!v) return 0;
-            return parseFloat(v.toString().replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.')) || 0;
+            if (!v && v !== 0) return 0;
+            // Format Shopee: 9.735.869 → hapus titik ribuan, ganti koma desimal
+            return parseFloat(v.toString().replace(/\./g,'').replace(',','.')) || 0;
           };
           const parsePct = (v) => {
             if (!v) return 0;
+            // Format: 4,32% → 4.32
             return parseFloat(v.toString().replace('%','').replace(',','.')) || 0;
           };
 
           hasil.push({
             toko,
             bulan,
-            sku_induk: skuInduk || skuVariasi.split('_')[0],
+            sku_induk: (row['SKU Induk']||'').toString().trim().toUpperCase() || skuVariasi.split('_')[0],
             sku_variasi: skuVariasi,
             views: parseNum(row['Jumlah Produk Dilihat']),
             ctr: parsePct(row['Persentase Klik']),
