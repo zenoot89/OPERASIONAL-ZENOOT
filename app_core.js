@@ -2567,41 +2567,38 @@ function _renderVarianPanel(induk, chNama) {
   }
 
   const _getStok = (varNama) => {
-    const stokRow = (DB.stok||[]).find(s => s.var === varNama);
-    if (!stokRow) return 0;
-    return Math.max(0, (stokRow.awal||0) + (stokRow.masuk||0) - (stokRow.keluar||0));
+    const s = (DB.stok||[]).find(s => s.var === varNama);
+    if (!s) return 0;
+    return Math.max(0, (s.awal||0) + (s.masuk||0) - (s.keluar||0));
   };
 
-  const _getStatusStok = (qty) => {
-    if (qty === 0) return { label:'Habis', cls:'status-habis' };
-    if (qty <= 2)  return { label:'Kritis', cls:'status-kritis' };
-    if (qty <= 5)  return { label:'Rendah', cls:'status-rendah' };
-    return { label:'Aman', cls:'status-aman' };
+  const _getStatus = (qty) => {
+    if (qty === 0) return { label:'HABIS',  cls:'vsr-habis',  bar: 0 };
+    if (qty <= 2)  return { label:'Kritis', cls:'vsr-kritis', bar: 20 };
+    if (qty <= 5)  return { label:'Rendah', cls:'vsr-rendah', bar: 45 };
+    return             { label:'Aman',   cls:'vsr-aman',   bar: 85 };
   };
 
-  const _isVarAktif = (p) => {
-    const t = p.toko || 'semua';
-    return t === 'semua' || t.split(',').map(x => x.trim()).includes(chNama);
-  };
+  // Cari max stok untuk progress bar relatif
+  const stokList = vars.map(p => _getStok(p.var));
+  const maxStok  = Math.max(...stokList, 1);
 
   const html = vars.map(p => {
-    const stok = _getStok(p.var);
-    const { label, cls } = _getStatusStok(stok);
-    const aktif = _isVarAktif(p);
-    const isHabis = stok === 0;
-    return `<div class="ch-varian-row${isHabis?' disabled':''}">
-      <div class="ch-varian-info">
-        <div class="ch-varian-nama">${p.var}</div>
-        <div class="ch-varian-status ${cls}">
-          <span class="ch-varian-status-dot"></span>
-          ${label} (${stok}pc)
+    const qty = _getStok(p.var);
+    const { label, cls } = _getStatus(qty);
+    const barPct = Math.round((qty / maxStok) * 100);
+    const isHabis = qty === 0;
+    return `<div class="ch-vsr-row ${cls}${isHabis?' ch-vsr-habis-row':''}">
+      <div class="ch-vsr-left">
+        <div class="ch-vsr-nama">${p.var}</div>
+        <div class="ch-vsr-bar-wrap">
+          <div class="ch-vsr-bar-fill ${cls}" style="width:${barPct}%"></div>
         </div>
       </div>
-      <label class="ch-split-toggle" ${isHabis?'style="pointer-events:none;opacity:.4;"':''}>
-        <input type="checkbox" ${aktif&&!isHabis?'checked':''} ${isHabis?'disabled':''}
-          onchange="_splitToggleVarian('${p.var}','${induk}','${chNama}',this.checked)">
-        <div class="ch-split-toggle-track"></div>
-      </label>
+      <div class="ch-vsr-right">
+        <span class="ch-vsr-qty ${cls}">${qty}<span class="ch-vsr-pc">pc</span></span>
+        <span class="ch-vsr-badge ${cls}">${label}</span>
+      </div>
     </div>`;
   }).join('');
 
