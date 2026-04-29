@@ -2313,9 +2313,8 @@ function _renderSplitChannelList() {
     'Shopee':'shopee','Lazada':'lazada','TikTok Shop':'tiktok','Offline':'offline','Lainnya':'lainnya'
   };
   list.innerHTML = channels.map((ch, idx) => {
-    const cls = platformBadgeClass[ch.platform]||'lainnya';
+    const style = _platformStyle(ch.platform);
     const allInduk = Object.keys(groups);
-    // Baca dari DB.produk.toko — single source of truth
     const aktif = allInduk.filter(induk => {
       const vars = groups[induk] || [];
       return vars.some(p => {
@@ -2325,10 +2324,9 @@ function _renderSplitChannelList() {
     }).length;
     const total = allInduk.length;
     const isActive = _splitActiveChannel === ch.nama ? ' active' : '';
-    const isAktif = ch.status === 'Aktif';
     return `<div class="ch-split-ch-item${isActive}" onclick="_splitSelectChannel('${ch.nama}')">
       <div class="ch-split-ch-name">${ch.nama}</div>
-      <div><span class="ch-split-ch-badge ${cls}">${ch.platform}</span></div>
+      <div><span class="ch-split-ch-badge" style="background:${style.bg};color:${style.color};border:none;">${ch.platform}</span></div>
       <div class="ch-split-ch-counter">${aktif}/${total} aktif</div>
       <div class="ch-split-ch-actions">
       </div>
@@ -2362,7 +2360,11 @@ function _splitSelectChannel(chNama) {
   const hapusBtn  = document.getElementById('ch-split-header-hapus-btn');
   if (titleEl) titleEl.textContent = chNama;
   const platformLabel = { Shopee:'Shopee Store', Lazada:'Lazada Store', 'TikTok Shop':'TikTok Shop', Offline:'Offline Store', Lainnya:'Channel' };
-  if (subEl) subEl.textContent = platformLabel[ch.platform]||ch.platform;
+  const pStyle = _platformStyle(ch.platform);
+  if (subEl) {
+    subEl.textContent = platformLabel[ch.platform]||ch.platform;
+    subEl.style.cssText = `font-size:11px;padding:2px 8px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-weight:600;display:inline-block;margin-top:2px;`;
+  }
   if (badge) {
     badge.textContent = ch.status;
     badge.className = 'ch-split-status-badge' + (ch.status !== 'Aktif' ? ' nonaktif' : '');
@@ -2468,6 +2470,8 @@ function _splitToggleProduk(induk, chNama, val) {
   });
   const allToggle = document.getElementById('ch-split-all-toggle');
   if (allToggle) allToggle.checked = semuaAktif;
+  // Update counter realtime di header
+  _updateHeaderCounter(chNama);
 }
 
 function _splitToggleAll(chNama, val) {
@@ -2492,6 +2496,7 @@ function _splitToggleAll(chNama, val) {
   document.querySelectorAll('.ch-split-ch-item').forEach(el => {
     el.classList.toggle('active', el.querySelector('.ch-split-ch-name')?.textContent === _splitActiveChannel);
   });
+  _updateHeaderCounter(chNama);
   toast(val ? '✅ Semua produk diaktifkan!' : 'Semua produk dinonaktifkan');
 }
 
@@ -2520,6 +2525,28 @@ function _persistAssign() {
       });
     }).catch(e => console.warn('[persistAssign]', e.message));
   }
+}
+
+function _updateHeaderCounter(chNama) {
+  const groups = _buildProdukGroups();
+  const allInduk = Object.keys(groups);
+  const aktif = allInduk.filter(induk => {
+    const vars = groups[induk]||[];
+    return vars.some(p => { const t=p.toko||'semua'; return t==='semua'||t.split(',').map(x=>x.trim()).includes(chNama); });
+  }).length;
+  const counterEl = document.getElementById('ch-split-right-counter');
+  if (counterEl) counterEl.textContent = aktif + '/' + allInduk.length + ' produk aktif';
+}
+
+function _platformStyle(platform) {
+  const map = {
+    'Shopee':      { bg:'#EE4D2D', color:'#fff' },
+    'Lazada':      { bg:'#0F146D', color:'#fff' },
+    'TikTok Shop': { bg:'#010101', color:'#fff' },
+    'Offline':     { bg:'#5C3D2E', color:'#fff' },
+    'Lainnya':     { bg:'#888780', color:'#fff' },
+  };
+  return map[platform] || { bg:'#888780', color:'#fff' };
 }
 
 function _splitHapusActive() {
