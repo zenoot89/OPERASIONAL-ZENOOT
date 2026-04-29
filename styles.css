@@ -1444,23 +1444,59 @@ html{scroll-behavior:smooth;}
   text-transform: uppercase;
   color: var(--dusty);
 }
-.ch-split-add-btn {
-  width: 24px; height: 24px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border);
+.ch-hdr-action-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ch-hdr-act-btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.ch-hdr-act-btn.ch-hdr-act-add {
+  border-color: var(--brown);
   background: var(--card);
   color: var(--brown);
   font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 400;
-  transition: background .15s, border-color .15s;
+  padding: 0 9px;
 }
-.ch-split-add-btn:hover {
+.ch-hdr-act-btn.ch-hdr-act-add:hover {
   background: var(--brown);
   color: var(--cream);
-  border-color: var(--brown);
+}
+.ch-hdr-act-btn.ch-hdr-act-toggle {
+  border-color: var(--dusty);
+  background: var(--card);
+  color: var(--dusty);
+}
+.ch-hdr-act-btn.ch-hdr-act-toggle:hover {
+  background: var(--dusty);
+  color: #fff;
+}
+.ch-hdr-act-btn.ch-hdr-act-toggle.aktifkan {
+  border-color: var(--sage);
+  color: var(--sage);
+}
+.ch-hdr-act-btn.ch-hdr-act-toggle.aktifkan:hover {
+  background: var(--sage);
+  color: #fff;
+}
+.ch-hdr-act-btn.ch-hdr-act-hapus {
+  border-color: #E24B4A;
+  background: var(--card);
+  color: #E24B4A;
+}
+.ch-hdr-act-btn.ch-hdr-act-hapus:hover {
+  background: #E24B4A;
+  color: #fff;
 }
 .ch-split-left-list {
   flex: 1;
@@ -1632,12 +1668,13 @@ html{scroll-behavior:smooth;}
   font-size: 13px;
 }
 
-.ch-split-produk-row { cursor: pointer; }
+.ch-split-produk-row { cursor: pointer; transition: background .13s; }
+.ch-split-produk-row:active { background: rgba(92,61,46,.1) !important; }
 .ch-produk-row-active {
   background: var(--cream) !important;
   border-left: 3px solid var(--brown);
 }
-.ch-split-produk-row:hover { background: var(--success-bg); }
+.ch-split-produk-row:hover { background: rgba(92,61,46,.04); }
 
 /* Indeterminate toggle track — setengah aktif */
 .ch-split-toggle-track.indeterminate { background: rgba(90,122,106,.45); }

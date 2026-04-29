@@ -2434,7 +2434,6 @@ function _splitSelectChannel(chNama) {
   const subEl     = document.getElementById('ch-split-right-sub');
   const counterEl = document.getElementById('ch-split-right-counter');
   const badge     = document.getElementById('ch-split-status-badge');
-  const hapusBtn  = document.getElementById('ch-split-header-hapus-btn');
 
   if (titleEl) titleEl.textContent = chNama;
 
@@ -2459,16 +2458,22 @@ function _splitSelectChannel(chNama) {
   }).length;
   if (counterEl) counterEl.textContent = aktif + '/' + allInduk.length;
 
-  // Tombol Nonaktifkan/Aktifkan
-  const headerBtn = document.getElementById('ch-split-header-toggle-btn');
-  if (headerBtn) {
-    const chIdx = (DB.channel||[]).findIndex(c => c.nama === chNama);
-    headerBtn.style.display = chIdx >= 0 ? 'inline-flex' : 'none';
-    headerBtn.textContent = ch.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan';
-    headerBtn.dataset.idx = chIdx;
+  // Tombol di header kiri
+  const toggleBtn = document.getElementById('ch-left-toggle-btn');
+  const hapusBtn  = document.getElementById('ch-left-hapus-btn');
+  const chIdx = (DB.channel||[]).findIndex(c => c.nama === chNama);
+  if (toggleBtn) {
+    toggleBtn.style.display = chIdx >= 0 ? 'inline-block' : 'none';
+    if (ch.status === 'Aktif') {
+      toggleBtn.textContent = 'Nonaktifkan';
+      toggleBtn.classList.remove('aktifkan');
+    } else {
+      toggleBtn.textContent = 'Aktifkan';
+      toggleBtn.classList.add('aktifkan');
+    }
+    toggleBtn.dataset.idx = chIdx;
   }
   if (hapusBtn) {
-    const chIdx = (DB.channel||[]).findIndex(c => c.nama === chNama);
     hapusBtn.style.display = chIdx >= 0 ? 'inline-block' : 'none';
     hapusBtn.dataset.idx = chIdx;
   }
@@ -2736,16 +2741,24 @@ function _platformStyle(platform) {
   return map[platform] || { bg:'#8C7B6B', color:'#fff' };
 }
 
-function _splitHapusActive() {
-  const btn = document.getElementById('ch-split-header-hapus-btn');
-  if (!btn) return;
-  const idx = parseInt(btn.dataset.idx);
-  if (!confirm('Hapus channel "' + (DB.channel[idx]?.nama||'') + '"? TIDAK BISA DIBATALKAN!')) return;
-  _splitHapus(idx);
+function _confirmHapusChannel() {
+  if (!_splitActiveChannel) return;
+  const dialog = document.getElementById('ch-dialog-hapus');
+  const namaEl = document.getElementById('ch-dialog-hapus-nama');
+  if (namaEl) namaEl.textContent = '"' + _splitActiveChannel + '"';
+  if (dialog) { dialog.style.display = 'flex'; }
+}
+function _cancelHapusChannel() {
+  const dialog = document.getElementById('ch-dialog-hapus');
+  if (dialog) dialog.style.display = 'none';
+}
+function _confirmExecHapus() {
+  _cancelHapusChannel();
+  _splitHapusActive();
 }
 
 function _splitToggleActiveChannel() {
-  const btn = document.getElementById('ch-split-header-toggle-btn');
+  const btn = document.getElementById('ch-left-toggle-btn');
   if (!btn) return;
   const idx = parseInt(btn.dataset.idx);
   _splitToggleStatus(idx);
@@ -2760,16 +2773,29 @@ function _splitToggleStatus(idx) {
   toast('Status ' + DB.channel[idx].nama + ' diubah ke ' + DB.channel[idx].status);
 }
 
+function _splitHapusActive() {
+  if (!_splitActiveChannel) return;
+  const idx = (DB.channel||[]).findIndex(c => c.nama === _splitActiveChannel);
+  if (idx < 0) return;
+  _splitHapus(idx);
+}
+
 function _splitHapus(idx) {
   const ch = DB.channel[idx];
   if (!ch) return;
-  if (!confirm('Hapus channel "' + ch.nama + '"? Data assign produk untuk channel ini juga akan terhapus.')) return;
   if (DB.assignChannel) {
     Object.keys(DB.assignChannel).forEach(induk => {
       if (DB.assignChannel[induk]) delete DB.assignChannel[induk][ch.nama];
     });
   }
-  if (_splitActiveChannel === ch.nama) _splitActiveChannel = null;
+  if (_splitActiveChannel === ch.nama) {
+    _splitActiveChannel = null;
+    // Reset panel kanan
+    const toggleBtn = document.getElementById('ch-left-toggle-btn');
+    const hapusBtn  = document.getElementById('ch-left-hapus-btn');
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    if (hapusBtn)  hapusBtn.style.display  = 'none';
+  }
   DB.channel.splice(idx, 1);
   saveDB();
   _persistAssign();

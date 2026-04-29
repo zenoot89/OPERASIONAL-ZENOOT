@@ -451,16 +451,17 @@
     <div class="ch-split-left">
       <div class="ch-split-left-header">
         <span class="ch-split-left-title">CHANNEL</span>
-        <button class="ch-split-add-btn" onclick="openModal('modal-tambah-channel')" title="Tambah Channel">＋</button>
+        <div class="ch-hdr-action-group">
+          <button class="ch-hdr-act-btn ch-hdr-act-toggle" id="ch-left-toggle-btn" onclick="_splitToggleActiveChannel()" style="display:none;">Nonaktifkan</button>
+          <button class="ch-hdr-act-btn ch-hdr-act-hapus"  id="ch-left-hapus-btn"  onclick="_confirmHapusChannel()" style="display:none;">Hapus</button>
+          <button class="ch-hdr-act-btn ch-hdr-act-add"    onclick="openModal('modal-tambah-channel')">+</button>
+        </div>
       </div>
-      <div class="ch-split-left-list" id="ch-split-channel-list">
-        <!-- dirender JS -->
-      </div>
+      <div class="ch-split-left-list" id="ch-split-channel-list"></div>
     </div>
 
     <!-- PANEL 2: PRODUK -->
     <div class="ch-panel-produk">
-      <!-- Header 4 bagian inline -->
       <div class="ch-panel-produk-header" id="ch-split-right-header">
         <div class="ch-hdr-nama" id="ch-split-right-title">—</div>
         <div class="ch-hdr-sep"></div>
@@ -469,12 +470,7 @@
         <div class="ch-hdr-status"><span class="ch-split-status-badge" id="ch-split-status-badge"></span></div>
         <div class="ch-hdr-sep"></div>
         <div class="ch-hdr-counter" id="ch-split-right-counter">—</div>
-        <div class="ch-hdr-actions">
-          <button class="ch-split-ch-action-btn" id="ch-split-header-toggle-btn" onclick="_splitToggleActiveChannel()" style="display:none;"></button>
-          <button id="ch-split-header-hapus-btn" onclick="_splitHapusActive()" style="display:none;font-size:11px;padding:5px 14px;border-radius:6px;border:1.5px solid #E24B4A;color:#E24B4A;background:rgba(226,75,74,0.08);cursor:pointer;font-weight:600;letter-spacing:.3px;">Hapus</button>
-        </div>
       </div>
-      <!-- Body: list produk induk -->
       <div class="ch-panel-produk-body" id="ch-split-right-body">
         <div class="ch-split-empty">← Pilih channel</div>
       </div>
@@ -493,7 +489,21 @@
 
   </div>
 
-  <!-- hidden tbody tetap ada agar renderChannel() tidak error -->
+  <!-- Dialog Konfirmasi Hapus Channel -->
+  <div id="ch-dialog-hapus" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;">
+    <div style="background:var(--card);border-radius:16px;padding:28px 32px;width:400px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <div style="font-size:22px;margin-bottom:10px;">⚠️</div>
+      <div style="font-size:16px;font-weight:800;color:var(--charcoal);margin-bottom:8px;">Hapus Channel?</div>
+      <div style="font-size:13px;color:var(--dusty);margin-bottom:6px;">Anda akan menghapus channel:</div>
+      <div id="ch-dialog-hapus-nama" style="font-size:14px;font-weight:700;color:var(--rust);margin-bottom:6px;"></div>
+      <div style="font-size:12px;color:var(--dusty);margin-bottom:24px;padding:10px 12px;background:rgba(226,75,74,0.07);border-radius:8px;border-left:3px solid var(--rust);">Tindakan ini tidak dapat dibatalkan. Semua data produk yang ter-assign ke channel ini akan terlepas.</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="_cancelHapusChannel()" style="padding:9px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--charcoal);font-size:13px;font-weight:600;cursor:pointer;">Batal</button>
+        <button onclick="_confirmExecHapus()" style="padding:9px 20px;border-radius:8px;border:none;background:#E24B4A;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
   <table style="display:none"><tbody id="channel-body"></tbody></table>
 
 </div>
