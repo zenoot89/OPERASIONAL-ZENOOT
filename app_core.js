@@ -1251,14 +1251,10 @@ function populateJInduk() {
 
 // Saat channel berubah → filter SKU Induk yang dijual di channel itu
 // Simpan full list induk untuk keperluan search
-let _jIndukAllItems = [];
-
 function onJChChange() {
   const chEl = document.getElementById('j-ch');
   const chNama = _normalizeCh(chEl ? chEl.value : '');
-
-  // Filter produk yang toko-nya include channel ini
-  _jIndukAllItems = [...new Set(DB.produk
+  const indukList = [...new Set(DB.produk
     .filter(p => {
       if ((p.status_produk||'aktif') === 'arsip') return false;
       const t = _normalizeCh(p.toko||'semua');
@@ -1267,28 +1263,10 @@ function onJChChange() {
     })
     .map(p=>p.induk)
   )].sort();
-
-  // Reset search dan isi select
-  const searchEl = document.getElementById('j-sku-induk-search');
-  if (searchEl) searchEl.value = '';
-  _renderJIndukSelect(_jIndukAllItems);
-}
-
-function _renderJIndukSelect(items) {
   const sel = document.getElementById('j-sku-induk');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Pilih Produk —</option>' +
-    items.map(i => `<option value="${i}">${i}</option>`).join('');
-  sel.value = '';
-  // Reset variasi
+  if (sel) sel.innerHTML = '<option value="">— Pilih Produk —</option>' + indukList.map(i=>`<option value="${i}">${i}</option>`).join('');
   const varSel = document.getElementById('j-sku-variasi');
   if (varSel) varSel.innerHTML = '<option value="">— Pilih Variasi —</option>';
-}
-
-function _filterJIndukSelect() {
-  const q = (document.getElementById('j-sku-induk-search')?.value || '').toLowerCase();
-  const filtered = _jIndukAllItems.filter(i => i.toLowerCase().includes(q));
-  _renderJIndukSelect(filtered);
 }
 
 function _normalizeCh(s){ return (s||'').trim().replace(/\.\s+/g,'.').toUpperCase(); }
