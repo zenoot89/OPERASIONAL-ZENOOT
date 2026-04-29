@@ -1298,7 +1298,7 @@ html{scroll-behavior:smooth;}
 /* ── Split Panel: Channel + Assign Produk ── */
 .ch-split-panel {
   display: grid;
-  grid-template-columns: 230px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 0;
   height: calc(100vh - 120px);
   min-height: 500px;
@@ -1307,6 +1307,119 @@ html{scroll-behavior:smooth;}
   border-radius: 14px;
   overflow: hidden;
 }
+
+/* ── Platform Accordion Group ── */
+.ch-platform-group {
+  border-bottom: 1px solid var(--border);
+}
+
+.ch-platform-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .18s ease;
+  border-left: 3px solid transparent;
+}
+.ch-platform-header:hover {
+  filter: brightness(0.97);
+}
+.ch-platform-header.open {
+  border-bottom: 1px solid rgba(0,0,0,.05);
+}
+
+.ch-platform-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ch-platform-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ch-platform-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--charcoal);
+}
+
+.ch-platform-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--dusty);
+  background: rgba(0,0,0,.06);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* Chevron accordion platform */
+.ch-platform-chevron {
+  display: inline-block;
+  width: 14px; height: 14px;
+  position: relative;
+  flex-shrink: 0;
+  transition: transform .26s cubic-bezier(.4,0,.2,1);
+  transform: rotate(-90deg);
+}
+.ch-platform-chevron::before,
+.ch-platform-chevron::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 5px; height: 1.5px;
+  background: var(--dusty);
+  border-radius: 2px;
+  transition: background .2s;
+}
+.ch-platform-chevron::before { transform: translate(-50%,-50%) translate(-1.8px,0) rotate(40deg); }
+.ch-platform-chevron::after  { transform: translate(-50%,-50%) translate( 1.8px,0) rotate(-40deg); }
+.ch-platform-chevron.open {
+  transform: rotate(0deg);
+}
+
+/* Platform body — accordion collapse */
+.ch-platform-body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height .3s cubic-bezier(.4,0,.2,1), opacity .22s ease;
+}
+.ch-platform-body.open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+/* Channel item dalam accordion */
+.ch-split-ch-item {
+  padding: 10px 14px 10px 20px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background .13s, border-color .13s;
+  position: relative;
+}
+.ch-split-ch-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+
+/* Status dot kecil */
+.ch-item-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ch-item-status-dot.aktif    { background: var(--sage); }
+.ch-item-status-dot.nonaktif { background: var(--rust); opacity: .6; }
 
 /* ── KIRI ── */
 .ch-split-left {
@@ -1368,11 +1481,11 @@ html{scroll-behavior:smooth;}
   border-left-color: var(--brown);
 }
 .ch-split-ch-name {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--charcoal);
-  margin-bottom: 4px;
-  letter-spacing: .3px;
+  letter-spacing: .2px;
+  line-height: 1.2;
 }
 .ch-split-ch-item.active .ch-split-ch-name { color: var(--brown); }
 .ch-split-ch-badge {
@@ -1538,10 +1651,10 @@ html{scroll-behavior:smooth;}
 /* Responsive */
 @media(max-width:700px){
   .ch-split-panel { grid-template-columns:1fr; height:auto; }
-  .ch-split-left { border-right:none; border-bottom:1px solid var(--border); max-height:220px; overflow-y:auto; }
+  .ch-split-left { border-right:none; border-bottom:1px solid var(--border); max-height:260px; overflow-y:auto; }
   .ch-split-right { max-height:none; overflow-y:visible; }
   .ch-split-right-body { max-height:60vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-  .ch-split-ch-actions { display:flex !important; } /* selalu tampil di mobile — tidak ada hover */
+  .ch-split-ch-actions { display:flex !important; }
   .ch-split-ch-action-btn { padding:5px 10px; font-size:11px; }
 }
 

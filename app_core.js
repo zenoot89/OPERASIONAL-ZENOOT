@@ -2115,7 +2115,7 @@ function renderChannel() {
   const body=document.getElementById('channel-body'); if(!body)return;
   const channels=DB.channel||[];
   if (!channels.length) { body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--dusty)">Belum ada channel.</td></tr>'; return; }
-  const platformColor={Shopee:'#ee4d2d',Lazada:'#f57c00','TikTok Shop':'#010101',Offline:'#5a7a6a',Lainnya:'#8c7b6b'};
+  const platformColor={Shopee:'#EE4D2D',Lazada:'#0F146D','TikTok Shop':'#1C1C1E',Offline:'#8C8C8C',Lainnya:'#8C7B6B'};
   body.innerHTML=channels.map((c,i)=>`<tr>
     <td class="mono">${i+1}</td><td><strong>${c.nama}</strong></td>
     <td><span style="background:${platformColor[c.platform]||'#888'};color:white;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">${c.platform}</span></td>
@@ -2300,35 +2300,110 @@ function renderSplitPanel() {
   }
 }
 
+// State accordion platform — default semua open
+const _platformAccOpen = {};
+
 function _renderSplitChannelList() {
   const list = document.getElementById('ch-split-channel-list');
   if (!list) return;
-  const channels = DB.channel||[];
+  const channels = (DB.channel||[]).filter(c => c.nama !== '__assign__');
   if (!channels.length) {
     list.innerHTML = '<div style="padding:20px 16px;color:var(--dusty);font-size:12px;">Belum ada channel.</div>';
     return;
   }
-  const groups = _buildProdukGroups();
-  const platformBadgeClass = {
-    'Shopee':'shopee','Lazada':'lazada','TikTok Shop':'tiktok','Offline':'offline','Lainnya':'lainnya'
+
+  // Group channels per platform, urutan tetap
+  const platformOrder = ['Shopee','Lazada','TikTok Shop','Offline','Lainnya'];
+  const grouped = {};
+  platformOrder.forEach(p => grouped[p] = []);
+  channels.forEach(ch => {
+    const key = grouped[ch.platform] !== undefined ? ch.platform : 'Lainnya';
+    grouped[key].push(ch);
+  });
+
+  const produkGroups = _buildProdukGroups();
+  const allInduk = Object.keys(produkGroups);
+
+  // Warna blush tipis per platform
+  const platformBlush = {
+    'Shopee':      'rgba(238,77,45,0.06)',
+    'Lazada':      'rgba(15,20,109,0.06)',
+    'TikTok Shop': 'rgba(28,28,30,0.07)',
+    'Offline':     'rgba(140,140,140,0.06)',
+    'Lainnya':     'rgba(140,123,107,0.06)',
   };
-  list.innerHTML = channels.map((ch, idx) => {
-    const style = _platformStyle(ch.platform);
-    const allInduk = Object.keys(groups);
-    const aktif = allInduk.filter(induk => {
-      const vars = groups[induk] || [];
-      return vars.some(p => {
-        const t = p.toko || 'semua';
-        return t === 'semua' || t.split(',').map(x => x.trim()).includes(ch.nama);
-      });
-    }).length;
-    const total = allInduk.length;
-    const isActive = _splitActiveChannel === ch.nama ? ' active' : '';
-    return `<div class="ch-split-ch-item${isActive}" onclick="_splitSelectChannel('${ch.nama}')">
-      <div class="ch-split-ch-name">${ch.nama}</div>
-      <div><span class="ch-split-ch-badge" style="background:${style.bg};color:${style.color};border:none;">${ch.platform}</span></div>
+  const platformDot = {
+    'Shopee':      '#EE4D2D',
+    'Lazada':      '#0F146D',
+    'TikTok Shop': '#1C1C1E',
+    'Offline':     '#8C8C8C',
+    'Lainnya':     '#8C7B6B',
+  };
+
+  let html = '';
+  platformOrder.forEach(platform => {
+    const chList = grouped[platform];
+    if (!chList.length) return;
+
+    // Default open kalau belum pernah di-set
+    if (_platformAccOpen[platform] === undefined) _platformAccOpen[platform] = true;
+    const isOpen = _platformAccOpen[platform];
+    const dot = platformDot[platform];
+    const blush = platformBlush[platform];
+
+    html += `
+    <div class="ch-platform-group">
+      <div class="ch-platform-header ${isOpen?'open':''}"
+           style="background:${blush};"
+           onclick="_togglePlatformAcc('${platform}')">
+        <div class="ch-platform-header-left">
+          <span class="ch-platform-dot" style="background:${dot};"></span>
+          <span class="ch-platform-name">${platform}</span>
+          <span class="ch-platform-count">${chList.length}</span>
+        </div>
+        <span class="ch-platform-chevron ${isOpen?'open':''}"></span>
+      </div>
+      <div class="ch-platform-body ${isOpen?'open':''}">
+        ${chList.map(ch => {
+          const aktif = allInduk.filter(induk => {
+            const vars = produkGroups[induk]||[];
+            return vars.some(p => {
+              const t = p.toko||'semua';
+              return t==='semua'||t.split(',').map(x=>x.trim()).includes(ch.nama);
+            });
+          }).length;
+          const isActive = _splitActiveChannel === ch.nama ? ' active' : '';
+          const statusDot = ch.status === 'Aktif'
+            ? '<span class="ch-item-status-dot aktif"></span>'
+            : '<span class="ch-item-status-dot nonaktif"></span>';
+          return `<div class="ch-split-ch-item${isActive}" onclick="_splitSelectChannel('${ch.nama}')">
+            <div class="ch-split-ch-item-inner">
+              ${statusDot}
+              <div class="ch-split-ch-name">${ch.nama}</div>
+            </div>
+            <div class="ch-split-ch-counter">${aktif}/${allInduk.length} produk</div>
+            <div class="ch-split-ch-actions">
+              <button class="ch-split-ch-action-btn" onclick="event.stopPropagation();_splitToggleStatus(${(DB.channel||[]).findIndex(c=>c.nama===ch.nama)})">${ch.status==='Aktif'?'Nonaktifkan':'Aktifkan'}</button>
+              <button class="ch-split-ch-action-btn danger" onclick="event.stopPropagation();_splitHapus(${(DB.channel||[]).findIndex(c=>c.nama===ch.nama)})">Hapus</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
-  }).join('');
+  });
+
+  list.innerHTML = html;
+}
+
+function _togglePlatformAcc(platform) {
+  _platformAccOpen[platform] = !_platformAccOpen[platform];
+  _renderSplitChannelList();
+  // Pertahankan active channel selection
+  if (_splitActiveChannel) {
+    document.querySelectorAll('.ch-split-ch-item').forEach(el => {
+      el.classList.toggle('active', el.querySelector('.ch-split-ch-name')?.textContent === _splitActiveChannel);
+    });
+  }
 }
 
 function _buildProdukGroups() {
@@ -2538,11 +2613,11 @@ function _platformStyle(platform) {
   const map = {
     'Shopee':      { bg:'#EE4D2D', color:'#fff' },
     'Lazada':      { bg:'#0F146D', color:'#fff' },
-    'TikTok Shop': { bg:'#010101', color:'#fff' },
-    'Offline':     { bg:'#5C3D2E', color:'#fff' },
-    'Lainnya':     { bg:'#888780', color:'#fff' },
+    'TikTok Shop': { bg:'#1C1C1E', color:'#fff' },
+    'Offline':     { bg:'#8C8C8C', color:'#fff' },
+    'Lainnya':     { bg:'#8C7B6B', color:'#fff' },
   };
-  return map[platform] || { bg:'#888780', color:'#fff' };
+  return map[platform] || { bg:'#8C7B6B', color:'#fff' };
 }
 
 function _splitHapusActive() {
