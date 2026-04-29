@@ -2630,6 +2630,7 @@ function _splitToggleVarian(varNama, induk, chNama, val) {
 }
 
 
+function _splitToggleProduk(induk, chNama, val) {
   // Tulis ke DB.produk.toko — single source of truth
   const groups = _buildProdukGroups();
   const allChannels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
@@ -2645,19 +2646,14 @@ function _splitToggleVarian(varNama, induk, chNama, val) {
     p.toko = tokoArr.length === allChannels.length ? 'semua' : tokoArr.join(',');
   });
   saveDB();
+  _renderSplitRightBody(chNama);
+  // Re-highlight active induk
+  document.querySelectorAll('.ch-split-produk-row').forEach(r => {
+    r.classList.toggle('ch-produk-row-active', r.querySelector('.ch-split-produk-name')?.textContent === _splitActiveInduk);
+  });
+  // Re-render varian kalau induk ini sedang aktif
+  if (_splitActiveInduk === induk) _renderVarianPanel(induk, chNama);
   _renderSplitChannelList();
-  document.querySelectorAll('.ch-split-ch-item').forEach(el => {
-    el.classList.toggle('active', el.querySelector('.ch-split-ch-name')?.textContent === _splitActiveChannel);
-  });
-  // Update toggle "aktifkan semua"
-  const indukList = Object.keys(groups).sort();
-  const semuaAktif = indukList.every(i => {
-    const vars = groups[i]||[];
-    return vars.some(p => { const t=p.toko||'semua'; return t==='semua'||t.split(',').map(x=>x.trim()).includes(chNama); });
-  });
-  const allToggle = document.getElementById('ch-split-all-toggle');
-  if (allToggle) allToggle.checked = semuaAktif;
-  // Update counter realtime di header
   _updateHeaderCounter(chNama);
 }
 
