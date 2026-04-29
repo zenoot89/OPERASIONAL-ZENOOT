@@ -2359,7 +2359,7 @@ function _renderSplitChannelList() {
     const blushItem = platformBlushItem[platform];
 
     html += `
-    <div class="ch-platform-group">
+    <div class="ch-platform-group" data-platform="${platform}">
       <div class="ch-platform-header ${isOpen?'open':''}"
            style="background:${blush};"
            onclick="_togglePlatformAcc('${platform}')">
