@@ -219,30 +219,14 @@
         </div>
         <div class="form-row">
           <div class="fg"><label class="lbl">SKU Induk</label>
-            <div class="searchable-select" id="rs-sku-induk-wrap">
-              <div class="ss-display" id="rs-sku-induk-display" onclick="_toggleSS('rs-sku-induk-wrap')">
-                <span class="ss-value" id="rs-sku-induk-val">— Pilih Produk —</span>
-                <span class="ss-arrow">▾</span>
-              </div>
-              <div class="ss-dropdown" id="rs-sku-induk-dd">
-                <input class="ss-search" type="text" placeholder="🔍 Cari produk..." id="rs-sku-induk-search" oninput="_filterSS('rs-sku-induk-wrap')" onclick="event.stopPropagation()">
-                <div class="ss-list" id="rs-sku-induk-list"></div>
-              </div>
-            </div>
-            <input type="hidden" id="rs-sku-induk">
+            <select class="sel" id="rs-sku-induk" onchange="populateRsVariasi()">
+              <option value="">— Pilih Produk —</option>
+            </select>
           </div>
           <div class="fg"><label class="lbl">SKU Variasi</label>
-            <div class="searchable-select" id="rs-sku-variasi-wrap">
-              <div class="ss-display" id="rs-sku-variasi-display" onclick="_toggleSS('rs-sku-variasi-wrap')">
-                <span class="ss-value" id="rs-sku-variasi-val">— Pilih Variasi —</span>
-                <span class="ss-arrow">▾</span>
-              </div>
-              <div class="ss-dropdown" id="rs-sku-variasi-dd">
-                <input class="ss-search" type="text" placeholder="🔍 Cari variasi..." id="rs-sku-variasi-search" oninput="_filterSS('rs-sku-variasi-wrap')" onclick="event.stopPropagation()">
-                <div class="ss-list" id="rs-sku-variasi-list"></div>
-              </div>
-            </div>
-            <input type="hidden" id="rs-sku-variasi">
+            <select class="sel" id="rs-sku-variasi">
+              <option value="">— Pilih Variasi —</option>
+            </select>
           </div>
         </div>
         <div class="form-row">
@@ -978,17 +962,9 @@
     </div>
     <div class="form-row">
       <div class="fg"><label class="lbl">SKU Variasi</label>
-        <div class="searchable-select" id="ej-sku-wrap">
-          <div class="ss-display" id="ej-sku-display" onclick="_toggleSS('ej-sku-wrap')">
-            <span class="ss-value" id="ej-sku-val">— Pilih Variasi —</span>
-            <span class="ss-arrow">▾</span>
-          </div>
-          <div class="ss-dropdown" id="ej-sku-dd">
-            <input class="ss-search" type="text" placeholder="🔍 Cari variasi..." id="ej-sku-search" oninput="_filterSS('ej-sku-wrap')" onclick="event.stopPropagation()">
-            <div class="ss-list" id="ej-sku-list"></div>
-          </div>
-        </div>
-        <input type="hidden" id="ej-sku">
+        <select class="sel" id="ej-sku">
+          <option value="">— Pilih Variasi —</option>
+        </select>
       </div>
       <div class="fg"><label class="lbl">Qty</label><input class="inp" type="number" id="ej-qty" min="1"></div>
     </div>

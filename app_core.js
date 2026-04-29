@@ -1087,26 +1087,25 @@ function hapusStok(idx) {
 // ================================================================
 function populateRsInduk() {
   const supplier = (document.getElementById('rs-supplier')||{}).value || '';
-  // Filter produk berdasarkan supplier yang dipilih
   const filteredProduk = supplier && supplier !== 'LAINNYA'
     ? DB.produk.filter(p => (p.suplaier||'').toUpperCase() === supplier.toUpperCase())
     : DB.produk;
   const indukList = [...new Set(filteredProduk.map(p=>p.induk))];
-  // Fallback: kalau tidak ada produk untuk supplier itu, tampilkan semua
   const finalList = indukList.length ? indukList : [...new Set(DB.produk.map(p=>p.induk))];
-  _populateSS('rs-sku-induk-wrap', finalList, populateRsVariasi);
+  const sel = document.getElementById('rs-sku-induk');
+  if (sel) sel.innerHTML = '<option value="">— Pilih Produk —</option>' + finalList.map(i=>`<option value="${i}">${i}</option>`).join('');
   populateRsVariasi();
 }
 function populateRsVariasi() {
   const induk = document.getElementById('rs-sku-induk').value;
   const supplier = (document.getElementById('rs-supplier')||{}).value || '';
   let variants = DB.produk.filter(p => p.induk === induk);
-  // Kalau supplier dipilih dan ada produk yang cocok, filter lebih lanjut
   if (supplier && supplier !== 'LAINNYA' && supplier !== 'PRODUKSI SENDIRI') {
     const supVariants = variants.filter(p => (p.suplaier||'').toUpperCase() === supplier.toUpperCase());
     if (supVariants.length) variants = supVariants;
   }
-  _populateSS('rs-sku-variasi-wrap', variants.map(p=>p.var), ()=>{});
+  const sel = document.getElementById('rs-sku-variasi');
+  if (sel) sel.innerHTML = '<option value="">— Pilih Variasi —</option>' + variants.map(p=>`<option value="${p.var}">${p.var}</option>`).join('');
 }
 function populateRqInduk() { const indukList=[...new Set(DB.produk.map(p=>p.induk))];document.getElementById('rq-induk').innerHTML=indukList.map(s=>`<option>${s}</option>`).join('');populateRqVariasi(); }
 function populateRqVariasi() { const induk=document.getElementById('rq-induk').value;document.getElementById('rq-variasi').innerHTML=DB.produk.filter(p=>p.induk===induk).map(p=>`<option>${p.var}</option>`).join(''); }
@@ -1391,11 +1390,13 @@ function _syncChannelDropdowns() {
 
 function populateJVariasi() {
   const induk=document.getElementById('j-sku-induk')?.value;
-  if(!induk) return;
+  const sel=document.getElementById('j-sku-variasi');
+  if(!sel) return;
+  if(!induk) { sel.innerHTML='<option value="">— Pilih Variasi —</option>'; return; }
   const vars = DB.produk
     .filter(p=>p.induk===induk&&(p.status_produk||'aktif')!=='arsip')
     .map(p=>p.var);
-  _populateSS('j-sku-variasi-wrap', vars, ()=>{});
+  sel.innerHTML = '<option value="">— Pilih Variasi —</option>' + vars.map(v=>`<option value="${v}">${v}</option>`).join('');
 }
 
 function addJurnal() {
@@ -1472,20 +1473,12 @@ function openEditJurnal(idx) {
     const el=document.getElementById(id); if(!el)return;
     if(id==='ej-idx')el.value=idx; else if(id==='ej-tgl')el.value=r.tgl; else if(id==='ej-ch')el.value=r.ch; else if(id==='ej-qty')el.value=r.qty; else if(id==='ej-harga')el.value=r.harga; else if(id==='ej-hpp')el.value=r.hpp;
   });
-  // Populate SS ej-sku dengan semua variasi, set nilai aktif
+  // Populate select ej-sku dengan semua variasi, set nilai aktif
   const semuaVar = [...new Set(DB.produk.filter(p=>(p.status_produk||'aktif')!=='arsip').map(p=>p.var))].sort();
-  _populateSS('ej-sku-wrap', semuaVar, ()=>{});
-  // Set nilai aktif ke nilai transaksi
-  const ejSkuHidden = document.getElementById('ej-sku');
-  const ejSkuVal    = document.getElementById('ej-sku-val');
-  if (ejSkuHidden) ejSkuHidden.value = r.var;
-  if (ejSkuVal)    ejSkuVal.textContent = r.var;
-  // Highlight active item setelah render
-  setTimeout(() => {
-    document.querySelectorAll('#ej-sku-list .ss-item').forEach(el => {
-      el.classList.toggle('active', el.textContent === r.var);
-    });
-  }, 50);
+  const ejSel = document.getElementById('ej-sku');
+  if (ejSel) {
+    ejSel.innerHTML = '<option value="">— Pilih Variasi —</option>' + semuaVar.map(v=>`<option value="${v}"${v===r.var?' selected':''}>${v}</option>`).join('');
+  }
   openModal('modal-edit-jurnal');
 }
 function saveEditJurnal() {
