@@ -1430,6 +1430,17 @@ html{scroll-behavior:smooth;}
   background: var(--card);
   flex-shrink: 0;
 }
+.ch-split-right-header-info {
+  flex: 1;
+  min-width: 0;
+}
+.ch-split-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
 .ch-split-right-title {
   font-size: 15px;
   font-weight: 800;

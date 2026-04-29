@@ -2289,9 +2289,8 @@ function _renderSplitChannelList() {
   list.innerHTML = channels.map((ch, idx) => {
     const cls = platformBadgeClass[ch.platform]||'lainnya';
     const allInduk = Object.keys(groups);
-    const aktif = allInduk.filter(induk => assign[induk] ? assign[induk][ch.nama] === true : false)
-      .reduce((sum, induk) => sum + (groups[induk]?.length || 0), 0);
-    const total = allInduk.reduce((sum, induk) => sum + (groups[induk]?.length || 0), 0);
+    const aktif = allInduk.filter(induk => assign[induk] ? assign[induk][ch.nama] === true : false).length;
+    const total = allInduk.length;
     const isActive = _splitActiveChannel === ch.nama ? ' active' : '';
     const isAktif = ch.status === 'Aktif';
     return `<div class="ch-split-ch-item${isActive}" onclick="_splitSelectChannel('${ch.nama}')">
