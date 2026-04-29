@@ -546,6 +546,12 @@ label.lbl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1
 
 /* ═══ SMOOTH SCROLL ═══ */
 html{scroll-behavior:smooth;}
+html, body {
+  transition: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+* { -webkit-tap-highlight-color: transparent; }
 
 /* ═══ SCROLLBAR — tipis & elegan ═══ */
 ::-webkit-scrollbar{width:4px;height:4px;}
@@ -1824,15 +1830,25 @@ html{scroll-behavior:smooth;}
 .status-habis   .ch-varian-status-dot { background: var(--dusty); }
 
 
-@media(max-width:900px){
+@media(max-width:900px) and (orientation:portrait){
   .ch-split-panel { grid-template-columns:1fr; height:auto; }
-  .ch-split-left { border-right:none; border-bottom:1px solid var(--border); max-height:260px; overflow-y:auto; }
+  .ch-split-left { border-right:none; border-bottom:1px solid var(--border); max-height:240px; overflow-y:auto; }
   .ch-panel-produk { border-right:none; border-bottom:1px solid var(--border); }
-  .ch-panel-produk-body { max-height:50vh; overflow-y:auto; }
-  .ch-panel-varian-body { max-height:50vh; overflow-y:auto; }
+  .ch-panel-produk-body { max-height:45vh; overflow-y:auto; }
+  .ch-panel-varian-body { max-height:45vh; overflow-y:auto; }
   .ch-split-ch-actions { display:flex !important; }
   .ch-split-ch-action-btn { padding:5px 10px; font-size:11px; }
   .ch-hdr-nama { max-width:70px; }
+}
+@media(max-width:900px) and (orientation:landscape){
+  .ch-split-panel { grid-template-columns:240px 1fr 280px; height:calc(100vh - 60px); }
+  .ch-split-left { max-height:none; overflow-y:auto; }
+  .ch-panel-produk-body { overflow-y:auto; }
+  .ch-panel-varian-body { overflow-y:auto; }
+  .ch-panel-spacer { display:none; }
+  .ch-hdr-nama { max-width:80px; }
+  .ch-split-ch-actions { display:flex !important; }
+  .ch-split-ch-action-btn { padding:4px 8px; font-size:10px; }
 }
 
 
