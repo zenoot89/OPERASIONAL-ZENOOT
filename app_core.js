@@ -2233,7 +2233,7 @@ function renderAssignChannel() {
   }
   const platformColor = {Shopee:'#ee4d2d',Lazada:'#f57c00','TikTok Shop':'#010101',Offline:'#5a7a6a',Lainnya:'#8c7b6b'};
   let html = '<div class="tbl-wrap"><table class="ch-assign-table"><thead><tr>';
-  html += '<th style="min-width:200px;text-align:left;">SKU Induk</th>';
+  html += '<th style="min-width:200px;text-align:left;position:sticky;left:0;z-index:3;background:var(--cream);">SKU Induk</th>';
   channels.forEach(ch=>{
     const col = platformColor[ch.platform]||'#888';
     html += '<th><div style="color:'+col+';font-size:11px;font-weight:800;">'+ch.nama+'</div>';
@@ -2245,7 +2245,7 @@ function renderAssignChannel() {
   Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(function(entry){
     const induk = entry[0], vars = entry[1];
     html += '<tr class="induk-row">';
-    html += '<td><span style="font-size:13px;">'+induk+'</span>';
+    html += '<td style="position:sticky;left:0;z-index:2;background:var(--cream);min-width:200px;"><span style="font-size:13px;font-weight:700;">'+induk+'</span>';
     html += '<span style="font-size:11px;color:var(--dusty);margin-left:8px;">'+vars.length+' varian</span></td>';
     channels.forEach(function(ch){
       const checked = assign[induk] ? assign[induk][ch.nama] !== false : true;
