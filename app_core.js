@@ -817,7 +817,7 @@ function go(id, el) {
   if (id==='jurnal')  { populateJInduk(); renderJurnal(); }
   if (id==='produk')  renderProduk();
   if (id==='restock') { populateRsInduk(); renderRestock(); renderLowStock(); }
-  if (id==='channel') renderChannel();
+  if (id==='channel') { renderChannel(); renderSplitPanel(); }
   if (id==='daily')   { if (typeof renderDailyChecklist==='function') renderDailyChecklist(); }
   // Auto-close sidebar di mobile setelah navigasi
   if (window.innerWidth <= 900) {
@@ -2076,7 +2076,7 @@ function tambahChannel() {
   if (DB.channel.find(c=>c.nama===nama)) { toast('Channel sudah ada!','err'); return; }
   DB.channel.push({nama,platform,status});
   document.getElementById('ch-nama').value='';
-  saveDB(); closeModal('modal-tambah-channel'); renderChannel();
+  saveDB(); closeModal('modal-tambah-channel'); renderChannel(); renderSplitPanel();
   _syncChannelDropdowns(); // langsung sync ke dropdown jurnal
   toast(`✅ Channel ${nama} ditambahkan!`);
 }
@@ -2208,31 +2208,25 @@ try { localStorage.removeItem(DB_KEY); } catch(e) {}
 // CHANNEL TAB & ASSIGN PRODUK KE CHANNEL
 // ================================================================
 function goChTab(id, el) {
-  document.querySelectorAll('.ch-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.ch-sub').forEach(s=>s.classList.remove('active'));
-  if (el) el.classList.add('active');
-  const sub = document.getElementById('chsub-'+id);
-  if (sub) sub.classList.add('active');
-  if (id === 'assign') renderSplitPanel();
+  renderSplitPanel();
 }
 
 // ================================================================
-// SPLIT PANEL — Assign Produk ke Channel
+// SPLIT PANEL — Channel + Assign Produk (halaman tunggal)
 // ================================================================
 
-let _splitActiveChannel = null; // nama channel yang sedang dipilih
+let _splitActiveChannel = null;
 
 function renderSplitPanel() {
   _renderSplitChannelList();
-  // Pilih channel pertama (aktif) otomatis
-  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif');
+  const channels = (DB.channel||[]);
   if (channels.length && !_splitActiveChannel) {
     _splitSelectChannel(channels[0].nama);
   } else if (_splitActiveChannel) {
     _splitSelectChannel(_splitActiveChannel);
   } else {
-    document.getElementById('ch-split-right-body').innerHTML =
-      '<div class="ch-split-empty">Belum ada channel aktif. Tambah channel dulu.</div>';
+    const body = document.getElementById('ch-split-right-body');
+    if (body) body.innerHTML = '<div class="ch-split-empty">Belum ada channel. Tambah channel dulu.</div>';
   }
 }
 
@@ -2241,7 +2235,7 @@ function _renderSplitChannelList() {
   if (!list) return;
   const channels = DB.channel||[];
   if (!channels.length) {
-    list.innerHTML = '<div style="padding:20px 16px;color:rgba(255,255,255,.3);font-size:12px;">Belum ada channel.</div>';
+    list.innerHTML = '<div style="padding:20px 16px;color:var(--dusty);font-size:12px;">Belum ada channel.</div>';
     return;
   }
   const groups = _buildProdukGroups();
@@ -2249,19 +2243,21 @@ function _renderSplitChannelList() {
   const platformBadgeClass = {
     'Shopee':'shopee','Lazada':'lazada','TikTok Shop':'tiktok','Offline':'offline','Lainnya':'lainnya'
   };
-  list.innerHTML = channels.map(ch => {
+  list.innerHTML = channels.map((ch, idx) => {
     const cls = platformBadgeClass[ch.platform]||'lainnya';
-    // Hitung berapa induk yang aktif di channel ini
     const allInduk = Object.keys(groups);
-    const aktif = allInduk.filter(induk => {
-      return assign[induk] ? assign[induk][ch.nama] !== false : true;
-    }).length;
+    const aktif = allInduk.filter(induk => assign[induk] ? assign[induk][ch.nama] !== false : true).length;
     const total = allInduk.length;
     const isActive = _splitActiveChannel === ch.nama ? ' active' : '';
+    const isAktif = ch.status === 'Aktif';
     return `<div class="ch-split-ch-item${isActive}" onclick="_splitSelectChannel('${ch.nama}')">
       <div class="ch-split-ch-name">${ch.nama}</div>
       <div><span class="ch-split-ch-badge ${cls}">${ch.platform}</span></div>
       <div class="ch-split-ch-counter">${aktif}/${total} aktif</div>
+      <div class="ch-split-ch-actions">
+        <button class="ch-split-ch-action-btn" onclick="event.stopPropagation();_splitToggleStatus(${idx})">${isAktif ? 'Nonaktifkan' : 'Aktifkan'}</button>
+        <button class="ch-split-ch-action-btn danger" onclick="event.stopPropagation();_splitHapus(${idx})">Hapus</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -2277,24 +2273,21 @@ function _buildProdukGroups() {
 
 function _splitSelectChannel(chNama) {
   _splitActiveChannel = chNama;
-
-  // Update active state kiri
   document.querySelectorAll('.ch-split-ch-item').forEach(el => {
     el.classList.toggle('active', el.querySelector('.ch-split-ch-name')?.textContent === chNama);
   });
-
   const ch = (DB.channel||[]).find(c=>c.nama===chNama);
   if (!ch) return;
-
-  // Update header kanan
-  document.getElementById('ch-split-right-title').textContent = chNama;
+  const titleEl = document.getElementById('ch-split-right-title');
+  const subEl   = document.getElementById('ch-split-right-sub');
+  const badge   = document.getElementById('ch-split-status-badge');
+  if (titleEl) titleEl.textContent = chNama;
   const platformLabel = { Shopee:'Shopee Store', Lazada:'Lazada Store', 'TikTok Shop':'TikTok Shop', Offline:'Offline Store', Lainnya:'Channel' };
-  document.getElementById('ch-split-right-sub').textContent = platformLabel[ch.platform]||ch.platform;
-  const badge = document.getElementById('ch-split-status-badge');
-  badge.textContent = ch.status;
-  badge.className = 'ch-split-status-badge' + (ch.status !== 'Aktif' ? ' nonaktif' : '');
-
-  // Render produk di kanan
+  if (subEl) subEl.textContent = platformLabel[ch.platform]||ch.platform;
+  if (badge) {
+    badge.textContent = ch.status;
+    badge.className = 'ch-split-status-badge' + (ch.status !== 'Aktif' ? ' nonaktif' : '');
+  }
   _renderSplitRightBody(chNama);
 }
 
@@ -2379,11 +2372,34 @@ function _persistAssign() {
   try { localStorage.setItem('zenot_assign_channel', JSON.stringify(DB.assignChannel)); } catch(e) {}
 }
 
-// Fungsi lama dipertahankan untuk kompatibilitas modul lain
-function onAssignToggle() {}
-async function saveAssignChannel() {
-  _persistAssign();
-  toast('Assign channel tersimpan!');
+function _splitToggleStatus(idx) {
+  if (!DB.channel[idx]) return;
+  DB.channel[idx].status = DB.channel[idx].status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+  saveDB();
+  renderChannel();
+  renderSplitPanel();
+  toast('Status ' + DB.channel[idx].nama + ' diubah ke ' + DB.channel[idx].status);
 }
+
+function _splitHapus(idx) {
+  const ch = DB.channel[idx];
+  if (!ch) return;
+  if (!confirm('Hapus channel "' + ch.nama + '"? Data assign produk untuk channel ini juga akan terhapus.')) return;
+  if (DB.assignChannel) {
+    Object.keys(DB.assignChannel).forEach(induk => {
+      if (DB.assignChannel[induk]) delete DB.assignChannel[induk][ch.nama];
+    });
+  }
+  if (_splitActiveChannel === ch.nama) _splitActiveChannel = null;
+  DB.channel.splice(idx, 1);
+  saveDB();
+  _persistAssign();
+  renderChannel();
+  renderSplitPanel();
+  toast('Channel ' + ch.nama + ' dihapus.');
+}
+
+function onAssignToggle() {}
+async function saveAssignChannel() { _persistAssign(); toast('Assign channel tersimpan!'); }
 
 // renderChannel tetap dihandle oleh fungsi di atas (renderChannel di app_core)

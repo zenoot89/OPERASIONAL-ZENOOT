@@ -444,57 +444,40 @@
 ════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-channel">
 
-  <!-- ── Tab Bar ── -->
-  <div class="ch-tab-bar">
-    <button class="ch-tab active" id="chtab-list"   onclick="goChTab('list',this)">📋 Daftar Channel</button>
-    <button class="ch-tab"        id="chtab-assign" onclick="goChTab('assign',this)">🗂️ Assign Produk</button>
-  </div>
+  <!-- ── Split Panel Utama ── -->
+  <div class="ch-split-panel">
 
-  <!-- ── Sub: Daftar Channel ── -->
-  <div class="ch-sub active" id="chsub-list">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
-      <button class="btn btn-p" onclick="openModal('modal-tambah-channel')">➕ Tambah Channel</button>
+    <!-- KIRI: List Channel -->
+    <div class="ch-split-left">
+      <div class="ch-split-left-header">
+        <span class="ch-split-left-title">CHANNEL</span>
+        <button class="ch-split-add-btn" onclick="openModal('modal-tambah-channel')" title="Tambah Channel">＋</button>
+      </div>
+      <div class="ch-split-left-list" id="ch-split-channel-list">
+        <!-- dirender JS -->
+      </div>
     </div>
-    <div class="tbl-wrap">
-      <table>
-        <thead><tr><th>#</th><th>Nama</th><th>Platform</th><th>Status</th><th>Aksi</th></tr></thead>
-        <tbody id="channel-body"></tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- ── Sub: Assign Produk — Split Panel ── -->
-  <div class="ch-sub" id="chsub-assign">
-    <div class="ch-split-panel">
-
-      <!-- KIRI: List Channel -->
-      <div class="ch-split-left">
-        <div class="ch-split-left-header">
-          <span class="ch-split-left-title">CHANNEL</span>
+    <!-- KANAN: Produk di Channel -->
+    <div class="ch-split-right">
+      <div class="ch-split-right-header" id="ch-split-right-header">
+        <div class="ch-split-right-header-info">
+          <div class="ch-split-right-title" id="ch-split-right-title">Pilih channel</div>
+          <div class="ch-split-right-sub" id="ch-split-right-sub">—</div>
         </div>
-        <div class="ch-split-left-list" id="ch-split-channel-list">
-          <!-- dirender JS -->
+        <div class="ch-split-right-actions">
+          <span class="ch-split-status-badge" id="ch-split-status-badge"></span>
         </div>
       </div>
-
-      <!-- KANAN: Produk di Channel -->
-      <div class="ch-split-right">
-        <div class="ch-split-right-header" id="ch-split-right-header">
-          <div class="ch-split-right-header-info">
-            <div class="ch-split-right-title" id="ch-split-right-title">Pilih channel</div>
-            <div class="ch-split-right-sub" id="ch-split-right-sub">—</div>
-          </div>
-          <div class="ch-split-right-actions">
-            <span class="ch-split-status-badge" id="ch-split-status-badge"></span>
-          </div>
-        </div>
-        <div class="ch-split-right-body" id="ch-split-right-body">
-          <div class="ch-split-empty">← Pilih channel di kiri</div>
-        </div>
+      <div class="ch-split-right-body" id="ch-split-right-body">
+        <div class="ch-split-empty">← Pilih channel di kiri</div>
       </div>
-
     </div>
+
   </div>
+
+  <!-- hidden tbody tetap ada agar renderChannel() tidak error -->
+  <table style="display:none"><tbody id="channel-body"></tbody></table>
 
 </div>
 
