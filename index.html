@@ -460,14 +460,21 @@
 
     <!-- KANAN: Produk di Channel -->
     <div class="ch-split-right">
-      <div class="ch-split-right-header" id="ch-split-right-header">
-        <div class="ch-split-right-header-info">
-          <div class="ch-split-right-title" id="ch-split-right-title">Pilih channel</div>
-          <div class="ch-split-right-sub" id="ch-split-right-sub">—</div>
+      <div class="ch-split-right-header" id="ch-split-right-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);gap:12px;">
+        <!-- KIRI: Nama channel + platform -->
+        <div style="display:flex;flex-direction:column;min-width:0;">
+          <div id="ch-split-right-title" style="font-size:15px;font-weight:800;color:var(--charcoal);font-family:'DM Serif Display',serif;"></div>
+          <div id="ch-split-right-sub" style="font-size:11px;color:var(--dusty);margin-top:1px;"></div>
         </div>
-        <div class="ch-split-right-actions">
+        <!-- TENGAH: Platform badge + counter -->
+        <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-start;padding-left:20px;">
           <span class="ch-split-status-badge" id="ch-split-status-badge"></span>
+          <span id="ch-split-right-counter" style="font-size:12px;color:var(--dusty);white-space:nowrap;"></span>
+        </div>
+        <!-- KANAN: Nonaktifkan + Hapus -->
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
           <button class="ch-split-ch-action-btn" id="ch-split-header-toggle-btn" onclick="_splitToggleActiveChannel()" style="display:none;"></button>
+          <button id="ch-split-header-hapus-btn" onclick="_splitHapusActive()" style="display:none;font-size:11px;padding:5px 14px;border-radius:6px;border:1.5px solid #E24B4A;color:#E24B4A;background:rgba(226,75,74,0.08);cursor:pointer;font-weight:600;letter-spacing:.3px;">Hapus</button>
         </div>
       </div>
       <div class="ch-split-right-body" id="ch-split-right-body">
