@@ -2327,9 +2327,6 @@ function _renderSplitChannelList() {
     return `<div class="ch-split-ch-item${isActive}" onclick="_splitSelectChannel('${ch.nama}')">
       <div class="ch-split-ch-name">${ch.nama}</div>
       <div><span class="ch-split-ch-badge" style="background:${style.bg};color:${style.color};border:none;">${ch.platform}</span></div>
-      <div class="ch-split-ch-counter">${aktif}/${total} aktif</div>
-      <div class="ch-split-ch-actions">
-      </div>
     </div>`;
   }).join('');
 }
@@ -2362,8 +2359,7 @@ function _splitSelectChannel(chNama) {
   const platformLabel = { Shopee:'Shopee Store', Lazada:'Lazada Store', 'TikTok Shop':'TikTok Shop', Offline:'Offline Store', Lainnya:'Channel' };
   const pStyle = _platformStyle(ch.platform);
   if (subEl) {
-    subEl.textContent = platformLabel[ch.platform]||ch.platform;
-    subEl.style.cssText = `font-size:11px;padding:2px 8px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-weight:600;display:inline-block;margin-top:2px;`;
+    subEl.innerHTML = `<span style="font-size:11px;padding:2px 10px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-weight:700;display:inline-block;">${ch.platform}</span>`;
   }
   if (badge) {
     badge.textContent = ch.status;
