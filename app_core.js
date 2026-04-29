@@ -2331,8 +2331,6 @@ function _renderSplitChannelList() {
       <div><span class="ch-split-ch-badge ${cls}">${ch.platform}</span></div>
       <div class="ch-split-ch-counter">${aktif}/${total} aktif</div>
       <div class="ch-split-ch-actions">
-        <button class="ch-split-ch-action-btn" onclick="event.stopPropagation();_splitToggleStatus(${idx})">${isAktif ? 'Nonaktifkan' : 'Aktifkan'}</button>
-        <button class="ch-split-ch-action-btn danger" onclick="event.stopPropagation();_splitHapus(${idx})">Hapus</button>
       </div>
     </div>`;
   }).join('');
@@ -2357,9 +2355,11 @@ function _splitSelectChannel(chNama) {
   });
   const ch = (DB.channel||[]).find(c=>c.nama===chNama);
   if (!ch) return;
-  const titleEl = document.getElementById('ch-split-right-title');
-  const subEl   = document.getElementById('ch-split-right-sub');
-  const badge   = document.getElementById('ch-split-status-badge');
+  const titleEl   = document.getElementById('ch-split-right-title');
+  const subEl     = document.getElementById('ch-split-right-sub');
+  const counterEl = document.getElementById('ch-split-right-counter');
+  const badge     = document.getElementById('ch-split-status-badge');
+  const hapusBtn  = document.getElementById('ch-split-header-hapus-btn');
   if (titleEl) titleEl.textContent = chNama;
   const platformLabel = { Shopee:'Shopee Store', Lazada:'Lazada Store', 'TikTok Shop':'TikTok Shop', Offline:'Offline Store', Lainnya:'Channel' };
   if (subEl) subEl.textContent = platformLabel[ch.platform]||ch.platform;
@@ -2367,13 +2367,27 @@ function _splitSelectChannel(chNama) {
     badge.textContent = ch.status;
     badge.className = 'ch-split-status-badge' + (ch.status !== 'Aktif' ? ' nonaktif' : '');
   }
-  // Tombol Nonaktifkan/Aktifkan di header kanan
+  // Counter produk aktif
+  const groups = _buildProdukGroups();
+  const allInduk = Object.keys(groups);
+  const aktif = allInduk.filter(induk => {
+    const vars = groups[induk]||[];
+    return vars.some(p => { const t=p.toko||'semua'; return t==='semua'||t.split(',').map(x=>x.trim()).includes(chNama); });
+  }).length;
+  if (counterEl) counterEl.textContent = aktif + '/' + allInduk.length + ' produk aktif';
+  // Tombol Nonaktifkan/Aktifkan
   const headerBtn = document.getElementById('ch-split-header-toggle-btn');
   if (headerBtn) {
     const chIdx = (DB.channel||[]).findIndex(c => c.nama === chNama);
     headerBtn.style.display = chIdx >= 0 ? 'inline-flex' : 'none';
     headerBtn.textContent = ch.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan';
     headerBtn.dataset.idx = chIdx;
+  }
+  // Tombol Hapus
+  if (hapusBtn) {
+    const chIdx = (DB.channel||[]).findIndex(c => c.nama === chNama);
+    hapusBtn.style.display = chIdx >= 0 ? 'inline-block' : 'none';
+    hapusBtn.dataset.idx = chIdx;
   }
   _renderSplitRightBody(chNama);
 }
@@ -2506,6 +2520,14 @@ function _persistAssign() {
       });
     }).catch(e => console.warn('[persistAssign]', e.message));
   }
+}
+
+function _splitHapusActive() {
+  const btn = document.getElementById('ch-split-header-hapus-btn');
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.idx);
+  if (!confirm('Hapus channel "' + (DB.channel[idx]?.nama||'') + '"? TIDAK BISA DIBATALKAN!')) return;
+  _splitHapus(idx);
 }
 
 function _splitToggleActiveChannel() {
