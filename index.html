@@ -944,23 +944,14 @@
     <!-- Baris 2: SKU Induk | SKU Variasi -->
     <div class="form-row">
       <div class="fg"><label class="lbl">SKU Induk</label>
-        <input class="inp" type="text" id="j-sku-induk-search" placeholder="Cari produk..." oninput="_filterJIndukSelect()" autocomplete="off" style="margin-bottom:4px;">
         <select class="sel" id="j-sku-induk" onchange="onJIndukChange()">
           <option value="">— Pilih Produk —</option>
         </select>
       </div>
       <div class="fg"><label class="lbl">SKU Variasi</label>
-        <div class="searchable-select" id="j-sku-variasi-wrap">
-          <div class="ss-display" id="j-sku-variasi-display" onclick="_toggleSS('j-sku-variasi-wrap')">
-            <span class="ss-value" id="j-sku-variasi-val">— Pilih Variasi —</span>
-            <span class="ss-arrow">▾</span>
-          </div>
-          <div class="ss-dropdown" id="j-sku-variasi-dd">
-            <input class="ss-search" type="text" placeholder="🔍 Cari variasi..." id="j-sku-variasi-search" oninput="_filterSS('j-sku-variasi-wrap')" onclick="event.stopPropagation()">
-            <div class="ss-list" id="j-sku-variasi-list"></div>
-          </div>
-        </div>
-        <input type="hidden" id="j-sku-variasi">
+        <select class="sel" id="j-sku-variasi">
+          <option value="">— Pilih Variasi —</option>
+        </select>
       </div>
     </div>
     <!-- Baris 3: Qty | Simpan sejajar -->

@@ -1297,11 +1297,12 @@ function _normalizeCh(s){ return (s||'').trim().replace(/\.\s+/g,'.').toUpperCas
 // Cascade: pilih induk → filter variasi saja (channel sudah difilter duluan via onJChChange)
 function onJIndukChange() {
   const induk = document.getElementById('j-sku-induk')?.value;
-  if (!induk) return;
-
-  // Update variasi dropdown
+  const varSel = document.getElementById('j-sku-variasi');
+  if (!varSel) return;
+  if (!induk) { varSel.innerHTML = '<option value="">— Pilih Variasi —</option>'; return; }
   const produkInduk = DB.produk.filter(p=>p.induk===induk && (p.status_produk||'aktif')!=='arsip');
-  _populateSS('j-sku-variasi-wrap', produkInduk.map(p=>p.var), ()=>{});
+  varSel.innerHTML = '<option value="">— Pilih Variasi —</option>' +
+    produkInduk.map(p=>`<option value="${p.var}">${p.var}</option>`).join('');
 }
 
 // ── Searchable Select Helpers ──
