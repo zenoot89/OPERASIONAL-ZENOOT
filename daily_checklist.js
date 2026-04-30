@@ -596,3 +596,11 @@ window.dcSaveTarget         = dcSaveTarget;
 window.dcSaveCatatan        = dcSaveCatatan;
 window.dcTambahKeu          = dcTambahKeu;
 window.dcHapusKeu           = dcHapusKeu;
+
+// Auto-render jika page-daily sudah aktif saat script ini load
+(function() {
+  const el = document.getElementById('page-daily');
+  if (el && el.classList.contains('active')) {
+    renderDailyChecklist();
+  }
+})();

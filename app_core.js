@@ -868,7 +868,14 @@ function go(id, el) {
   if (id==='produk')  renderProduk();
   if (id==='restock') { populateRsInduk(); renderRestock(); renderLowStock(); }
   if (id==='channel') { renderChannel(); renderSplitPanel(); }
-  if (id==='daily')   { if (typeof renderDailyChecklist==='function') renderDailyChecklist(); }
+  if (id==='daily') {
+    if (typeof renderDailyChecklist === 'function') {
+      renderDailyChecklist();
+    } else {
+      // daily_checklist.js belum selesai load — retry 300ms
+      setTimeout(() => { if (typeof renderDailyChecklist === 'function') renderDailyChecklist(); }, 300);
+    }
+  }
   // Auto-close sidebar di mobile setelah navigasi
   if (window.innerWidth <= 900) {
     const sb = document.getElementById('sidebar');
