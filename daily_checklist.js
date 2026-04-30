@@ -90,14 +90,26 @@ function dcPullFromDB() {
   result.unitTerjual  = jToday.reduce((s,j) => s + j.qty, 0);
   result.jurnalCount  = jToday.length;
 
-  // Stok kritis & habis
+  // Hitung total terjual per SKU dari semua jurnal
+  const terjualMap = {};
+  (DB.jurnal||[]).forEach(j => {
+    const key = j.var || j.sku || '';
+    if (key) terjualMap[key] = (terjualMap[key]||0) + (j.qty||0);
+  });
+
+  // Stok kritis & habis — dengan data terjual
   if (DB.stok && DB.stok.length > 0) {
     result.totalSKU = DB.stok.length;
     DB.stok.forEach(s => {
       const akhir = typeof getAkhir === 'function' ? getAkhir(s) : (s.masuk - s.keluar);
-      if (akhir <= 0) result.stokHabis.push(s.var || s.induk || '-');
-      else if (akhir <= (s.safety || 4)) result.stokKritis.push({ sku: s.var || s.induk || '-', qty: akhir });
+      const varNama = s.var || s.induk || '-';
+      const terjual = terjualMap[varNama] || 0;
+      if (akhir <= 0) result.stokHabis.push({ sku: varNama, qty: 0, terjual });
+      else if (akhir <= (s.safety || 4)) result.stokKritis.push({ sku: varNama, qty: akhir, terjual });
     });
+    // Sort by terjual tertinggi, ambil top 10
+    result.stokHabis.sort((a,b) => b.terjual - a.terjual);
+    result.stokKritis.sort((a,b) => b.terjual - a.terjual);
   }
   return result;
 }
@@ -404,20 +416,51 @@ function renderDailyChecklist() {
   <!-- ══ STOK ALERT ══ -->
   ${(db.stokHabis.length > 0 || db.stokKritis.length > 0) ? `
   <div class="dc-section-title">🚨 Alert Stok</div>
-  <div class="intel-card" style="margin-bottom:16px;">
-    ${db.stokHabis.length > 0 ? `
-      <div style="margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:700;color:var(--rust);margin-bottom:6px;">❌ Stok Habis (${db.stokHabis.length} SKU)</div>
-        <div class="dc-chip-wrap">${db.stokHabis.map(s=>`<span class="dc-stok-habis-chip">${s}</span>`).join('')}</div>
-      </div>
-    `:''}
-    ${db.stokKritis.length > 0 ? `
-      <div>
-        <div style="font-size:12px;font-weight:700;color:#92400E;margin-bottom:6px;">⚠️ Stok Kritis (${db.stokKritis.length} SKU)</div>
-        <div class="dc-chip-wrap">${db.stokKritis.map(s=>`<span class="dc-stok-kritis-chip">${s.sku} (${s.qty})</span>`).join('')}</div>
-      </div>
-    `:''}
-  </div>
+
+  ${db.stokHabis.length > 0 ? `
+  <div class="intel-card" style="margin-bottom:12px;border-left:4px solid #C83232;">
+    <div style="font-size:12px;font-weight:700;color:#C83232;margin-bottom:10px;">❌ Stok Habis — ${db.stokHabis.length} SKU (Top 10 prioritas)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:#FEE2E2;color:#991B1B;">
+          <th style="padding:7px 10px;text-align:left;border-radius:6px 0 0 6px;font-weight:700;">SKU</th>
+          <th style="padding:7px 10px;text-align:center;font-weight:700;">Stok</th>
+          <th style="padding:7px 10px;text-align:center;border-radius:0 6px 6px 0;font-weight:700;">Total Terjual</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${db.stokHabis.slice(0,10).map((s,i) => `
+        <tr style="border-bottom:1px solid #FEE2E2;background:${i%2===0?'#fff':'#FFF5F5'};">
+          <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-weight:700;color:#C83232;">${s.sku}</td>
+          <td style="padding:7px 10px;text-align:center;color:#C83232;font-weight:800;">0 pc</td>
+          <td style="padding:7px 10px;text-align:center;color:var(--charcoal);font-weight:600;">${s.terjual > 0 ? s.terjual+'x' : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  ${db.stokKritis.length > 0 ? `
+  <div class="intel-card" style="margin-bottom:16px;border-left:4px solid #D4A017;">
+    <div style="font-size:12px;font-weight:700;color:#B8860B;margin-bottom:10px;">⚠️ Stok Kritis — ${db.stokKritis.length} SKU (Top 10 prioritas)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:#FEF3C7;color:#92400E;">
+          <th style="padding:7px 10px;text-align:left;border-radius:6px 0 0 6px;font-weight:700;">SKU</th>
+          <th style="padding:7px 10px;text-align:center;font-weight:700;">Stok</th>
+          <th style="padding:7px 10px;text-align:center;border-radius:0 6px 6px 0;font-weight:700;">Total Terjual</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${db.stokKritis.slice(0,10).map((s,i) => `
+        <tr style="border-bottom:1px solid #FEF3C7;background:${i%2===0?'#fff':'#FFFBEB'};">
+          <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-weight:700;color:#B8860B;">${s.sku}</td>
+          <td style="padding:7px 10px;text-align:center;color:#D4A017;font-weight:800;">${s.qty} pc</td>
+          <td style="padding:7px 10px;text-align:center;color:var(--charcoal);font-weight:600;">${s.terjual > 0 ? s.terjual+'x' : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
   ` : ''}
 
   <!-- ══ KEUANGAN HARIAN ══ -->
