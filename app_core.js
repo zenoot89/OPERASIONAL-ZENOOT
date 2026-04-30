@@ -1424,30 +1424,65 @@ function renderJurnal() {
 
 function openEditJurnal(idx) {
   const r = DB.jurnal[idx];
+
   // Populate channel dropdown dari DB.channel
   const chSel = document.getElementById('ej-ch');
   if (chSel) {
     const channels = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>c.nama);
     chSel.innerHTML = channels.map(c=>`<option value="${c}" ${r.ch===c?'selected':''}>${c}</option>`).join('');
   }
-  ['ej-idx','ej-tgl','ej-ch','ej-sku','ej-qty','ej-harga','ej-hpp'].forEach(id=>{
-    const el=document.getElementById(id); if(!el)return;
-    if(id==='ej-idx')el.value=idx;
-    else if(id==='ej-tgl')el.value=r.tgl;
-    else if(id==='ej-ch')el.value=r.ch;
-    else if(id==='ej-sku')el.value=r.var;
-    else if(id==='ej-qty')el.value=r.qty;
-    else if(id==='ej-harga')el.value=r.harga;
-    else if(id==='ej-hpp')el.value=r.hpp;
-  });
+
+  // Populate induk dropdown
+  const indukList = [...new Set((DB.produk||[]).map(p=>p.induk))].sort();
+  const currentInduk = (DB.produk||[]).find(p=>p.var===r.var)?.induk || indukList[0];
+  const indukSel = document.getElementById('ej-induk');
+  if (indukSel) {
+    indukSel.innerHTML = indukList.map(i=>`<option value="${i}" ${i===currentInduk?'selected':''}>${i}</option>`).join('');
+  }
+
+  // Populate variasi dropdown berdasarkan induk
+  const varList = (DB.produk||[]).filter(p=>p.induk===currentInduk);
+  const skuSel = document.getElementById('ej-sku');
+  if (skuSel) {
+    skuSel.innerHTML = varList.map(p=>`<option value="${p.var}" ${p.var===r.var?'selected':''}>${p.var}</option>`).join('');
+  }
+
+  // Set field lainnya
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
+  set('ej-idx',   idx);
+  set('ej-tgl',   r.tgl);
+  set('ej-qty',   r.qty);
+  set('ej-harga', r.harga);
+  set('ej-hpp',   r.hpp);
+
   openModal('modal-edit-jurnal');
 }
+
+function onEjIndukChange() {
+  const induk = document.getElementById('ej-induk')?.value;
+  const varList = (DB.produk||[]).filter(p=>p.induk===induk);
+  const skuSel = document.getElementById('ej-sku');
+  if (skuSel) skuSel.innerHTML = varList.map(p=>`<option value="${p.var}">${p.var}</option>`).join('');
+  onEjSkuChange();
+}
+
+function onEjSkuChange() {
+  const varNama = document.getElementById('ej-sku')?.value;
+  const prod = (DB.produk||[]).find(p=>p.var===varNama);
+  if (prod) {
+    const hppEl = document.getElementById('ej-hpp');
+    if (hppEl) hppEl.value = prod.hpp || 0;
+  }
+}
 function saveEditJurnal() {
-  const idx=+document.getElementById('ej-idx').value;
-  const newQty=+document.getElementById('ej-qty').value||0;
-  const newVar=document.getElementById('ej-sku').value;
-  const uuid=DB.jurnal[idx].uuid;
-  DB.jurnal[idx]={...DB.jurnal[idx], tgl:document.getElementById('ej-tgl').value, ch:document.getElementById('ej-ch').value, var:newVar, qty:newQty, harga:0, hpp:+document.getElementById('ej-hpp').value||0};
+  const idx     = +document.getElementById('ej-idx').value;
+  const newQty  = +document.getElementById('ej-qty').value||0;
+  const newVar  = document.getElementById('ej-sku').value;
+  const newCh   = document.getElementById('ej-ch').value;
+  const newTgl  = document.getElementById('ej-tgl').value;
+  const newHpp  = +document.getElementById('ej-hpp').value||0;
+  const uuid    = DB.jurnal[idx].uuid;
+  DB.jurnal[idx] = {...DB.jurnal[idx], tgl:newTgl, ch:newCh, var:newVar, qty:newQty, harga:0, hpp:newHpp};
   recalcStok();
   // Sync edit ke Supabase
   if (uuid && SUPABASE_URL) {

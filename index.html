@@ -978,13 +978,23 @@
       </div>
     </div>
     <div class="form-row">
-      <div class="fg"><label class="lbl">SKU Variasi</label><input class="inp" id="ej-sku"></div>
-      <div class="fg"><label class="lbl">Qty</label><input class="inp" type="number" id="ej-qty" min="1"></div>
+      <div class="fg"><label class="lbl">SKU Induk</label>
+        <select class="sel" id="ej-induk" onchange="onEjIndukChange()">
+          <!-- diisi JS -->
+        </select>
+      </div>
+      <div class="fg"><label class="lbl">SKU Variasi</label>
+        <select class="sel" id="ej-sku" onchange="onEjSkuChange()">
+          <!-- diisi JS -->
+        </select>
+      </div>
     </div>
     <div class="form-row">
+      <div class="fg"><label class="lbl">Qty</label><input class="inp" type="number" id="ej-qty" min="1"></div>
       <div class="fg"><label class="lbl">HPP/pc</label><input class="inp" type="number" id="ej-hpp" readonly style="background:var(--cream);color:var(--dusty)"></div>
-      <div class="fg"><label class="lbl">Harga Jual/pc</label><input class="inp" type="number" id="ej-harga"></div>
     </div>
+    <div class="form-row">
+      <div class="fg"><label class="lbl">Harga Jual/pc</label><input class="inp" type="number" id="ej-harga"></div>
     <div style="display:flex;gap:10px;">
       <button class="btn btn-p btn-full" onclick="saveEditJurnal()">💾 Simpan</button>
       <button class="btn btn-d" onclick="closeModal('modal-edit-jurnal')">Batal</button>
