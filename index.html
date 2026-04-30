@@ -224,8 +224,7 @@
           <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="rs-tgl"></div>
           <div class="fg"><label class="lbl">Supplier</label>
             <select class="sel" id="rs-supplier" onchange="populateRsInduk()">
-              <option>ALAN</option><option>H SOLAH</option><option>G. CS</option>
-              <option>PRODUKSI SENDIRI</option><option>LAINNYA</option>
+              <option value="">— Pilih Supplier —</option>
             </select>
           </div>
         </div>
@@ -348,8 +347,7 @@
       <p style="font-size:13px;color:var(--dusty);margin-bottom:12px;" id="bulk-sup-info">—</p>
       <div class="fg"><label class="lbl">Supplier Baru</label>
         <select class="sel" id="bulk-sup-val">
-          <option>ALAN</option><option>H SOLAH</option><option>G. CS</option>
-          <option>PRODUKSI SENDIRI</option><option>LAINNYA</option>
+          <option value="">— Pilih Supplier —</option>
         </select>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -975,8 +973,7 @@
       <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="ej-tgl"></div>
       <div class="fg"><label class="lbl">Channel</label>
         <select class="sel" id="ej-ch">
-          <option>SHP.ZENOOT</option><option>SHP. ALLEY</option><option>SHP.ELENZ</option>
-          <option>LAZ.ZENOOT</option><option>TT.ALLEY</option><option>OFFLEN</option>
+          <!-- diisi JS dari DB.channel -->
         </select>
       </div>
     </div>
@@ -1007,8 +1004,7 @@
       <div class="fg"><label class="lbl">Jumlah Masuk</label><input class="inp" type="number" id="rq-qty" placeholder="0" min="1"></div>
       <div class="fg"><label class="lbl">Supplier</label>
         <select class="sel" id="rq-supplier">
-          <option>ALAN</option><option>H SOLAH</option><option>G. CS</option>
-          <option>PRODUKSI SENDIRI</option><option>LAINNYA</option>
+          <option value="">— Pilih Supplier —</option>
         </select>
       </div>
     </div>

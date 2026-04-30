@@ -503,6 +503,7 @@ function setCloudStatus(ok) {
 function setBackupMode(on) { _backupModeActive = on; }
 
 function saveDB() {
+  _syncAllDropdowns();
   const ind = document.getElementById('save-indicator');
   if (ind) {
     ind.textContent = '☁️ Menyimpan...';
@@ -1099,6 +1100,37 @@ function hapusStok(idx) {
 // ================================================================
 // RESTOCK
 // ================================================================
+// ════════════════════════════════════════════════════════
+// SINGLE SOURCE OF TRUTH — semua dropdown dari DB
+// ════════════════════════════════════════════════════════
+function _syncAllDropdowns() {
+  // Supplier list dari DB.produk
+  const suppliers = [...new Set((DB.produk||[]).map(p=>p.suplaier||'').filter(Boolean))].sort();
+  const supplierOpts = suppliers.map(s=>`<option value="${s}">${s}</option>`).join('');
+
+  // Channel list dari DB.channel
+  const channels = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>c.nama);
+  const channelOpts = channels.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  // Populate semua supplier dropdown
+  ['rs-supplier','rq-supplier','bulk-sup-val'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = `<option value="">— Pilih Supplier —</option>${supplierOpts}`;
+    if (cur) el.value = cur;
+  });
+
+  // Populate semua channel dropdown
+  ['ej-ch'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = channelOpts;
+    if (cur) el.value = cur;
+  });
+}
+
 function populateRsInduk() {
   const supplier = (document.getElementById('rs-supplier')||{}).value || '';
   // Filter produk berdasarkan supplier yang dipilih
@@ -1391,10 +1423,22 @@ function renderJurnal() {
 }
 
 function openEditJurnal(idx) {
-  const r=DB.jurnal[idx];
+  const r = DB.jurnal[idx];
+  // Populate channel dropdown dari DB.channel
+  const chSel = document.getElementById('ej-ch');
+  if (chSel) {
+    const channels = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>c.nama);
+    chSel.innerHTML = channels.map(c=>`<option value="${c}" ${r.ch===c?'selected':''}>${c}</option>`).join('');
+  }
   ['ej-idx','ej-tgl','ej-ch','ej-sku','ej-qty','ej-harga','ej-hpp'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
-    if(id==='ej-idx')el.value=idx; else if(id==='ej-tgl')el.value=r.tgl; else if(id==='ej-ch')el.value=r.ch; else if(id==='ej-sku')el.value=r.var; else if(id==='ej-qty')el.value=r.qty; else if(id==='ej-harga')el.value=r.harga; else if(id==='ej-hpp')el.value=r.hpp;
+    if(id==='ej-idx')el.value=idx;
+    else if(id==='ej-tgl')el.value=r.tgl;
+    else if(id==='ej-ch')el.value=r.ch;
+    else if(id==='ej-sku')el.value=r.var;
+    else if(id==='ej-qty')el.value=r.qty;
+    else if(id==='ej-harga')el.value=r.harga;
+    else if(id==='ej-hpp')el.value=r.hpp;
   });
   openModal('modal-edit-jurnal');
 }
@@ -2274,9 +2318,10 @@ const DB_KEY = 'zenot_db_v1'; // key lama, dihapus saat init
 try { localStorage.removeItem(DB_KEY); } catch(e) {}
 (async () => {
   await loadDB();
-  await loadTokoList();       // ← multi-toko
+  await loadTokoList();
   await cleanChannelData();
   syncStokFromProduk();
+  _syncAllDropdowns();
   renderDashboard();
   renderStok();
   renderHarga();
