@@ -76,23 +76,40 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--charcoa
 /* Nav items */
 .nav-item{
   display:flex;align-items:center;gap:10px;
-  padding:11px 16px 11px 20px;cursor:pointer;
-  color:rgba(255,255,255,.5);font-size:13px;
-  transition:background .2s cubic-bezier(.4,0,.2,1), color .2s, transform .15s;
+  padding:9px 14px 9px 16px;cursor:pointer;
+  color:rgba(255,255,255,.55);font-size:13px;
+  transition:background .15s, color .15s;
   border-left:3px solid transparent;
   border-radius:0;
   border-bottom:1px solid rgba(255,255,255,.04);
 }
-.nav-item:hover{
-  color:var(--cream);
-  background:rgba(255,255,255,.06);
-  transform:translateX(2px);
-}
-.nav-item:active{
-  transform:scale(.98);
-  background:rgba(255,255,255,.1);
-}
-.nav-item.active{color:var(--cream);background:rgba(255,255,255,.08);border-left-color:var(--gold);font-weight:600;}
+.nav-item svg { flex-shrink:0;opacity:.65;transition:opacity .15s; }
+.nav-item:hover{ color:var(--cream);background:rgba(255,255,255,.07); }
+.nav-item:hover svg { opacity:1; }
+.nav-item:active{ background:rgba(255,255,255,.12); }
+.nav-item.active{color:#fff;background:rgba(255,255,255,.1);border-left-color:var(--gold);font-weight:600;}
+.nav-item.active svg { opacity:1; }
+.nav-item-action{color:rgba(255,255,255,.4);font-size:12px;}
+
+/* Nav section wrap + pin edit btn */
+.nav-sec-wrap { display:flex;align-items:center;justify-content:space-between;padding-right:10px; }
+.nav-pin-edit-btn { background:none;border:none;cursor:pointer;color:rgba(255,255,255,.3);padding:3px 5px;border-radius:5px;display:flex;align-items:center;transition:color .15s,background .15s;line-height:1; }
+.nav-pin-edit-btn:hover { color:var(--cream);background:rgba(255,255,255,.1); }
+
+/* Nav acc label with SVG */
+.nav-acc-label { display:flex;align-items:center;gap:10px; }
+.nav-acc-label svg { flex-shrink:0;opacity:.6; }
+
+/* Pin Manager */
+.pin-item { display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:background .12s;border:1.5px solid var(--border);margin-bottom:6px;background:var(--card); }
+.pin-item:hover { background:var(--cream); }
+.pin-item.selected { border-color:var(--brown);background:rgba(92,61,46,.07); }
+.pin-item-icon { width:30px;height:30px;border-radius:7px;background:var(--cream);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border); }
+.pin-item-name { font-size:13px;font-weight:600;color:var(--charcoal);flex:1; }
+.pin-item-cat { font-size:10px;color:var(--dusty); }
+.pin-item-check { width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s; }
+.pin-item.selected .pin-item-check { background:var(--brown);border-color:var(--brown); }
+.pin-max-warn { font-size:11px;color:var(--rust);font-weight:600;margin-bottom:8px;padding:6px 10px;background:rgba(180,60,30,.08);border-radius:6px;display:none; }
 
 /* ═══ ACCORDION — Shopee style ═══ */
 .nav-accordion{

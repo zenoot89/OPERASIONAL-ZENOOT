@@ -1101,7 +1101,97 @@ function hapusStok(idx) {
 // RESTOCK
 // ================================================================
 // ════════════════════════════════════════════════════════
-// SINGLE SOURCE OF TRUTH — semua dropdown dari DB
+// PIN MANAGER — Custom Menu Utama
+// ════════════════════════════════════════════════════════
+const PIN_KEY = 'zenot_pinned_menu';
+const PIN_MAX = 6;
+
+const ALL_MENUS = [
+  { id:'dashboard',       label:'Dashboard',        cat:'Utama',        svgPath:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
+  { id:'stok',            label:'Stok Produk',       cat:'Inventori',    svgPath:'M2 3h20v14H2zM8 21h8M12 17v4' },
+  { id:'restock',         label:'Re-Stock',          cat:'Inventori',    svgPath:'M23 4 23 10 17 10M1 20 1 14 7 14M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15' },
+  { id:'produk',          label:'Kelola Produk',     cat:'Inventori',    svgPath:'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01' },
+  { id:'harga',           label:'Price List',        cat:'Inventori',    svgPath:'M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' },
+  { id:'jurnal',          label:'Jurnal Penjualan',  cat:'Penjualan',    svgPath:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8' },
+  { id:'channel',         label:'Channel',           cat:'Penjualan',    svgPath:'M2 2h8v8H2zM14 2h8v8h-8zM2 14h8v8H2zM14 14h8v8h-8z' },
+  { id:'intel',           label:'Intelligence',      cat:'Intelligence', svgPath:'M22 12 18 12 15 21 9 3 6 12 2 12' },
+  { id:'planning-kpi',   label:'Target & KPI',      cat:'Perencanaan',  svgPath:'M22 12 18 12 15 21 9 3 6 12 2 12' },
+  { id:'planning-ops',   label:'Ops per Toko',      cat:'Perencanaan',  svgPath:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10' },
+  { id:'daily',           label:'Daily Checklist',   cat:'Tools',        svgPath:'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
+];
+
+const DEFAULT_PINS = ['dashboard','jurnal','stok','daily','channel','restock'];
+
+function getPins() {
+  try { return JSON.parse(localStorage.getItem(PIN_KEY)) || DEFAULT_PINS; } catch(e) { return DEFAULT_PINS; }
+}
+function savePins() {
+  const checked = [...document.querySelectorAll('.pin-item.selected')].map(el=>el.dataset.id);
+  if (checked.length === 0) { toast('⚠️ Pilih minimal 1 fitur!'); return; }
+  localStorage.setItem(PIN_KEY, JSON.stringify(checked));
+  closeModal('modal-pin-manager');
+  renderNavUtama();
+  toast('✅ Menu Utama diperbarui!');
+}
+
+function renderNavUtama() {
+  const pins = getPins();
+  const wrap = document.getElementById('nav-utama-pins');
+  if (!wrap) return;
+  wrap.innerHTML = pins.map(id => {
+    const m = ALL_MENUS.find(x=>x.id===id);
+    if (!m) return '';
+    const onclick = id === 'intel'
+      ? `goIntelFromSidebar('intel-dashboard',this)`
+      : `go('${id}',this)`;
+    return `<div class="nav-item" onclick="${onclick}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${m.svgPath}"/></svg>
+      <span>${m.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function openPinManager() {
+  const pins = getPins();
+  const list = document.getElementById('pin-manager-list');
+  if (!list) return;
+  list.innerHTML = `
+    <div class="pin-max-warn" id="pin-warn">Maksimal ${PIN_MAX} fitur!</div>
+    ${ALL_MENUS.map(m => `
+    <div class="pin-item ${pins.includes(m.id)?'selected':''}" data-id="${m.id}" onclick="togglePin(this)">
+      <div class="pin-item-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brown)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${m.svgPath}"/></svg>
+      </div>
+      <div>
+        <div class="pin-item-name">${m.label}</div>
+        <div class="pin-item-cat">${m.cat}</div>
+      </div>
+      <div class="pin-item-check">
+        ${pins.includes(m.id) ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </div>
+    </div>`).join('')}
+  `;
+  openModal('modal-pin-manager');
+}
+
+function togglePin(el) {
+  const selected = document.querySelectorAll('.pin-item.selected');
+  const isSelected = el.classList.contains('selected');
+  if (!isSelected && selected.length >= PIN_MAX) {
+    const warn = document.getElementById('pin-warn');
+    if (warn) { warn.style.display='block'; setTimeout(()=>warn.style.display='none',2000); }
+    return;
+  }
+  el.classList.toggle('selected');
+  const check = el.querySelector('.pin-item-check');
+  if (el.classList.contains('selected')) {
+    check.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  } else {
+    check.innerHTML = '';
+  }
+}
+
+
 // ════════════════════════════════════════════════════════
 function _syncAllDropdowns() {
   // Supplier list dari DB.produk
@@ -2357,6 +2447,7 @@ try { localStorage.removeItem(DB_KEY); } catch(e) {}
   await cleanChannelData();
   syncStokFromProduk();
   _syncAllDropdowns();
+  renderNavUtama();
   renderDashboard();
   renderStok();
   renderHarga();
