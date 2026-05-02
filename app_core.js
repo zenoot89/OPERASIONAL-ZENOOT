@@ -2103,16 +2103,32 @@ function parseMassal() {
 function doInputMassal() {
   const raw=document.getElementById('massal-paste-area').value.trim();
   const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
+  const tgl = new Date().toISOString().split('T')[0];
   let updated=0;
   lines.forEach(line=>{
     const parts=line.split('\t');
     const sku=(parts[0]||'').trim().toUpperCase();
     const qty=parseInt((parts[1]||'0').replace(/[^\d]/g,''))||0;
     const stok=DB.stok.find(s=>s.var.toUpperCase()===sku);
-    if(stok&&qty>0){stok.awal=(stok.awal||0)+qty;updated++;}
+    if(stok&&qty>0){
+      stok.masuk=(stok.masuk||0)+qty;
+      // Tambah record restock
+      DB.restock = DB.restock||[];
+      DB.restock.push({
+        uuid: DataLayer._uuid(),
+        tgl, var: stok.var,
+        supplier: '', qty, catatan: 'Input Massal'
+      });
+      updated++;
+    }
   });
-  if (updated>0) { recalcStok();saveDB();renderStok();renderDashboard();closeModal('modal-stok-massal');document.getElementById('massal-paste-area').value='';document.getElementById('massal-preview').style.display='none';toast(`✅ ${updated} SKU berhasil diupdate!`); }
-  else toast('Tidak ada data valid','err');
+  if (updated>0) {
+    recalcStok(); saveDB(); renderStok(); renderRestock(); renderDashboard();
+    closeModal('modal-stok-massal');
+    document.getElementById('massal-paste-area').value='';
+    document.getElementById('massal-preview').style.display='none';
+    toast(`✅ ${updated} SKU berhasil diupdate!`);
+  } else toast('Tidak ada data valid','err');
 }
 
 // ================================================================

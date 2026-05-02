@@ -266,9 +266,9 @@
     </select>
     <button class="btn btn-o btn-sm" onclick="resetStokFilter()">↺ Reset</button>
     <div style="margin-left:auto;display:flex;gap:8px;">
-      <button class="btn btn-s btn-sm" onclick="openModal('modal-restock-quick')">➕ Input Masuk</button>
-      <button class="btn btn-o btn-sm" onclick="openModal('modal-stok-massal')">📋 Massal</button>
-      <button class="btn btn-o btn-sm" onclick="syncStokDanRender()">🔄 Sync</button>
+      <button class="btn btn-s" onclick="openModal('modal-restock-quick')">➕ Input Masuk</button>
+      <button class="btn btn-o" onclick="openModal('modal-stok-massal')">📋 Massal</button>
+      <button class="btn btn-o" onclick="syncStokDanRender()">🔄 Sync</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -308,7 +308,7 @@
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <div class="card-title" style="margin:0">➕ Input Stok Masuk</div>
-          <button class="btn btn-o" style="padding:6px 12px;font-size:12px;font-weight:700;" onclick="openModal('modal-stok-massal')">📋 Massal</button>
+          <button class="btn btn-o" onclick="openModal('modal-stok-massal')">📋 Input Massal</button>
         </div>
         <div class="form-row">
           <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="rs-tgl"></div>
