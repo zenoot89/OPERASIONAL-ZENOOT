@@ -1327,8 +1327,61 @@ function renderRestock() {
     <td style="font-size:11px">${r.supplier||'—'}</td>
     <td class="mono" style="text-align:center;color:var(--sage);font-weight:600">+${r.qty}</td>
     <td style="font-size:12px;color:var(--dusty)">${r.catatan||'—'}</td>
-    <td><button class="btn btn-d btn-sm" onclick="deleteRestock(${i})">🗑</button></td>
+    <td style="display:flex;gap:4px;">
+      <button class="btn btn-o btn-sm" onclick="editRestock(${i})">✏️</button>
+      <button class="btn btn-d btn-sm" onclick="deleteRestock(${i})">🗑</button>
+    </td>
   </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--dusty)">Belum ada log restock</td></tr>`;
+}
+
+function editRestock(i) {
+  const r = DB.restock[i];
+  if (!r) return;
+  // Buat modal edit sederhana
+  let modal = document.getElementById('modal-edit-restock');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-edit-restock';
+    modal.className = 'overlay';
+    modal.innerHTML = `<div class="modal" style="max-width:400px;width:90%">
+      <div class="modal-hd">Edit Log Restock <button class="modal-close" onclick="closeModal('modal-edit-restock')">×</button></div>
+      <div class="modal-bd">
+        <div class="fg"><label class="lbl">SKU Variasi</label><input class="inp" id="er-var" readonly style="background:var(--cream);color:var(--dusty)"></div>
+        <div class="fg"><label class="lbl">Tanggal</label><input class="inp" type="date" id="er-tgl"></div>
+        <div class="form-row">
+          <div class="fg"><label class="lbl">Jumlah Masuk</label><input class="inp" type="number" id="er-qty" min="1"></div>
+          <div class="fg"><label class="lbl">Supplier</label><select class="sel" id="er-supplier"></select></div>
+        </div>
+        <button class="btn btn-p btn-full" onclick="saveEditRestock()">💾 Simpan</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    document.querySelector('#modal-edit-restock').addEventListener('click', e => { if(e.target===modal) closeModal('modal-edit-restock'); });
+  }
+  document.getElementById('er-var').value = r.var;
+  document.getElementById('er-tgl').value = r.tgl;
+  document.getElementById('er-qty').value = r.qty;
+  // Populate supplier
+  const supOpts = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>`<option>${c.nama}</option>`).join('');
+  document.getElementById('er-supplier').innerHTML = `<option value="">— Pilih Supplier —</option>${supOpts}`;
+  if (r.supplier) document.getElementById('er-supplier').value = r.supplier;
+  modal._editIdx = i;
+  openModal('modal-edit-restock');
+}
+
+function saveEditRestock() {
+  const modal = document.getElementById('modal-edit-restock');
+  const i = modal._editIdx;
+  const r = DB.restock[i];
+  if (!r) return;
+  const qty = parseInt(document.getElementById('er-qty').value)||0;
+  if (qty <= 0) { toast('Jumlah harus lebih dari 0','err'); return; }
+  r.tgl = document.getElementById('er-tgl').value;
+  r.qty = qty;
+  r.supplier = document.getElementById('er-supplier').value;
+  recalcStok(); saveDB(); renderStok(); renderRestock(); renderDashboard();
+  closeModal('modal-edit-restock');
+  toast('✅ Log restock diperbarui!');
 }
 
 function renderLowStock() {
@@ -2122,6 +2175,8 @@ function doInputMassal() {
   const raw=document.getElementById('massal-paste-area').value.trim();
   const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
   const tgl = new Date().toISOString().split('T')[0];
+  const supEl = document.getElementById('bulk-sup-val');
+  const supplier = supEl ? supEl.value : '';
   let updated=0;
   lines.forEach(line=>{
     const parts=line.split('\t');
@@ -2129,13 +2184,11 @@ function doInputMassal() {
     const qty=parseInt((parts[1]||'0').replace(/[^\d]/g,''))||0;
     const stok=DB.stok.find(s=>s.var.toUpperCase()===sku);
     if(stok&&qty>0){
-      stok.masuk=(stok.masuk||0)+qty;
-      // Tambah record restock
       DB.restock = DB.restock||[];
       DB.restock.push({
         uuid: DataLayer._uuid(),
         tgl, var: stok.var,
-        supplier: '', qty, catatan: 'Input Massal'
+        supplier: supplier||'', qty, catatan: 'Input Massal'
       });
       updated++;
     }
