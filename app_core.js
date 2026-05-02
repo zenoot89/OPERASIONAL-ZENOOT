@@ -849,6 +849,7 @@ const ptitles = {
   restock:'Re-Stock <span>Produk</span>',   jurnal:'Jurnal <span>Penjualan</span>',
   produk:'Kelola <span>Produk</span>',       channel:'Channel <span>Penjualan</span>',
   keuangan:'Laporan <span>Keuangan</span>',  blueprint:'Blueprint <span>Strategi</span>',
+  'laporan':'Laporan <span>Keuangan</span>',
   'planning-kpi':'Target <span>&amp; KPI</span>',
   'planning-ops':'Ops <span>per Toko</span>',
   'analisis-upload':'Analisis <span>&amp; Proyeksi</span>',
@@ -870,6 +871,7 @@ function go(id, el) {
   if (id==='produk')  renderProduk();
   if (id==='restock') { populateRsInduk(); renderRestock(); renderLowStock(); }
   if (id==='channel') { renderChannel(); renderSplitPanel(); }
+  if (id==='laporan')      { if (typeof renderLaporan==='function') renderLaporan(); }
   if (id==='planning-kpi') { if (typeof renderPlanningKPI==='function') renderPlanningKPI(); }
   if (id==='planning-ops') { if (typeof renderPlanningOps==='function') renderPlanningOps(); }
   if (id==='daily') {
@@ -1115,6 +1117,7 @@ const ALL_MENUS = [
   { id:'jurnal',          label:'Jurnal Penjualan',  cat:'Penjualan',    svgPath:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8' },
   { id:'channel',         label:'Channel',           cat:'Penjualan',    svgPath:'M2 2h8v8H2zM14 2h8v8h-8zM2 14h8v8H2zM14 14h8v8h-8z' },
   { id:'intel',           label:'Intelligence',      cat:'Intelligence', svgPath:'M22 12 18 12 15 21 9 3 6 12 2 12' },
+  { id:'laporan',         label:'Laporan Keuangan',  cat:'Laporan',      svgPath:'M18 20V10M12 20V4M6 20v-6' },
   { id:'planning-kpi',   label:'Target & KPI',      cat:'Perencanaan',  svgPath:'M22 12 18 12 15 21 9 3 6 12 2 12' },
   { id:'planning-ops',   label:'Ops per Toko',      cat:'Perencanaan',  svgPath:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10' },
   { id:'daily',           label:'Daily Checklist',   cat:'Tools',        svgPath:'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
