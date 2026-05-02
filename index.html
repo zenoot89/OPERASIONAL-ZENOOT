@@ -1105,7 +1105,7 @@
     <div class="modal-hd">Input Stok Masuk <button class="modal-close" onclick="closeModal('modal-restock-quick')">×</button></div>
     <div class="form-row">
       <div class="fg"><label class="lbl">SKU Induk</label><select class="sel" id="rq-induk" onchange="populateRqVariasi()"></select></div>
-      <div class="fg"><label class="lbl">SKU Variasi</label><select class="sel" id="rq-variasi"></select></div>
+      <div class="fg"><label class="lbl">SKU Variasi</label><select class="sel" id="rq-variasi" onchange="autoFillRqSupplier()"></select></div>
     </div>
     <div class="form-row">
       <div class="fg"><label class="lbl">Jumlah Masuk</label><input class="inp" type="number" id="rq-qty" placeholder="0" min="1"></div>

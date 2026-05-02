@@ -1256,7 +1256,17 @@ function populateRsVariasi() {
   document.getElementById('rs-sku-variasi').innerHTML = variants.map(p=>`<option>${p.var}</option>`).join('');
 }
 function populateRqInduk() { const indukList=[...new Set(DB.produk.map(p=>p.induk))];document.getElementById('rq-induk').innerHTML=indukList.map(s=>`<option>${s}</option>`).join('');populateRqVariasi(); }
-function populateRqVariasi() { const induk=document.getElementById('rq-induk').value;document.getElementById('rq-variasi').innerHTML=DB.produk.filter(p=>p.induk===induk).map(p=>`<option>${p.var}</option>`).join(''); }
+function populateRqVariasi() {
+  const induk = document.getElementById("rq-induk").value;
+  document.getElementById("rq-variasi").innerHTML = DB.produk.filter(p=>p.induk===induk).map(p=>`<option>${p.var}</option>`).join("");
+  autoFillRqSupplier();
+}
+function autoFillRqSupplier() {
+  const varName = document.getElementById("rq-variasi").value;
+  const produk = DB.produk.find(p => p.var === varName);
+  const supEl = document.getElementById("rq-supplier");
+  if (produk && produk.suplaier && supEl) { supEl.value = produk.suplaier; }
+}
 
 function inputRestock() {
   const varName=document.getElementById('rs-sku-variasi').value;
