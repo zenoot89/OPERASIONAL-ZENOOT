@@ -164,14 +164,59 @@ function parseOrderFile(wb) {
 // ─── PARSE ADS CSV ──────────────────────────────────────────────
 function parseAdsFile(csvText) {
   let total = 0;
+  // Deteksi separator: Shopee Ads kadang pakai ',' kadang ';'
+  const sep = (csvText.includes(';') && csvText.split('\n').slice(0,5).join('').split(';').length > csvText.split('\n').slice(0,5).join('').split(',').length) ? ';' : ',';
   const lines = csvText.split('\n');
+
+  // Cari header row untuk menemukan kolom nominal
+  let amountCol = -1;
+  let headerFound = false;
+
   for (const line of lines) {
-    if (line.includes('Iklan Produk')) {
-      const parts = line.split(',');
-      try { total += Math.abs(parseFloat(parts[3].trim())); } catch(e) {}
+    const raw = line.trim();
+    if (!raw) continue;
+    const parts = raw.split(sep).map(p => p.trim().replace(/^"|"$/g, ''));
+
+    // Cari header row
+    if (!headerFound) {
+      const lower = parts.map(p => p.toLowerCase());
+      const candidates = ['jumlah tagihan', 'tagihan', 'total tagihan', 'amount', 'biaya', 'total biaya', 'debit', 'pengeluaran'];
+      for (const c of candidates) {
+        const idx = lower.findIndex(p => p.includes(c));
+        if (idx >= 0) { amountCol = idx; headerFound = true; break; }
+      }
+      continue;
+    }
+
+    // Baris data — hitung baris yang mengandung kata kunci iklan/ads
+    const rowLower = raw.toLowerCase();
+    const isAdsRow = rowLower.includes('iklan') || rowLower.includes('ads') ||
+                     rowLower.includes('produk') || rowLower.includes('campaign') ||
+                     rowLower.includes('search') || rowLower.includes('discovery');
+
+    if (isAdsRow && amountCol >= 0 && parts[amountCol]) {
+      const numStr = String(parts[amountCol]).replace(/[^0-9]/g, '');
+      const val = parseFloat(numStr);
+      if (!isNaN(val) && val > 0) total += val;
     }
   }
-  return total; // Raw tanpa PPN — user input manual nilai iklan aktual
+
+  // Fallback: metode lama — cari baris 'Iklan Produk', ambil kolom numerik pertama >= 1000
+  if (total === 0) {
+    for (const line of lines) {
+      const rowLow = line.toLowerCase();
+      if (rowLow.includes('iklan produk') || rowLow.includes('product ads') || rowLow.includes('iklan')) {
+        const parts = line.split(sep);
+        for (let i = 1; i < parts.length; i++) {
+          const numStr = parts[i].trim().replace(/[^0-9]/g, '');
+          const val = parseFloat(numStr);
+          if (!isNaN(val) && val >= 1000) { total += val; break; }
+        }
+      }
+    }
+  }
+
+  return Math.round(total);
 }
 
 // ─── GET HPP dari DB.produk ──────────────────────────────────────
@@ -607,6 +652,24 @@ function _laporanUpload(type, input) {
   if (box) {
     box.classList.add('done');
     box.querySelector('.lap-upload-sub').textContent = '✅ ' + file.name;
+  }
+
+  // Auto-parse ads CSV → langsung isi field iklan
+  if (type === 'ads') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const totalIklan = parseAdsFile(e.target.result);
+        const iklanEl = document.getElementById('lap-iklan');
+        if (iklanEl && totalIklan > 0) {
+          iklanEl.value = totalIklan;
+          _laporanSaveOps();
+          if (typeof toast === 'function') toast(`\u2705 Iklan terbaca: Rp ${totalIklan.toLocaleString('id-ID')}`);
+        }
+      } catch(err) { console.warn('[parseAds]', err); }
+    };
+    reader.readAsText(file);
+    return;
   }
 
   // Auto-detect toko & bulan dari Income file
