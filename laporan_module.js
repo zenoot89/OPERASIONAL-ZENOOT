@@ -388,7 +388,7 @@ function renderLaporan() {
 
   el.innerHTML = `
   <style>
-    .lap-wrap { display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start; }
+    .lap-wrap { display:grid;grid-template-columns:1fr 280px 280px;gap:16px;align-items:start; }
     .lap-card { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:16px; }
     .lap-title { font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dusty);margin-bottom:14px; }
     .lap-upload-box { border:2px dashed var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s;position:relative;margin-bottom:10px; }
@@ -432,12 +432,13 @@ function renderLaporan() {
     .lap-history-item:hover { background:var(--cream); }
     .lap-history-item.active { border-color:var(--brown);background:rgba(92,61,46,.07); }
 
-    @media(max-width:900px){ .lap-wrap{grid-template-columns:1fr;} }
+    @media(max-width:1100px){ .lap-wrap{grid-template-columns:1fr 280px;} }
+    @media(max-width:800px){ .lap-wrap{grid-template-columns:1fr;} }
   </style>
 
   <div class="lap-wrap">
 
-    <!-- PANEL KIRI: Hasil Laporan -->
+    <!-- KOLOM 1: Hasil Laporan -->
     <div id="lap-hasil-wrap">
       ${_laporanState.parsed ? _renderHasil(_laporanState.parsed) : `
         <div class="lap-card" style="text-align:center;padding:60px 20px;">
@@ -448,7 +449,30 @@ function renderLaporan() {
       `}
     </div>
 
-    <!-- PANEL KANAN: Upload + Config -->
+    <!-- KOLOM 2: Ops per Toko -->
+    <div id="lap-opstoko-card">
+      <div class="lap-card">
+        <div class="lap-title">⚙️ Ops per Toko</div>
+        <div class="lap-field" style="margin-bottom:10px;">
+          <label>Operasional (Rp)</label>
+          <input type="number" id="lap-opstoko-ops" placeholder="0" oninput="_lapOpsTokoChange()">
+        </div>
+        <div class="lap-field" style="margin-bottom:10px;">
+          <label>Rasio Ops / Omset</label>
+          <div id="lap-opstoko-rasio" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--dusty);background:var(--cream);min-height:40px;box-sizing:border-box;">—</div>
+        </div>
+        <div class="lap-field" style="margin-bottom:10px;">
+          <label>Target Omset (Rp)</label>
+          <input type="number" id="lap-opstoko-omset" placeholder="0" oninput="_lapOpsTokoChange()">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+          <div style="font-size:10px;color:var(--dusty);">💾 Auto-save ke Ops per Toko</div>
+          <div id="lap-opstoko-status" style="font-size:10px;color:var(--sage);font-weight:700;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KOLOM 3: Pilih Toko + Upload + Proses + History -->
     <div>
       <!-- Pilih Toko & Bulan -->
       <div class="lap-card">
@@ -466,31 +490,6 @@ function renderLaporan() {
               style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box;background:var(--card);color:var(--charcoal);outline:none;"
               onchange="_laporanSetBulan(this.value)">
           </div>
-        </div>
-      </div>
-
-      <!-- Ops per Toko -->
-      <div class="lap-card" id="lap-opstoko-card">
-        <div class="lap-title">⚙️ Ops per Toko</div>
-        <div class="lap-manual" style="margin-bottom:10px;">
-          <div class="lap-field">
-            <label>Operasional (Rp)</label>
-            <input type="number" id="lap-opstoko-ops" placeholder="0"
-              oninput="_lapOpsTokoChange()">
-          </div>
-          <div class="lap-field">
-            <label>Rasio Ops / Omset</label>
-            <div id="lap-opstoko-rasio" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--dusty);background:var(--cream);min-height:40px;box-sizing:border-box;">—</div>
-          </div>
-        </div>
-        <div class="lap-field" style="margin-bottom:10px;">
-          <label>Target Omset (Rp)</label>
-          <input type="number" id="lap-opstoko-omset" placeholder="0"
-            oninput="_lapOpsTokoChange()">
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-          <div style="font-size:10px;color:var(--dusty);">💾 Auto-save ke Ops per Toko</div>
-          <div id="lap-opstoko-status" style="font-size:10px;color:var(--sage);font-weight:700;"></div>
         </div>
       </div>
 
