@@ -1,605 +1,496 @@
 /* ═══════════════════════════════════════════════════════════════════
    dashboard_v2.js — zenOt Operasional
-   Dashboard Baru: Full Data, Informatif, Tanpa Diagram/Simbol
-   Menggantikan renderDashboard() dan semua widget-nya di app_core.js
-   
-   CARA PAKAI:
-   1. Tambahkan file ini ke index.html SETELAH app_core.js:
-      <script src="dashboard_v2.js"></script>
-   2. Tidak perlu hapus kode lama di app_core.js — file ini override fungsinya
+   REDESIGN: Owner's Command Center — Insight tajam untuk pengambil keputusan
+   by BURHANMOLOGY × Claude
 ════════════════════════════════════════════════════════════════════ */
 
-// ── Helper format rupiah singkat (1.2jt, 850rb) ──
-function fmtShort(v) {
-  v = Math.round(v || 0);
-  if (v >= 1000000) return 'Rp ' + (v / 1000000).toFixed(1) + 'jt';
-  if (v >= 1000)    return 'Rp ' + (v / 1000).toFixed(0) + 'rb';
-  return 'Rp ' + v.toLocaleString('id-ID');
-}
+// ── Helpers ──
+const fmtShort = v => {
+  v = Math.round(v||0);
+  if (v>=1000000000) return 'Rp '+(v/1000000000).toFixed(1)+'M';
+  if (v>=1000000)    return 'Rp '+(v/1000000).toFixed(1)+'jt';
+  if (v>=1000)       return 'Rp '+(v/1000).toFixed(0)+'rb';
+  return 'Rp '+v.toLocaleString('id-ID');
+};
+const fmtNum = n => Number(n||0).toLocaleString('id-ID');
+const getTodayStr    = () => new Date().toISOString().slice(0,10);
+const getKemarinStr  = () => { const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); };
+const getBulanStr    = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+const getBulanLaluStr= () => { const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+const getDaysInMonth = () => { const d=new Date(); return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); };
+const getDayOfMonth  = () => new Date().getDate();
 
-// ── Helper delta badge (naik/turun vs kemarin) ──
 function deltaBadge(now, prev) {
-  if (!prev || prev === 0) return '';
-  const pct = Math.round((now - prev) / prev * 100);
-  if (pct > 0)  return `<span class="db2-delta db2-up">+${pct}%</span>`;
-  if (pct < 0)  return `<span class="db2-delta db2-dn">${pct}%</span>`;
-  return `<span class="db2-delta db2-flat">0%</span>`;
+  if (!prev||prev===0) return '<span class="ow-delta ow-flat">—</span>';
+  const pct = Math.round((now-prev)/prev*100);
+  if (pct>0)  return `<span class="ow-delta ow-up">▲ ${Math.abs(pct)}%</span>`;
+  if (pct<0)  return `<span class="ow-delta ow-dn">▼ ${Math.abs(pct)}%</span>`;
+  return '<span class="ow-delta ow-flat">0%</span>';
 }
 
-// ── Helper: tanggal hari ini & kemarin ──
-function getTodayStr()    { return new Date().toISOString().slice(0, 10); }
-function getKemarinStr()  { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); }
-function getBulanStr()    { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
-function getDaysInMonth() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
-function getDayOfMonth()  { return new Date().getDate(); }
+function progressBar(pct, color) {
+  const w = Math.min(100,Math.max(0,pct));
+  const c = pct<40?'#C0392B':pct<70?'#D97706':(color||'var(--gold)');
+  return `<div class="ow-pbar-wrap"><div class="ow-pbar-fill" style="width:${w}%;background:${c}"></div></div>`;
+}
 
-// ── Override fungsi utama renderDashboard ──
+// ── Inject CSS ──
+function _owInjectCSS() {
+  if (document.getElementById('ow-dash-style')) return;
+  const st = document.createElement('style');
+  st.id = 'ow-dash-style';
+  st.textContent = `
+.ow-wrap{display:flex;flex-direction:column;gap:16px;padding-bottom:32px;}
+.ow-kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;}
+.ow-kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px 14px;position:relative;overflow:hidden;}
+.ow-kpi-accent{position:absolute;top:0;left:0;width:4px;height:100%;border-radius:14px 0 0 14px;}
+.ow-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1.3px;color:var(--dusty);font-weight:700;margin-bottom:6px;}
+.ow-kpi-val{font-size:21px;font-weight:700;color:var(--charcoal);line-height:1.1;}
+.ow-kpi-sub{font-size:11px;color:var(--dusty);margin-top:7px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.ow-delta{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.ow-up{background:#EFF7F3;color:#2D6A4F;}
+.ow-dn{background:#FFF0EE;color:#9B2335;}
+.ow-flat{background:var(--cream);color:var(--dusty);}
+.ow-sec-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+.ow-sec-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;color:var(--dusty);}
+.ow-sec-note{font-size:11px;color:var(--dusty);opacity:.65;}
+.ow-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ow-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:900px){.ow-row2,.ow-row3{grid-template-columns:1fr;}}
+.ow-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;}
+.ow-card-title{font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:14px;}
+.ow-card-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.ow-badge-red{background:#FFF0EE;color:#9B2335;}
+.ow-badge-amber{background:#FFFBF0;color:#92400E;}
+.ow-badge-green{background:#EFF7F3;color:#2D6A4F;}
+.ow-badge-gray{background:var(--cream);color:var(--dusty);}
+.ow-badge-blue{background:#EFF5FD;color:#1A5EB8;}
+.ow-pbar-wrap{width:100%;height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin:6px 0 2px;}
+.ow-pbar-fill{height:100%;border-radius:99px;transition:width .5s;}
+.ow-stok-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.ow-stok-row:last-child{border-bottom:none;}
+.ow-stok-sku{font-weight:600;color:var(--charcoal);font-family:'DM Mono',monospace;font-size:12px;flex:1;}
+.ow-stok-right{display:flex;align-items:center;gap:10px;}
+.ow-stok-num{font-weight:700;font-family:'DM Mono',monospace;font-size:14px;}
+.stok-red{color:#C0392B;} .stok-amber{color:#D97706;} .stok-green{color:#2D6A4F;}
+.ow-stok-meta{font-size:11px;color:var(--dusty);}
+.ow-empty{padding:20px;text-align:center;font-size:13px;color:var(--dusty);background:var(--cream);border-radius:10px;}
+.ow-ch-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.ow-ch-row:last-child{border-bottom:none;}
+.ow-ch-name{font-size:12px;font-weight:700;color:var(--charcoal);min-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ow-ch-bar{flex:1;height:7px;background:var(--cream);border-radius:99px;overflow:hidden;}
+.ow-ch-fill{height:100%;background:var(--brown);border-radius:99px;}
+.ow-ch-val{font-size:12px;font-weight:700;color:var(--charcoal);min-width:65px;text-align:right;}
+.ow-sku-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.ow-sku-row:last-child{border-bottom:none;}
+.ow-sku-rank{font-size:11px;font-weight:700;color:var(--dusty);width:18px;text-align:center;}
+.ow-sku-name{flex:1;font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--charcoal);}
+.ow-sku-bar{width:70px;height:4px;background:var(--border);border-radius:99px;overflow:hidden;}
+.ow-sku-bfill{height:100%;background:var(--gold);border-radius:99px;}
+.ow-sku-qty{font-size:13px;font-weight:700;color:var(--brown);min-width:38px;text-align:right;}
+.ow-sup-row{display:grid;grid-template-columns:100px 1fr 70px 45px 45px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.ow-sup-row:last-child{border-bottom:none;}
+.ow-sup-name{font-weight:700;color:var(--charcoal);}
+.ow-sup-bar{height:5px;background:var(--cream);border-radius:99px;overflow:hidden;}
+.ow-sup-fill{height:100%;background:var(--sage);border-radius:99px;}
+.ow-alerts{display:flex;flex-direction:column;gap:8px;}
+.ow-alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;}
+.ow-alert-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.ow-alert-title{font-weight:700;color:var(--charcoal);margin-bottom:2px;}
+.ow-alert-sub{color:var(--dusty);font-size:12px;}
+.ow-alert.red{background:#FFF0EE;border:1px solid rgba(192,57,43,.2);}
+.ow-alert.amber{background:#FFFBF0;border:1px solid rgba(214,158,46,.25);}
+.ow-alert.green{background:#EFF7F3;border:1px solid rgba(45,106,79,.2);}
+.ow-alert.blue{background:#EFF5FD;border:1px solid rgba(26,94,184,.15);}
+.ow-alert.gray{background:var(--cream);border:1px solid var(--border);}
+.ow-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ow-mini{background:var(--cream);border-radius:10px;padding:12px;text-align:center;}
+.ow-mini-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:4px;}
+.ow-mini-val{font-size:18px;font-weight:700;color:var(--charcoal);}
+.ow-trend-bars{display:flex;align-items:flex-end;gap:5px;height:80px;margin-bottom:6px;}
+.ow-tbar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.ow-tbar{width:100%;border-radius:4px 4px 0 0;min-height:3px;background:var(--gold);opacity:.6;}
+.ow-tbar.today{opacity:1;background:var(--brown);}
+.ow-tbar.zero{opacity:.15;background:var(--dusty);}
+.ow-tbar-label{font-size:10px;color:var(--dusty);font-weight:600;}
+.ow-restock-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+.ow-restock-item:last-child{border-bottom:none;}
+.ow-restock-sku{flex:1;font-size:12px;font-family:'DM Mono',monospace;font-weight:600;color:var(--charcoal);}
+.ow-restock-heat{font-size:11px;color:var(--dusty);}
+.ow-restock-stok{font-size:13px;font-weight:700;min-width:50px;text-align:right;}
+.stok-habis{color:#C0392B;} .stok-kritis{color:#D97706;}
+  `;
+  document.head.appendChild(st);
+}
+
+// ── Main render ──
 function renderDashboard() {
-  const todayStr   = getTodayStr();
-  const kemarinStr = getKemarinStr();
-  const bulanStr   = getBulanStr();
+  _owInjectCSS();
 
-  // Filter jurnal sesuai toko aktif
-  const jurnal = (typeof getFilteredJurnal === 'function') ? getFilteredJurnal() : DB.jurnal;
+  const todayStr     = getTodayStr();
+  const kemarinStr   = getKemarinStr();
+  const bulanStr     = getBulanStr();
+  const bulanLaluStr = getBulanLaluStr();
 
-  // ── Slice waktu ──
-  const jHari    = jurnal.filter(j => j.tgl === todayStr);
-  const jKemarin = jurnal.filter(j => j.tgl === kemarinStr);
-  const jBulan   = jurnal.filter(j => (j.tgl || '').startsWith(bulanStr));
+  const jurnal = (typeof getFilteredJurnal==='function') ? getFilteredJurnal() : DB.jurnal;
 
-  // ── Keuangan ──
-  const omsetHari    = jHari.reduce((s, j)    => s + (j.harga || 0) * (j.qty || 0), 0);
-  const omsetKemarin = jKemarin.reduce((s, j) => s + (j.harga || 0) * (j.qty || 0), 0);
-  const omsetBulan   = jBulan.reduce((s, j)   => s + (j.harga || 0) * (j.qty || 0), 0);
-  const labaBulan    = jBulan.reduce((s, j)   => s + ((j.harga || 0) - (j.hpp || 0)) * (j.qty || 0), 0);
-  const qtyBulan     = jBulan.reduce((s, j)   => s + (j.qty || 0), 0);
-  const trxBulan     = jBulan.length;
-  const marginPct    = omsetBulan > 0 ? Math.round(labaBulan / omsetBulan * 100) : 0;
+  const jHari      = jurnal.filter(j => j.tgl===todayStr);
+  const jKemarin   = jurnal.filter(j => j.tgl===kemarinStr);
+  const jBulan     = jurnal.filter(j => (j.tgl||'').startsWith(bulanStr));
+  const jBulanLalu = jurnal.filter(j => (j.tgl||'').startsWith(bulanLaluStr));
 
-  // ── Stok ──
-  const nilaiStok  = DB.stok.reduce((s, r) => s + Math.max(0, getAkhir(r)) * (r.hpp || 0), 0);
-  const totalStok  = DB.stok.reduce((s, r) => s + Math.max(0, getAkhir(r)), 0);
-  const stokHabis  = DB.stok.filter(r => getAkhir(r) <= 0);
-  const stokKritis = DB.stok.filter(r => getAkhir(r) > 0 && getAkhir(r) <= (r.safety || 4));
+  const omsetHari     = jHari.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const omsetKemarin  = jKemarin.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const omsetBulan    = jBulan.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const omsetBulanLalu= jBulanLalu.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const labaBulan     = jBulan.reduce((s,j)=>s+((j.harga||0)-(j.hpp||0))*(j.qty||0),0);
+  const labaBulanLalu = jBulanLalu.reduce((s,j)=>s+((j.harga||0)-(j.hpp||0))*(j.qty||0),0);
+  const qtyBulan      = jBulan.reduce((s,j)=>s+(j.qty||0),0);
+  const trxBulan      = jBulan.length;
+  const marginPct     = omsetBulan>0 ? Math.round(labaBulan/omsetBulan*100) : 0;
+  const marginLaluPct = omsetBulanLalu>0 ? Math.round(labaBulanLalu/omsetBulanLalu*100) : 0;
+  const avgPerTrx     = trxBulan>0 ? Math.round(omsetBulan/trxBulan) : 0;
+  const proyeksi      = getDayOfMonth()>0 ? Math.round(omsetBulan/getDayOfMonth()*getDaysInMonth()) : 0;
 
-  // ── Sold map ──
-  const soldMap = {};
-  jurnal.forEach(j => { soldMap[j.var] = (soldMap[j.var] || 0) + (j.qty || 0); });
+  const nilaiStok  = DB.stok.reduce((s,r)=>s+Math.max(0,getAkhir(r))*(r.hpp||0),0);
+  const totalStok  = DB.stok.reduce((s,r)=>s+Math.max(0,getAkhir(r)),0);
+  const stokHabis  = DB.stok.filter(r=>getAkhir(r)<=0);
+  const stokKritis = DB.stok.filter(r=>getAkhir(r)>0&&getAkhir(r)<=(r.safety||4));
 
-  // ── Top SKU bulan ini ──
-  const soldBulanMap = {};
-  jBulan.forEach(j => { soldBulanMap[j.var] = (soldBulanMap[j.var] || 0) + (j.qty || 0); });
-  const topSKU = Object.entries(soldBulanMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const soldMap={}, soldBulanMap={}, soldBulanLaluMap={};
+  jurnal.forEach(j=>{soldMap[j.var]=(soldMap[j.var]||0)+(j.qty||0);});
+  jBulan.forEach(j=>{soldBulanMap[j.var]=(soldBulanMap[j.var]||0)+(j.qty||0);});
+  jBulanLalu.forEach(j=>{soldBulanLaluMap[j.var]=(soldBulanLaluMap[j.var]||0)+(j.qty||0);});
 
-  // ── Wajib Restock ──
+  const topSKU = Object.entries(soldBulanMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const deadStock = DB.stok.filter(r=>getAkhir(r)>0&&!soldMap[r.var]);
+  const deadStokNilai = deadStock.reduce((s,r)=>s+getAkhir(r)*(r.hpp||0),0);
+
   const wajibRestock = DB.stok
-    .filter(r => getAkhir(r) <= (r.safety || 4) && soldMap[r.var])
-    .map(r => ({ var: r.var, akhir: getAkhir(r), safety: r.safety || 4, terjual: soldMap[r.var] || 0 }))
-    .sort((a, b) => b.terjual - a.terjual)
-    .slice(0, 10);
+    .filter(r=>getAkhir(r)<=(r.safety||4)&&soldMap[r.var])
+    .map(r=>({var:r.var,akhir:getAkhir(r),safety:r.safety||4,terjual:soldMap[r.var]||0,bulanIni:soldBulanMap[r.var]||0}))
+    .sort((a,b)=>b.terjual-a.terjual).slice(0,8);
 
-  // ── No HPP ──
-  const noHPP = DB.produk.filter(p => !p.hpp || p.hpp <= 0);
-
-  // ── Channel ──
-  const chMap = {};
-  jBulan.forEach(j => {
-    if (!j.ch) return;
-    if (!chMap[j.ch]) chMap[j.ch] = { omset: 0, qty: 0, trx: 0 };
-    chMap[j.ch].omset += (j.harga || 0) * (j.qty || 0);
-    chMap[j.ch].qty   += (j.qty || 0);
-    chMap[j.ch].trx   += 1;
+  const chMap={}, chMapLalu={};
+  jBulan.forEach(j=>{
+    if(!j.ch) return;
+    if(!chMap[j.ch]) chMap[j.ch]={omset:0,qty:0,trx:0};
+    chMap[j.ch].omset+=(j.harga||0)*(j.qty||0);
+    chMap[j.ch].qty+=(j.qty||0); chMap[j.ch].trx+=1;
   });
-  const channels = Object.entries(chMap).sort((a, b) => b[1].omset - a[1].omset);
+  jBulanLalu.forEach(j=>{
+    if(!j.ch) return;
+    if(!chMapLalu[j.ch]) chMapLalu[j.ch]={omset:0};
+    chMapLalu[j.ch].omset+=(j.harga||0)*(j.qty||0);
+  });
+  const channels = Object.entries(chMap).sort((a,b)=>b[1].omset-a[1].omset);
+  const totalChOmset = channels.reduce((s,[,v])=>s+v.omset,0);
 
-  // ── Target ──
   const yr = new Date().getFullYear();
-  const mo = String(new Date().getMonth() + 1).padStart(2, '0');
-  let plan = {};
-  try { plan = JSON.parse(localStorage.getItem(`zenot_planning_${yr}_${mo}`) || '{}'); } catch(e) {}
-  const targetOmset  = plan.targetOmset   || 0;
-  const targetPcs    = plan.targetProduksi || 0;
-  const pctOmset     = targetOmset > 0 ? Math.min(100, Math.round(omsetBulan / targetOmset * 100)) : 0;
-  const pctPcs       = targetPcs   > 0 ? Math.min(100, Math.round(qtyBulan   / targetPcs   * 100)) : 0;
-  const daysLeft     = getDaysInMonth() - getDayOfMonth();
-  const sisaTarget   = Math.max(0, targetOmset - omsetBulan);
-  const perHariHarus = daysLeft > 0 && sisaTarget > 0 ? Math.round(sisaTarget / daysLeft) : 0;
+  const mo = String(new Date().getMonth()+1).padStart(2,'0');
+  let plan={};
+  try{plan=JSON.parse(localStorage.getItem(`zenot_planning_${yr}_${mo}`)||'{}');}catch(e){}
+  const targetOmset = plan.targetOmset||0;
+  const pctOmset    = targetOmset>0 ? Math.min(100,Math.round(omsetBulan/targetOmset*100)) : 0;
+  const daysLeft    = getDaysInMonth()-getDayOfMonth();
+  const sisaTarget  = Math.max(0,targetOmset-omsetBulan);
+  const perHariHarus= daysLeft>0&&sisaTarget>0 ? Math.round(sisaTarget/daysLeft) : 0;
 
-  // ── Target per channel (dari localStorage plan) ──
-  const tokoList = (window._tokoList && window._tokoList.length > 0)
-    ? window._tokoList
-    : (DB.channel || []).filter(c => c.nama !== '__assign__');
-  const chTargetRows = tokoList.map(ch => {
-    const kode = ch.kode || ch.nama;
-    let tgt = 0;
-    try { tgt = (JSON.parse(localStorage.getItem(`zenot_plan_${kode}_${yr}_${mo}`) || '{}')).targetOmset || 0; } catch(e) {}
-    const aktual = (chMap[kode] || {}).omset || 0;
-    const pct    = tgt > 0 ? Math.min(100, Math.round(aktual / tgt * 100)) : null;
-    return { kode, aktual, tgt, pct, qty: (chMap[kode] || {}).qty || 0, trx: (chMap[kode] || {}).trx || 0 };
-  }).filter(r => r.aktual > 0 || r.tgt > 0);
-
-  // ── Supplier ──
-  const supMap = {};
-  DB.stok.forEach(r => {
-    const p   = DB.produk.find(x => (x.var || '').toUpperCase() === (r.var || '').toUpperCase());
-    const sup = (p && p.suplaier) || 'Lainnya';
-    if (!supMap[sup]) supMap[sup] = { stok: 0, sku: 0, nilai: 0 };
-    supMap[sup].stok += Math.max(0, getAkhir(r));
-    supMap[sup].sku  += 1;
-    supMap[sup].nilai += Math.max(0, getAkhir(r)) * (r.hpp || 0);
+  const supMap={};
+  DB.stok.forEach(r=>{
+    const p=(DB.produk||[]).find(x=>(x.var||'').toUpperCase()===(r.var||'').toUpperCase());
+    const sup=(p&&p.suplaier)||'Lainnya';
+    if(!supMap[sup]) supMap[sup]={stok:0,sku:0,nilai:0,habis:0};
+    const akhir=getAkhir(r);
+    if(akhir<=0) supMap[sup].habis++;
+    supMap[sup].stok+=Math.max(0,akhir);
+    supMap[sup].sku+=1;
+    supMap[sup].nilai+=Math.max(0,akhir)*(r.hpp||0);
   });
-  const suppliers = Object.entries(supMap).sort((a, b) => b[1].stok - a[1].stok).slice(0, 8);
+  const suppliers = Object.entries(supMap).sort((a,b)=>b[1].nilai-a[1].nilai);
+  const supMax = suppliers.length>0 ? suppliers[0][1].nilai : 1;
 
-  // ── Transaksi terbaru ──
-  const recentTrx = jurnal.slice(0, 12);
-
-  // ── Hitung alert ──
-  const alertList = [];
-  stokHabis.forEach(r => alertList.push({ level: 'red', title: `Stok HABIS: ${r.var}`, sub: `Stok = 0 pcs — segera restock` }));
-  stokKritis.slice(0, 5).forEach(r => alertList.push({ level: 'amber', title: `Stok kritis: ${r.var}`, sub: `Sisa ${getAkhir(r)} pcs — safety: ${r.safety || 4} pcs` }));
-  if (targetOmset > 0 && pctOmset < 30 && daysLeft < 15) {
-    alertList.push({ level: 'amber', title: 'Target omset tertinggal', sub: `${pctOmset}% tercapai — perlu ${fmt(perHariHarus)}/hari dalam ${daysLeft} hari tersisa` });
+  const trend7=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const label=d.toLocaleDateString('id-ID',{weekday:'short'});
+    const val=jurnal.filter(j=>j.tgl===ds).reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+    trend7.push({label,val,ds});
   }
-  chTargetRows.forEach(r => {
-    if (r.tgt > 0 && r.pct !== null && r.pct < 30 && daysLeft < 15) {
-      alertList.push({ level: 'amber', title: `Channel ${r.kode} jauh dari target`, sub: `Aktual ${fmtShort(r.aktual)} dari target ${fmtShort(r.tgt)} (${r.pct}%)` });
-    }
-  });
-  if (noHPP.length > 0) {
-    alertList.push({ level: 'gray', title: `${noHPP.length} produk tidak ada HPP`, sub: `${noHPP.slice(0, 4).map(p => p.var).join(', ')}${noHPP.length > 4 ? ` +${noHPP.length - 4} lainnya` : ''} — laba tidak akurat` });
-  }
+  const trend7Max=Math.max(...trend7.map(t=>t.val),1);
 
-  // ══════════════════════════════════════════════
-  // RENDER HTML
-  // ══════════════════════════════════════════════
+  const noHPP=(DB.produk||[]).filter(p=>!p.hpp||p.hpp<=0);
 
-  // ── STAT CARDS (4 besar di atas) ──
-  document.getElementById('stat-cards').innerHTML = `
-    <div class="stat c1">
-      <div class="stat-label">Total Stok Aktif</div>
-      <div class="stat-val">${totalStok.toLocaleString('id-ID')} <span style="font-size:14px;font-weight:400">pcs</span></div>
-      <div class="stat-sub">${DB.stok.length} SKU terdaftar</div>
-    </div>
-    <div class="stat c2">
-      <div class="stat-label">Nilai Stok (HPP)</div>
-      <div class="stat-val" style="font-size:18px">${fmt(nilaiStok)}</div>
-      <div class="stat-sub">Berdasarkan harga pokok</div>
-    </div>
-    <div class="stat c3">
-      <div class="stat-label">Omset Bulan Ini</div>
-      <div class="stat-val" style="font-size:18px">${fmt(omsetBulan)}</div>
-      <div class="stat-sub">${trxBulan} transaksi · ${qtyBulan} pcs terjual</div>
-    </div>
-    <div class="stat c4">
-      <div class="stat-label">Stok Bermasalah</div>
-      <div class="stat-val">${stokHabis.length + stokKritis.length} <span style="font-size:14px;font-weight:400">SKU</span></div>
-      <div class="stat-sub">${stokHabis.length} habis · ${stokKritis.length} kritis</div>
-    </div>`;
+  // ═════════════════════════════════════
+  // RENDER
+  // ═════════════════════════════════════
+  const page = document.getElementById('page-dashboard');
+  page.innerHTML = '<div class="ow-wrap" id="ow-main"></div>';
+  const W = document.getElementById('ow-main');
+  const add = html => W.insertAdjacentHTML('beforeend', html);
 
-  // ── RENDER SEMUA SECTION ──
-  _renderSectionKondisiStok(stokHabis, stokKritis, wajibRestock, suppliers, totalStok, nilaiStok);
-  _renderSectionKeuangan(omsetHari, omsetKemarin, omsetBulan, labaBulan, marginPct, trxBulan, qtyBulan, jHari.length, jKemarin.length);
-  _renderSectionTarget(omsetBulan, targetOmset, pctOmset, qtyBulan, targetPcs, pctPcs, daysLeft, sisaTarget, perHariHarus, chTargetRows);
-  _renderSectionPenjualan(topSKU, channels, recentTrx);
-  _renderSectionAlert(alertList);
-}
+  // Hide old stat-cards
+  const sc=document.getElementById('stat-cards');
+  if(sc) sc.style.display='none';
 
-// ══════════════════════════════════════════════════════════════
-// SECTION 1: KONDISI STOK
-// ══════════════════════════════════════════════════════════════
-function _renderSectionKondisiStok(stokHabis, stokKritis, wajibRestock, suppliers, totalStok, nilaiStok) {
-  // Reuse existing notif-area untuk stok habis + kritis
-  let html = '';
+  // ─── 1. INSIGHT ALERTS ───
+  const alerts=[];
+  if(stokHabis.length>0) alerts.push({cls:'red',icon:'🚨',
+    title:`${stokHabis.length} SKU stok HABIS — risiko kehilangan order`,
+    sub:stokHabis.slice(0,5).map(r=>r.var).join(', ')+(stokHabis.length>5?` +${stokHabis.length-5} lainnya`:'')});
+  if(stokKritis.length>0) alerts.push({cls:'amber',icon:'⚠️',
+    title:`${stokKritis.length} SKU kritis — stok di bawah safety stock`,
+    sub:stokKritis.slice(0,3).map(r=>`${r.var} (${getAkhir(r)} pcs)`).join(' · ')+(stokKritis.length>3?` +${stokKritis.length-3} lainnya`:'')});
+  if(deadStock.length>0) alerts.push({cls:'amber',icon:'📦',
+    title:`${deadStock.length} SKU dead stock — ${fmtShort(deadStokNilai)} modal mengendap`,
+    sub:deadStock.slice(0,4).map(r=>r.var).join(', ')+(deadStock.length>4?` +${deadStock.length-4} lainnya`:'')
+      +' — pertimbangkan clearance atau retur'});
+  if(targetOmset>0&&pctOmset<50&&daysLeft<15) alerts.push({cls:'red',icon:'🎯',
+    title:`Target bulan ini baru ${pctOmset}% — butuh ${fmtShort(perHariHarus)}/hari dalam ${daysLeft} hari`,
+    sub:`Sudah: ${fmtShort(omsetBulan)} dari target ${fmtShort(targetOmset)}`});
+  if(omsetBulan>omsetBulanLalu&&omsetBulanLalu>0) alerts.push({cls:'green',icon:'📈',
+    title:`Omset tumbuh ${Math.round((omsetBulan-omsetBulanLalu)/omsetBulanLalu*100)}% vs bulan lalu — bagus!`,
+    sub:`${fmtShort(omsetBulan)} vs ${fmtShort(omsetBulanLalu)} — pertahankan momentum`});
+  if(noHPP.length>0) alerts.push({cls:'gray',icon:'💡',
+    title:`${noHPP.length} produk belum ada HPP — data laba tidak akurat`,
+    sub:'Lengkapi di Kelola Produk untuk kalkulasi margin yang benar'});
+  if(alerts.length===0) alerts.push({cls:'green',icon:'✅',
+    title:'Semua kondisi aman — tidak ada masalah kritis',sub:'Terus pantau stok dan target harian'});
 
-  // Tabel stok habis
-  if (stokHabis.length > 0) {
-    html += `
-    <div class="db2-sec-label">STOK HABIS (${stokHabis.length} SKU)</div>
-    <table class="db2-tbl">
-      <thead><tr><th>SKU</th><th>Produk Induk</th><th>Supplier</th><th class="r">Safety Stock</th></tr></thead>
-      <tbody>
-        ${stokHabis.map(r => {
-          const p = DB.produk.find(x => (x.var || '').toUpperCase() === (r.var || '').toUpperCase());
-          return `<tr>
-            <td><b>${r.var}</b></td>
-            <td class="muted">${p ? p.induk : '—'}</td>
-            <td class="muted">${p && p.suplaier ? p.suplaier : '—'}</td>
-            <td class="r muted">${r.safety || 4} pcs</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
-  } else {
-    html += `<div class="db2-ok-row">Tidak ada stok habis saat ini</div>`;
-  }
+  add(`<div>
+    <div class="ow-sec-hd"><span class="ow-sec-title">🧠 Insight & Action Items</span><span class="ow-sec-note">Hal yang perlu kamu tahu sekarang</span></div>
+    <div class="ow-alerts">${alerts.map(a=>`
+      <div class="ow-alert ${a.cls}">
+        <span class="ow-alert-icon">${a.icon}</span>
+        <div><div class="ow-alert-title">${a.title}</div><div class="ow-alert-sub">${a.sub}</div></div>
+      </div>`).join('')}</div>
+  </div>`);
 
-  // Tabel stok kritis
-  if (stokKritis.length > 0) {
-    html += `
-    <div class="db2-sec-label" style="margin-top:12px">STOK KRITIS — Di Bawah Safety Stock (${stokKritis.length} SKU)</div>
-    <table class="db2-tbl">
-      <thead><tr><th>SKU</th><th>Produk Induk</th><th class="r">Stok Sisa</th><th class="r">Safety</th><th class="r">Kurang</th></tr></thead>
-      <tbody>
-        ${stokKritis.map(r => {
-          const p      = DB.produk.find(x => (x.var || '').toUpperCase() === (r.var || '').toUpperCase());
-          const kurang = (r.safety || 4) - getAkhir(r);
-          return `<tr>
-            <td><b>${r.var}</b></td>
-            <td class="muted">${p ? p.induk : '—'}</td>
-            <td class="r warn-text">${getAkhir(r)} pcs</td>
-            <td class="r muted">${r.safety || 4} pcs</td>
-            <td class="r red-text">${kurang} pcs</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
-  }
+  // ─── 2. KPI STRIP ───
+  const kpis = [
+    {label:'Omset Hari Ini', val:fmtShort(omsetHari), accent:'var(--gold)',
+      sub:[deltaBadge(omsetHari,omsetKemarin),'<span>vs kemarin</span>'].join(' ')},
+    {label:'Omset Bulan Ini', val:fmtShort(omsetBulan), accent:'var(--brown)',
+      sub:[deltaBadge(omsetBulan,omsetBulanLalu),`<span>vs bln lalu · proyeksi ${fmtShort(proyeksi)}</span>`].join(' ')},
+    {label:'Laba Kotor Bulan', val:fmtShort(labaBulan), accent:marginPct>=20?'var(--sage)':'#E6A817',
+      sub:`<b style="color:${marginPct>=20?'#2D6A4F':'#D97706'}">${marginPct}% margin</b> ${deltaBadge(marginPct,marginLaluPct)}`},
+    {label:'Nilai Stok (HPP)', val:fmtShort(nilaiStok), accent:'#3D7EAA',
+      sub:`<span>${fmtNum(totalStok)} pcs · ${DB.stok.length} SKU</span>`},
+    {label:'Stok Bermasalah', val:`${stokHabis.length+stokKritis.length} SKU`, accent:stokHabis.length>0?'#C0392B':'#E6A817',
+      sub:`<span class="stok-red">${stokHabis.length} habis</span> · <span class="stok-amber">${stokKritis.length} kritis</span>`}
+  ];
+  add(`<div>
+    <div class="ow-sec-hd"><span class="ow-sec-title">📊 Performa Utama</span></div>
+    <div class="ow-kpi-strip">${kpis.map(k=>`
+      <div class="ow-kpi">
+        <div class="ow-kpi-accent" style="background:${k.accent}"></div>
+        <div class="ow-kpi-label">${k.label}</div>
+        <div class="ow-kpi-val">${k.val}</div>
+        <div class="ow-kpi-sub">${k.sub}</div>
+      </div>`).join('')}</div>
+  </div>`);
 
-  const elNotif = document.getElementById('notif-area');
-  if (elNotif) elNotif.innerHTML = html;
-
-  // Wajib Restock
-  const elRS = document.getElementById('db-wajib-restock');
-  if (elRS) {
-    if (!wajibRestock.length) {
-      elRS.innerHTML = '<div class="db2-ok-row">Tidak ada produk yang perlu restock</div>';
-    } else {
-      elRS.innerHTML = `
-      <table class="db2-tbl">
-        <thead><tr><th>SKU</th><th class="r">Stok Sisa</th><th class="r">Safety</th><th class="r">Total Terjual</th><th>Status</th></tr></thead>
-        <tbody>
-          ${wajibRestock.map(r => `
-            <tr>
-              <td><b>${r.var}</b></td>
-              <td class="r ${r.akhir <= 0 ? 'red-text' : 'warn-text'}">${r.akhir <= 0 ? 'HABIS' : r.akhir + ' pcs'}</td>
-              <td class="r muted">${r.safety} pcs</td>
-              <td class="r">${r.terjual} pcs</td>
-              <td>${r.akhir <= 0
-                ? '<span class="db2-badge db2-badge-red">Segera Restock</span>'
-                : '<span class="db2-badge db2-badge-amber">Restock</span>'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-    }
-  }
-
-  // Supplier
-  const elSup = document.getElementById('db-stok-supplier');
-  if (elSup) {
-    if (!suppliers.length) {
-      elSup.innerHTML = '<div class="db2-ok-row">Belum ada data supplier</div>';
-    } else {
-      elSup.innerHTML = `
-      <table class="db2-tbl">
-        <thead><tr><th>Supplier</th><th class="r">Jumlah SKU</th><th class="r">Total Stok</th><th class="r">Nilai Stok (HPP)</th></tr></thead>
-        <tbody>
-          ${suppliers.map(([sup, d]) => `
-            <tr>
-              <td><b>${sup}</b></td>
-              <td class="r">${d.sku}</td>
-              <td class="r">${d.stok.toLocaleString('id-ID')} pcs</td>
-              <td class="r">${fmt(d.nilai)}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-    }
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// SECTION 2: KEUANGAN
-// ══════════════════════════════════════════════════════════════
-function _renderSectionKeuangan(omsetHari, omsetKemarin, omsetBulan, labaBulan, marginPct, trxBulan, qtyBulan, trxHari, trxKemarin) {
-  // Inject ke progress-area (dipakai ulang untuk keuangan)
-  const el = document.getElementById('progress-area');
-  if (!el) return;
-
-  const deltaHari    = omsetKemarin > 0 ? Math.round((omsetHari - omsetKemarin) / omsetKemarin * 100) : 0;
-  const deltaSign    = deltaHari >= 0 ? '+' : '';
-  const deltaColor   = deltaHari >= 0 ? 'var(--sage)' : 'var(--rust)';
-
-  el.innerHTML = `
-  <div class="db2-keu-grid">
-    <div class="db2-keu-card">
-      <div class="db2-keu-label">Omset Hari Ini</div>
-      <div class="db2-keu-val">${fmt(omsetHari)}</div>
-      <div class="db2-keu-sub">${trxHari} transaksi
-        ${omsetKemarin > 0 ? `<span style="color:${deltaColor};font-weight:700;margin-left:6px">${deltaSign}${deltaHari}%</span> vs kemarin` : ''}</div>
-    </div>
-    <div class="db2-keu-card">
-      <div class="db2-keu-label">Omset Kemarin</div>
-      <div class="db2-keu-val">${fmt(omsetKemarin)}</div>
-      <div class="db2-keu-sub">${trxKemarin} transaksi</div>
-    </div>
-    <div class="db2-keu-card">
-      <div class="db2-keu-label">Omset Bulan Ini</div>
-      <div class="db2-keu-val">${fmt(omsetBulan)}</div>
-      <div class="db2-keu-sub">${trxBulan} transaksi · ${qtyBulan} pcs terjual</div>
-    </div>
-    <div class="db2-keu-card">
-      <div class="db2-keu-label">Laba Kotor Estimasi</div>
-      <div class="db2-keu-val" style="color:${labaBulan >= 0 ? 'var(--sage)' : 'var(--rust)'}">${fmt(labaBulan)}</div>
-      <div class="db2-keu-sub">Margin ${marginPct}% dari omset bulan ini</div>
-    </div>
-  </div>`;
-}
-
-// ══════════════════════════════════════════════════════════════
-// SECTION 3: TARGET
-// ══════════════════════════════════════════════════════════════
-function _renderSectionTarget(omsetBulan, targetOmset, pctOmset, qtyBulan, targetPcs, pctPcs, daysLeft, sisaTarget, perHariHarus, chTargetRows) {
-  const el = document.getElementById('db-target-channel');
-  if (!el) return;
-
-  const barColor = pct => pct >= 80 ? '#16a34a' : pct >= 50 ? 'var(--gold)' : 'var(--rust)';
-  const bar      = (pct, color) => `<div class="db2-prog-bar"><div style="width:${pct}%;background:${color};height:100%;border-radius:3px;transition:width .6s"></div></div>`;
-
-  let html = `
-  <div class="db2-target-grid">
-    <div>
-      <div class="db2-target-row">
-        <span class="db2-target-label">Target Omset Bulan Ini</span>
-        <span class="db2-target-nums">${fmt(omsetBulan)} / ${targetOmset > 0 ? fmt(targetOmset) : '— belum diset'}</span>
-        <span class="db2-target-pct" style="color:${targetOmset > 0 ? barColor(pctOmset) : 'var(--dusty)'}">${targetOmset > 0 ? pctOmset + '%' : '—'}</span>
-      </div>
-      ${targetOmset > 0 ? bar(pctOmset, barColor(pctOmset)) : ''}
-    </div>
-    <div>
-      <div class="db2-target-row">
-        <span class="db2-target-label">Target Produksi Bulan Ini</span>
-        <span class="db2-target-nums">${qtyBulan} pcs / ${targetPcs > 0 ? targetPcs + ' pcs' : '— belum diset'}</span>
-        <span class="db2-target-pct" style="color:${targetPcs > 0 ? barColor(pctPcs) : 'var(--dusty)'}">${targetPcs > 0 ? pctPcs + '%' : '—'}</span>
-      </div>
-      ${targetPcs > 0 ? bar(pctPcs, barColor(pctPcs)) : ''}
-    </div>
-  </div>`;
-
-  // Harus jual per hari
-  if (targetOmset > 0 && daysLeft > 0 && sisaTarget > 0) {
-    html += `
-  <div class="db2-per-hari">
-    <span class="db2-per-hari-label">Harus jual per hari (sisa target)</span>
-    <span class="db2-per-hari-val">${fmt(perHariHarus)}</span>
-    <span class="db2-per-hari-sub">Sisa ${fmt(sisaTarget)} dalam ${daysLeft} hari tersisa</span>
-  </div>`;
-  }
-
-  // Target per channel
-  if (chTargetRows.length > 0) {
-    html += `
-  <div class="db2-sec-label" style="margin-top:14px">TARGET OMSET VS AKTUAL PER CHANNEL</div>
-  <table class="db2-tbl">
-    <thead><tr><th>Channel</th><th class="r">Aktual</th><th class="r">Target</th><th class="r">Pct</th><th class="r">Sisa</th><th class="r">Qty</th></tr></thead>
-    <tbody>
-      ${chTargetRows.map(r => {
-        const sisaCh   = Math.max(0, r.tgt - r.aktual);
-        const pctColor = r.pct === null ? 'var(--dusty)' : barColor(r.pct);
-        return `<tr>
-          <td><b>${r.kode}</b></td>
-          <td class="r">${fmt(r.aktual)}</td>
-          <td class="r muted">${r.tgt > 0 ? fmt(r.tgt) : '—'}</td>
-          <td class="r" style="color:${pctColor};font-weight:700">${r.pct !== null ? r.pct + '%' : '—'}</td>
-          <td class="r muted">${r.tgt > 0 ? fmt(sisaCh) : '—'}</td>
-          <td class="r muted">${r.qty} pcs</td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>`;
-  }
-
-  el.innerHTML = html;
-}
-
-// ══════════════════════════════════════════════════════════════
-// SECTION 4: PENJUALAN
-// ══════════════════════════════════════════════════════════════
-function _renderSectionPenjualan(topSKU, channels, recentTrx) {
-  // Top SKU
-  const elTop = document.getElementById('db-top-sku');
-  if (elTop) {
-    if (!topSKU.length) {
-      elTop.innerHTML = '<div class="db2-ok-row">Belum ada data penjualan bulan ini</div>';
-    } else {
-      elTop.innerHTML = `
-      <table class="db2-tbl">
-        <thead><tr><th>No</th><th>SKU</th><th>Produk Induk</th><th class="r">Qty Terjual</th><th class="r">Estimasi Omset</th></tr></thead>
-        <tbody>
-          ${topSKU.map(([sku, qty], i) => {
-            const p     = DB.produk.find(x => (x.var || '').toUpperCase() === sku.toUpperCase());
-            const harga = p ? (p.jual || p.pasang || 0) : 0;
-            return `<tr>
-              <td class="muted">${i + 1}</td>
-              <td><b>${sku}</b></td>
-              <td class="muted">${p ? p.induk : '—'}</td>
-              <td class="r">${qty} pcs</td>
-              <td class="r muted">${harga > 0 ? fmt(harga * qty) : '—'}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`;
-    }
-  }
-
-  // Transaksi terbaru
-  const elSales = document.getElementById('last-sales');
-  if (elSales) {
-    if (!recentTrx.length) {
-      elSales.innerHTML = '<div class="db2-ok-row">Belum ada transaksi</div>';
-    } else {
-      elSales.innerHTML = `
-      <table class="db2-tbl">
-        <thead><tr><th>Tanggal</th><th>SKU</th><th>Channel</th><th class="r">Qty</th><th class="r">Harga Jual</th><th class="r">Total</th></tr></thead>
-        <tbody>
-          ${recentTrx.map(j => `<tr>
-            <td class="muted">${j.tgl || '—'}</td>
-            <td><b>${j.var}</b></td>
-            <td><span class="db2-ch-pill">${j.ch || '—'}</span></td>
-            <td class="r">${j.qty}</td>
-            <td class="r muted">${fmt(j.harga || 0)}</td>
-            <td class="r">${fmt((j.harga || 0) * (j.qty || 0))}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
-    }
-  }
-
-  // Channel aktif — inject ke chart-bars (dipakai ulang)
-  const elChart = document.getElementById('chart-bars');
-  const elLeg   = document.getElementById('chart-leg');
-  if (elChart) {
-    if (!channels.length) {
-      elChart.innerHTML = '<div class="db2-ok-row">Belum ada data channel</div>';
-      if (elLeg) elLeg.innerHTML = '';
-    } else {
-      elChart.style = 'display:block;height:auto';
-      elChart.innerHTML = `
-      <table class="db2-tbl">
-        <thead><tr><th>Channel</th><th class="r">Omset Bulan Ini</th><th class="r">Qty</th><th class="r">Transaksi</th><th class="r">Rata-rata/Trx</th></tr></thead>
-        <tbody>
-          ${channels.map(([ch, d]) => `<tr>
-            <td><b>${ch}</b></td>
-            <td class="r">${fmt(d.omset)}</td>
-            <td class="r muted">${d.qty} pcs</td>
-            <td class="r muted">${d.trx}</td>
-            <td class="r muted">${d.trx > 0 ? fmt(Math.round(d.omset / d.trx)) : '—'}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
-      if (elLeg) elLeg.innerHTML = '';
-    }
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// SECTION 5: ALERT PRIORITAS
-// ══════════════════════════════════════════════════════════════
-function _renderSectionAlert(alertList) {
-  // Buat/update container alert di bawah page-dashboard
-  let elAlert = document.getElementById('db2-alert-section');
-  if (!elAlert) {
-    const page = document.getElementById('page-dashboard');
-    if (!page) return;
-    elAlert = document.createElement('div');
-    elAlert.id = 'db2-alert-section';
-    elAlert.className = 'db-row2-wide';
-    page.appendChild(elAlert);
-  }
-
-  if (!alertList.length) {
-    elAlert.innerHTML = `
-    <div class="db-card">
-      <div class="db-card-title">Alert Prioritas — Lakukan Sekarang</div>
-      <div class="db2-ok-row">Semua kondisi aman. Tidak ada alert saat ini.</div>
-    </div>`;
-    return;
-  }
-
-  const rows = alertList.map(a => {
-    const cls  = a.level === 'red' ? 'db-alert-red' : a.level === 'amber' ? 'db-alert-yellow' : 'db-alert-green';
-    const bdg  = a.level === 'red'
-      ? '<span class="db2-badge db2-badge-red">Segera</span>'
-      : a.level === 'amber'
-        ? '<span class="db2-badge db2-badge-amber">Perhatian</span>'
-        : '<span class="db2-badge db2-badge-gray">Info</span>';
-    return `
-    <div class="db-alert ${cls}" style="font-size:13px;padding:8px 12px;">
-      <div style="flex:1">
-        <span class="db-alert-name" style="font-size:13px">${a.title}</span>
-        <span class="db-alert-msg" style="font-size:12px;margin-left:6px">${a.sub}</span>
-      </div>
-      ${bdg}
+  // ─── 3. TREN 7 HARI + TARGET ───
+  const trendBars = trend7.map(t=>{
+    const h = t.val===0 ? 3 : Math.round((t.val/trend7Max)*72)+8;
+    const cls = t.ds===todayStr?'today':t.val===0?'zero':'';
+    return `<div class="ow-tbar-wrap">
+      <div class="ow-tbar ${cls}" style="height:${h}px;${t.ds===todayStr?'box-shadow:0 0 0 2px var(--gold);':''}"></div>
+      <div class="ow-tbar-label">${t.label}${t.ds===todayStr?'*':''}</div>
     </div>`;
   }).join('');
 
-  elAlert.innerHTML = `
-  <div class="db-card db-card-urgent" style="grid-column:1/-1">
-    <div class="db-card-title">Alert Prioritas — Lakukan Sekarang <span style="color:var(--rust);font-family:'DM Mono',monospace;font-size:11px">(${alertList.length} item)</span></div>
-    ${rows}
-  </div>`;
+  let targetCard = '';
+  if(targetOmset>0){
+    targetCard = `
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+        <span style="font-weight:700">Omset vs Target</span>
+        <span>${fmtShort(omsetBulan)} / ${fmtShort(targetOmset)}</span>
+      </div>
+      ${progressBar(pctOmset)}
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dusty);margin-bottom:14px;">
+        <span style="font-weight:700;color:${pctOmset>=70?'#2D6A4F':'#D97706'}">${pctOmset}% tercapai</span>
+        <span>${daysLeft} hari tersisa</span>
+      </div>
+      <div class="ow-mini-grid">
+        <div class="ow-mini"><div class="ow-mini-label">Sisa Target</div><div class="ow-mini-val" style="font-size:15px;color:${sisaTarget>0?'#C0392B':'#2D6A4F'}">${fmtShort(sisaTarget)}</div></div>
+        <div class="ow-mini"><div class="ow-mini-label">Per Hari Perlu</div><div class="ow-mini-val" style="font-size:15px;color:#D97706">${perHariHarus>0?fmtShort(perHariHarus):'🎉 Done!'}</div></div>
+      </div>`;
+  } else {
+    targetCard = `<div class="ow-empty">Target belum diset.<br><a href="#" onclick="try{go('planning-kpi',null)}catch(e){}" style="color:var(--brown);font-weight:700">→ Set Target Bulan Ini</a></div>`;
+  }
+
+  add(`<div class="ow-row2">
+    <div>
+      <div class="ow-sec-hd"><span class="ow-sec-title">📈 Tren 7 Hari Terakhir</span><span class="ow-sec-note">* hari ini</span></div>
+      <div class="ow-card">
+        <div class="ow-trend-bars">${trendBars}</div>
+        <div style="font-size:11px;color:var(--dusty);margin-top:4px;">
+          Tertinggi: <b>${fmtShort(Math.max(...trend7.map(t=>t.val)))}</b> · 
+          Total 7 hari: <b>${fmtShort(trend7.reduce((s,t)=>s+t.val,0))}</b>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="ow-sec-hd"><span class="ow-sec-title">🎯 Target Bulanan</span></div>
+      <div class="ow-card">${targetCard}</div>
+    </div>
+  </div>`);
+
+  // ─── 4. STOK HABIS + WAJIB RESTOCK ───
+  const stokHabisHtml = stokHabis.length===0
+    ? `<div class="ow-empty">✅ Tidak ada stok habis</div>`
+    : stokHabis.slice(0,8).map(r=>{
+        const p=(DB.produk||[]).find(x=>(x.var||'').toUpperCase()===(r.var||'').toUpperCase());
+        return `<div class="ow-stok-row">
+          <span class="ow-stok-sku">${r.var}</span>
+          <div class="ow-stok-right">
+            <span class="ow-stok-meta">${(p&&p.suplaier)||'—'}</span>
+            <span class="ow-stok-meta">terjual: ${soldMap[r.var]||0} pcs</span>
+            <span class="ow-stok-num stok-red">HABIS</span>
+          </div>
+        </div>`;
+      }).join('')+(stokHabis.length>8?`<div style="font-size:11px;color:var(--dusty);padding-top:6px">+${stokHabis.length-8} lainnya</div>`:'');
+
+  const restockHtml = wajibRestock.length===0
+    ? `<div class="ow-empty">✅ Tidak ada urgensi restock</div>`
+    : wajibRestock.map(r=>`
+      <div class="ow-restock-item">
+        <span style="font-size:13px">${r.akhir<=0?'🔴':'🟡'}</span>
+        <span class="ow-restock-sku">${r.var}</span>
+        <span class="ow-restock-heat">${r.bulanIni||0} bln ini</span>
+        <span class="ow-restock-stok ${r.akhir<=0?'stok-habis':'stok-kritis'}">${r.akhir<=0?'HABIS':r.akhir+' pcs'}</span>
+      </div>`).join('');
+
+  add(`<div class="ow-row2">
+    <div>
+      <div class="ow-sec-hd">
+        <span class="ow-sec-title">📦 Stok Habis</span>
+        <span class="ow-card-badge ${stokHabis.length>0?'ow-badge-red':'ow-badge-green'}">${stokHabis.length} SKU</span>
+      </div>
+      <div class="ow-card" style="padding:14px 16px">${stokHabisHtml}</div>
+    </div>
+    <div>
+      <div class="ow-sec-hd">
+        <span class="ow-sec-title">🔁 Prioritas Restock</span>
+        <span class="ow-card-badge ow-badge-amber">${wajibRestock.length} SKU</span>
+      </div>
+      <div class="ow-card" style="padding:14px 16px">${restockHtml}</div>
+    </div>
+  </div>`);
+
+  // ─── 5. CHANNEL + TOP SKU ───
+  const chHtml = channels.length===0
+    ? `<div class="ow-empty">Belum ada penjualan bulan ini</div>`
+    : channels.map(([ch,v])=>{
+        const prev=(chMapLalu[ch]||{}).omset||0;
+        const bw = totalChOmset>0 ? Math.round(v.omset/totalChOmset*100) : 0;
+        return `<div class="ow-ch-row">
+          <span class="ow-ch-name">${ch}</span>
+          <div class="ow-ch-bar"><div class="ow-ch-fill" style="width:${bw}%"></div></div>
+          <span class="ow-ch-val">${fmtShort(v.omset)}</span>
+          ${deltaBadge(v.omset,prev)}
+          <span style="font-size:10px;color:var(--dusty);min-width:28px;text-align:right">${bw}%</span>
+        </div>`;
+      }).join('');
+
+  const topQty = topSKU.length>0 ? topSKU[0][1] : 1;
+  const skuHtml = topSKU.length===0
+    ? `<div class="ow-empty">Belum ada penjualan bulan ini</div>`
+    : topSKU.map(([sku,qty],i)=>`
+      <div class="ow-sku-row">
+        <span class="ow-sku-rank">${i+1}</span>
+        <span class="ow-sku-name">${sku}</span>
+        <div class="ow-sku-bar"><div class="ow-sku-bfill" style="width:${Math.round(qty/topQty*100)}%"></div></div>
+        <span class="ow-sku-qty">${qty} pcs</span>
+        ${deltaBadge(qty,soldBulanLaluMap[sku]||0)}
+      </div>`).join('');
+
+  add(`<div class="ow-row2">
+    <div>
+      <div class="ow-sec-hd"><span class="ow-sec-title">🛍️ Channel Penjualan</span><span class="ow-sec-note">Bulan ini vs lalu</span></div>
+      <div class="ow-card" style="padding:14px 16px">${chHtml}</div>
+    </div>
+    <div>
+      <div class="ow-sec-hd"><span class="ow-sec-title">🏆 Top SKU Bulan Ini</span><span class="ow-sec-note">vs bulan lalu</span></div>
+      <div class="ow-card" style="padding:14px 16px">${skuHtml}</div>
+    </div>
+  </div>`);
+
+  // ─── 6. DEAD STOCK (jika ada) ───
+  if(deadStock.length>0){
+    add(`<div>
+      <div class="ow-sec-hd">
+        <span class="ow-sec-title">🧟 Dead Stock — Belum Pernah Terjual</span>
+        <span class="ow-card-badge ow-badge-amber">${deadStock.length} SKU · ${fmtShort(deadStokNilai)} mengendap</span>
+      </div>
+      <div class="ow-card" style="padding:14px 16px">
+        <div style="font-size:12px;color:var(--dusty);margin-bottom:10px;padding:10px 12px;background:var(--cream);border-radius:8px;">
+          ⚠️ Produk-produk ini ada stok tapi <b>belum pernah terjual sama sekali</b>. Pertimbangkan: diskon clearance, bundling, atau retur ke supplier untuk jaga cashflow.
+        </div>
+        ${deadStock.slice(0,8).map(r=>`
+          <div class="ow-stok-row">
+            <span class="ow-stok-sku">${r.var}</span>
+            <div class="ow-stok-right">
+              <span class="ow-stok-meta">${fmtShort(getAkhir(r)*(r.hpp||0))} modal</span>
+              <span class="ow-stok-num stok-amber">${getAkhir(r)} pcs</span>
+            </div>
+          </div>`).join('')}
+        ${deadStock.length>8?`<div style="font-size:11px;color:var(--dusty);padding-top:8px">+${deadStock.length-8} SKU lainnya</div>`:''}
+      </div>
+    </div>`);
+  }
+
+  // ─── 7. SUPPLIER MAP ───
+  add(`<div>
+    <div class="ow-sec-hd"><span class="ow-sec-title">🏭 Stok per Supplier</span><span class="ow-sec-note">Nilai stok berdasarkan HPP</span></div>
+    <div class="ow-card" style="padding:14px 16px">
+      <div style="display:grid;grid-template-columns:100px 1fr 75px 45px 45px;gap:8px;padding:0 0 8px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.8px;">
+        <span>Supplier</span><span>Nilai Stok</span><span style="text-align:right">Nilai</span><span style="text-align:right">SKU</span><span style="text-align:right">Habis</span>
+      </div>
+      ${suppliers.map(([sup,v])=>`
+        <div class="ow-sup-row">
+          <span class="ow-sup-name">${sup}</span>
+          <div class="ow-sup-bar"><div class="ow-sup-fill" style="width:${Math.round(v.nilai/supMax*100)}%"></div></div>
+          <span style="text-align:right;font-weight:700;font-size:12px">${fmtShort(v.nilai)}</span>
+          <span style="text-align:right;font-size:12px;color:var(--dusty)">${v.sku}</span>
+          <span style="text-align:right;font-size:12px;font-weight:700;color:${v.habis>0?'#C0392B':'#2D6A4F'}">${v.habis}</span>
+        </div>`).join('')}
+    </div>
+  </div>`);
+
+  // ─── 8. RINGKASAN KEUANGAN DETAIL ───
+  add(`<div>
+    <div class="ow-sec-hd"><span class="ow-sec-title">💰 Ringkasan Keuangan</span></div>
+    <div class="ow-card">
+      <div class="ow-row3">
+        <div>
+          <div class="ow-mini-grid">
+            <div class="ow-mini"><div class="ow-mini-label">Hari Ini</div><div class="ow-mini-val" style="font-size:15px">${fmtShort(omsetHari)}</div></div>
+            <div class="ow-mini"><div class="ow-mini-label">Kemarin</div><div class="ow-mini-val" style="font-size:15px">${fmtShort(omsetKemarin)}</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="ow-mini-grid">
+            <div class="ow-mini"><div class="ow-mini-label">Transaksi</div><div class="ow-mini-val">${trxBulan}</div></div>
+            <div class="ow-mini"><div class="ow-mini-label">Qty Terjual</div><div class="ow-mini-val">${qtyBulan} pcs</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="ow-mini-grid">
+            <div class="ow-mini"><div class="ow-mini-label">Avg/Trx</div><div class="ow-mini-val" style="font-size:15px">${fmtShort(avgPerTrx)}</div></div>
+            <div class="ow-mini"><div class="ow-mini-label">Proyeksi Akhir Bln</div><div class="ow-mini-val" style="font-size:15px;color:var(--sage)">${fmtShort(proyeksi)}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`);
 }
 
-// ══════════════════════════════════════════════════════════════
-// CSS TAMBAHAN — inject sekali saat file di-load
-// ══════════════════════════════════════════════════════════════
-(function injectDashboardV2CSS() {
-  if (document.getElementById('db2-style')) return;
-  const s = document.createElement('style');
-  s.id = 'db2-style';
-  s.textContent = `
-  /* ── Ukuran font dasar lebih besar ── */
-  .db-card-title { font-size: 13px !important; }
-
-  /* ── Tabel full data ── */
-  .db2-tbl { width:100%; border-collapse:collapse; font-size:13px; }
-  .db2-tbl thead th { text-align:left; font-size:11px; font-weight:700; color:var(--dusty); text-transform:uppercase; letter-spacing:.4px; padding:5px 8px; border-bottom:2px solid var(--border); white-space:nowrap; }
-  .db2-tbl tbody td { padding:7px 8px; border-bottom:1px solid var(--border); color:var(--charcoal); vertical-align:middle; }
-  .db2-tbl tbody tr:last-child td { border-bottom:none; }
-  .db2-tbl tbody tr:hover { background:rgba(0,0,0,.025); }
-  .db2-tbl .r  { text-align:right; font-family:'DM Mono',monospace; }
-  .db2-tbl .muted { color:var(--dusty); }
-
-  /* ── Section label ── */
-  .db2-sec-label { font-size:10px; font-weight:700; color:var(--dusty); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; margin-top:4px; }
-
-  /* ── OK row ── */
-  .db2-ok-row { font-size:12px; color:var(--dusty); padding:8px 0; font-style:italic; }
-
-  /* ── Badge ── */
-  .db2-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:.3px; white-space:nowrap; }
-  .db2-badge-red   { background:rgba(192,57,43,.12); color:#a93226; border:1px solid rgba(192,57,43,.2); }
-  .db2-badge-amber { background:rgba(201,168,76,.15); color:#7d6100; border:1px solid rgba(201,168,76,.3); }
-  .db2-badge-gray  { background:var(--border); color:var(--dusty); border:1px solid var(--border); }
-  .db2-badge-green { background:rgba(90,122,106,.12); color:#3a5e4e; border:1px solid rgba(90,122,106,.2); }
-
-  /* ── Teks warna ── */
-  .red-text  { color:#c0392b !important; font-weight:700; }
-  .warn-text { color:#9a6f00 !important; font-weight:700; }
-
-  /* ── Channel pill ── */
-  .db2-ch-pill { font-size:10px; background:var(--border); color:var(--charcoal); padding:2px 7px; border-radius:10px; white-space:nowrap; font-weight:600; }
-
-  /* ── Keuangan grid ── */
-  .db2-keu-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-  @media(max-width:640px){ .db2-keu-grid{ grid-template-columns:1fr; } }
-  .db2-keu-card { background:var(--cream); border:1px solid var(--border); border-radius:10px; padding:10px 13px; }
-  .db2-keu-label { font-size:10px; text-transform:uppercase; letter-spacing:.8px; font-weight:700; color:var(--dusty); margin-bottom:3px; }
-  .db2-keu-val   { font-family:'DM Serif Display',serif; font-size:20px; color:var(--charcoal); line-height:1.2; }
-  .db2-keu-sub   { font-size:12px; color:var(--dusty); margin-top:3px; }
-
-  /* ── Target ── */
-  .db2-target-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-  @media(max-width:640px){ .db2-target-grid{ grid-template-columns:1fr; } }
-  .db2-target-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap; }
-  .db2-target-label { font-size:12px; color:var(--charcoal); font-weight:600; flex:1; min-width:100px; }
-  .db2-target-nums  { font-size:12px; font-family:'DM Mono',monospace; color:var(--dusty); white-space:nowrap; }
-  .db2-target-pct   { font-size:14px; font-family:'DM Mono',monospace; font-weight:800; white-space:nowrap; min-width:40px; text-align:right; }
-  .db2-prog-bar     { height:7px; background:var(--border); border-radius:3px; overflow:hidden; }
-
-  /* ── Harus per hari ── */
-  .db2-per-hari { display:flex; align-items:center; gap:12px; background:rgba(201,168,76,.1); border:1px solid rgba(201,168,76,.3); border-radius:8px; padding:10px 14px; margin:0 0 12px; flex-wrap:wrap; }
-  .db2-per-hari-label { font-size:12px; color:var(--dusty); flex:1; }
-  .db2-per-hari-val   { font-family:'DM Serif Display',serif; font-size:20px; color:var(--charcoal); }
-  .db2-per-hari-sub   { font-size:11px; color:var(--dusty); width:100%; margin-top:-4px; }
-
-  /* ── Delta badge ── */
-  .db2-delta { font-size:11px; font-weight:700; padding:1px 5px; border-radius:4px; }
-  .db2-up   { color:#16a34a; background:rgba(22,163,74,.1); }
-  .db2-dn   { color:#dc2626; background:rgba(220,38,38,.1); }
-  .db2-flat { color:var(--dusty); background:var(--border); }
-
-  /* ── Stat card font lebih besar ── */
-  .stat-label { font-size:12px !important; }
-  .stat-val   { font-size:22px !important; }
-  .stat-sub   { font-size:13px !important; }
-  `;
-  document.head.appendChild(s);
-})();
-
-// ── Override renderChartBars, renderNotif, renderProgress, renderLastSales, renderTopSKU, renderStokPerSupplier, renderWajibRestock, renderTargetPerChannel ──
-// Semua sudah di-handle di dalam renderDashboard() di atas — fungsi lama tidak dipakai lagi
-function renderChartBars()         { /* handled by dashboard_v2 */ }
-function renderProgress()          { /* handled by dashboard_v2 */ }
-function renderTopSKU()            { /* handled by dashboard_v2 */ }
-function renderStokPerSupplier()   { /* handled by dashboard_v2 */ }
-function renderWajibRestock()      { /* handled by dashboard_v2 */ }
-function renderTargetPerChannel()  { /* handled by dashboard_v2 */ }
+// Override section renderers (tidak dipakai oleh dashboard baru)
+function _renderSectionKondisiStok(){}
+function _renderSectionKeuangan(){}
+function _renderSectionTarget(){}
+function _renderSectionPenjualan(){}
+function _renderSectionAlert(){}
