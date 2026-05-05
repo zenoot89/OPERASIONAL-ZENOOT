@@ -279,23 +279,23 @@ async function renderPlanningOps() {
 
   el.innerHTML = `
   <style>
-    .ops-toko-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:14px;}
-    .ops-toko-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-    .ops-toko-name{font-size:15px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);}
-    .ops-4col{display:grid;grid-template-columns:1fr 1fr 1fr 1.2fr;gap:12px;align-items:end;}
+    .ops-toko-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:8px;}
+    .ops-toko-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+    .ops-toko-name{font-size:14px;font-weight:700;font-family:'DM Serif Display',serif;color:var(--charcoal);}
+    .ops-4col{display:grid;grid-template-columns:1fr 1fr 1fr 1.2fr;gap:8px;align-items:end;}
     @media(max-width:800px){.ops-4col{grid-template-columns:1fr 1fr;}}
     @media(max-width:480px){.ops-4col{grid-template-columns:1fr;}}
-    .plan-field{display:flex;flex-direction:column;gap:5px;}
-    .plan-label{font-size:10px;font-weight:700;color:var(--dusty);letter-spacing:.5px;text-transform:uppercase;}
-    .plan-input{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--charcoal);background:var(--card);outline:none;width:100%;box-sizing:border-box;transition:border-color .2s;}
+    .plan-field{display:flex;flex-direction:column;gap:3px;}
+    .plan-label{font-size:9px;font-weight:600;color:var(--dusty);letter-spacing:.5px;text-transform:uppercase;}
+    .plan-input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:400;font-family:'DM Mono',monospace;color:var(--charcoal);background:var(--card);outline:none;width:100%;box-sizing:border-box;transition:border-color .2s;}
     .plan-input:focus{border-color:var(--brown);}
-    .ops-result-box{background:var(--cream);border:2px solid var(--brown);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;}
-    .ops-result-label{font-size:10px;font-weight:700;color:var(--brown);letter-spacing:.5px;text-transform:uppercase;}
-    .ops-result-val{font-size:18px;font-weight:900;font-family:'DM Serif Display',serif;color:var(--charcoal);}
-    .ops-result-sub{font-size:11px;color:var(--dusty);font-weight:600;}
-    .ops-save-btn{margin-top:14px;padding:8px 20px;background:var(--brown);color:var(--cream);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;}
+    .ops-result-box{background:var(--cream);border:2px solid var(--brown);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:3px;}
+    .ops-result-label{font-size:9px;font-weight:700;color:var(--brown);letter-spacing:.5px;text-transform:uppercase;}
+    .ops-result-val{font-size:16px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);}
+    .ops-result-sub{font-size:10px;color:var(--dusty);font-weight:500;}
+    .ops-save-btn{margin-top:10px;padding:6px 16px;background:var(--brown);color:var(--cream);border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .2s;}
     .ops-save-btn:hover{opacity:.85;}
-    .ops-formula-hint{font-size:11px;color:var(--dusty);margin-top:4px;font-style:italic;}
+    .ops-formula-hint{font-size:10px;color:var(--dusty);margin-top:2px;font-style:italic;}
   </style>
   <div style="margin-bottom:24px;">
     <div style="font-size:22px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);">Biaya <span style="color:var(--brown)">Operasional</span></div>
@@ -327,9 +327,9 @@ async function renderPlanningOps() {
 
             <div class="plan-field">
               <div class="plan-label">Biaya Operasional (Rp)</div>
-              <input class="plan-input" type="number" id="ops-biaya-${chNama}" placeholder="0"
-                value="${biaya||''}"
-                oninput="recalcOpsTarget('${chNama}')">
+              <input class="plan-input" type="text" id="ops-biaya-${chNama}" placeholder="0"
+                value="${biaya>0?Number(biaya).toLocaleString('id-ID'):''}"
+                oninput="formatOpsInput(this,'${chNama}')">
               <div class="ops-formula-hint">Gaji, sewa, utilitas, dll</div>
             </div>
 
@@ -354,8 +354,20 @@ async function renderPlanningOps() {
   }`;
 }
 
+function formatOpsInput(el, chNama) {
+  const raw = el.value.replace(/[^\d]/g,'');
+  const num = parseInt(raw)||0;
+  const pos = el.selectionStart;
+  const prevLen = el.value.length;
+  el.value = num>0 ? num.toLocaleString('id-ID') : '';
+  const diff = el.value.length - prevLen;
+  try { el.setSelectionRange(pos+diff, pos+diff); } catch(e){}
+  recalcOpsTarget(chNama);
+}
+
 function recalcOpsTarget(chNama) {
-  const biaya  = parseFloat(document.getElementById(`ops-biaya-${chNama}`)?.value) || 0;
+  const rawBiaya = (document.getElementById(`ops-biaya-${chNama}`)?.value||'').replace(/[^\d]/g,'');
+  const biaya  = parseInt(rawBiaya)||0;
   const rasio  = parseFloat(document.getElementById(`ops-rasio-${chNama}`)?.value) || 0;
   const valEl  = document.getElementById(`ops-result-bulan-${chNama}`);
   const subEl  = document.getElementById(`ops-result-harian-${chNama}`);
@@ -376,7 +388,7 @@ function recalcOpsTarget(chNama) {
 }
 
 async function saveOpsToko(chNama) {
-  const biaya = parseFloat(document.getElementById(`ops-biaya-${chNama}`)?.value)||0;
+  const biaya = parseInt((document.getElementById(`ops-biaya-${chNama}`)?.value||'').replace(/[^\d]/g,''))||0;
   const rasio = parseFloat(document.getElementById(`ops-rasio-${chNama}`)?.value)||0;
   const targetBulan = (rasio > 0 && biaya > 0) ? Math.round(biaya / (rasio / 100)) : 0;
   const data = {
@@ -398,6 +410,7 @@ window.renderPlanningOps  = renderPlanningOps;
 window.savePlanningKPI    = savePlanningKPI;
 window.saveOpsToko        = saveOpsToko;
 window.recalcOpsTarget    = recalcOpsTarget;
+window.formatOpsInput     = formatOpsInput;
 window.PLAN               = PLAN;
 
 })();
