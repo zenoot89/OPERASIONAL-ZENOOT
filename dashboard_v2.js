@@ -254,6 +254,84 @@ function renderDashboard() {
   const sisaTarget  = Math.max(0,targetOmset-omsetBulan);
   const perHariHarus= daysLeft>0&&sisaTarget>0 ? Math.round(sisaTarget/daysLeft) : 0;
 
+  // ══════════════════════════════════════════════
+  // FITUR BARU 1: PACE INDICATOR
+  // ══════════════════════════════════════════════
+  // Rata-rata omset per hari yang sudah berjalan
+  const hariJalan      = getDayOfMonth();
+  const avgPerHari     = hariJalan > 0 ? omsetBulan / hariJalan : 0;
+  // Proyeksi akhir bulan berdasarkan pace saat ini
+  const paceProyeksi   = Math.round(avgPerHari * getDaysInMonth());
+  // Hari target selesai (kalau pace dipertahankan)
+  let paceTargetDate   = null;
+  let paceStatus       = 'aman'; // 'aman' | 'lambat' | 'gagal'
+  let pacePesan        = '';
+  if (targetOmset > 0) {
+    if (omsetBulan >= targetOmset) {
+      paceStatus = 'done';
+      pacePesan  = '🎉 Target bulan ini sudah tercapai!';
+    } else if (avgPerHari > 0) {
+      const hariDibutuhkan = Math.ceil((targetOmset - omsetBulan) / avgPerHari);
+      const tglSelesai = new Date();
+      tglSelesai.setDate(tglSelesai.getDate() + hariDibutuhkan);
+      const tglAkhirBulan = new Date(tglSelesai.getFullYear(), tglSelesai.getMonth()+1, 0);
+      if (tglSelesai <= tglAkhirBulan) {
+        paceStatus = 'aman';
+        paceTargetDate = tglSelesai.getDate();
+        pacePesan = `✅ Dengan pace ini, target selesai sekitar tgl <b>${tglSelesai.getDate()}</b> bulan ini.`;
+      } else {
+        paceStatus = 'lambat';
+        const selisih = paceProyeksi < targetOmset ? fmtShort(targetOmset - paceProyeksi) : '';
+        pacePesan = `⚠️ Pace saat ini tidak cukup. Proyeksi akhir bulan kurang <b>${selisih}</b> dari target.`;
+      }
+    } else {
+      paceStatus = 'gagal';
+      pacePesan = '🚨 Belum ada transaksi bulan ini. Target terancam gagal.';
+    }
+  } else {
+    pacePesan = '📌 Target belum diset. Silakan set target di menu Planning.';
+    paceStatus = 'nodata';
+  }
+  const paceWarnColor = paceStatus==='done'?'#2D6A4F':paceStatus==='aman'?'#2D6A4F':paceStatus==='lambat'?'#D97706':'#C0392B';
+  const paceBg        = paceStatus==='done'||paceStatus==='aman'?'#EFF7F3':paceStatus==='lambat'?'#FFFBF0':'#FFF0EE';
+  const paceBorderColor = paceStatus==='done'||paceStatus==='aman'?'#2D6A4F':paceStatus==='lambat'?'#D97706':'#C0392B';
+
+  // ══════════════════════════════════════════════
+  // FITUR BARU 2: ESTIMASI LABA BERSIH & GROSS MARGIN
+  // ══════════════════════════════════════════════
+  // labaBulan sudah dihitung di atas: sum(harga - hpp) * qty
+  // Gross margin % dari omset (omset = harga jual)
+  const omsetHargaJual   = jBulan.reduce((s,j)=>s+(j.harga||0)*(j.qty||0), 0);
+  const grossMarginAmt   = jBulan.reduce((s,j)=>s+((j.harga||0)-(getHppProduk(j.var)||0))*(j.qty||0), 0);
+  const grossMarginPct   = omsetHargaJual > 0 ? Math.round(grossMarginAmt / omsetHargaJual * 100) : 0;
+  // Ambil biaya ops dari localStorage
+  let biayaOpsPerBulan = 0;
+  try {
+    const bgRaw2 = localStorage.getItem('zenot_biaya_ops_global');
+    if (bgRaw2) { const bg2 = JSON.parse(bgRaw2); biayaOpsPerBulan = bg2.biayaOpsGlobal || 0; }
+  } catch(e) {}
+  const labaEstimasi      = grossMarginAmt - biayaOpsPerBulan;
+  const labaEstimasiPct   = omsetHargaJual > 0 ? Math.round(labaEstimasi / omsetHargaJual * 100) : 0;
+  const labaColor         = labaEstimasi >= 0 ? '#2D6A4F' : '#C0392B';
+  const labaBg            = labaEstimasi >= 0 ? '#EFF7F3' : '#FFF0EE';
+
+  // ══════════════════════════════════════════════
+  // FITUR BARU 3: SKU DECLINING
+  // ══════════════════════════════════════════════
+  // SKU yang terjual bulan ini TAPI turun vs bulan lalu (min 2 terjual bulan lalu agar meaningful)
+  const skuDeclining = Object.entries(soldBulanMap)
+    .filter(([sku, qty]) => {
+      const prev = soldBulanLaluMap[sku] || 0;
+      return prev >= 2 && qty < prev; // terjual bulan ini tapi lebih sedikit dari bulan lalu
+    })
+    .map(([sku, qty]) => {
+      const prev  = soldBulanLaluMap[sku] || 0;
+      const drop  = Math.round((prev - qty) / prev * 100);
+      return { sku, qty, prev, drop };
+    })
+    .sort((a, b) => b.drop - a.drop) // urutkan dari penurunan terbesar
+    .slice(0, 8);
+
   const supMap={};
   DB.stok.forEach(r=>{
     const p=(DB.produk||[]).find(x=>(x.var||'').toUpperCase()===(r.var||'').toUpperCase());
@@ -314,6 +392,101 @@ function renderDashboard() {
         <div class="ow-kpi-val">${k.val}</div>
         <div class="ow-kpi-sub">${k.sub}</div>
       </div>`).join('')}</div>
+  </div>`);
+
+  // ─── 2b. PACE + LABA + DECLINING (3 kolom, row baru) ───
+  add(`
+  <div class="ow-row3col">
+
+    <!-- PACE INDICATOR -->
+    <div class="ow-col3">
+      <div class="ow-col3-hd">
+        <span class="ow-sec-title">⚡ Pace Target</span>
+        <span class="ow-card-badge" style="background:${paceBg};color:${paceWarnColor};">${paceStatus==='done'?'TERCAPAI':paceStatus==='aman'?'ON TRACK':paceStatus==='lambat'?'LAMBAT':'BAHAYA'}</span>
+      </div>
+      <div class="ow-col3-card">
+        <div style="font-size:12px;padding:9px 12px;background:${paceBg};border-radius:8px;border-left:3px solid ${paceBorderColor};margin-bottom:14px;color:${paceWarnColor};font-weight:600;">
+          ${pacePesan}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="ow-mini">
+            <div class="ow-mini-label">Avg/Hari (aktual)</div>
+            <div class="ow-mini-val" style="font-size:15px;">${fmtShort(avgPerHari)}</div>
+          </div>
+          <div class="ow-mini">
+            <div class="ow-mini-label">Perlu/Hari</div>
+            <div class="ow-mini-val" style="font-size:15px;color:${perHariHarus>avgPerHari?'#C0392B':'#2D6A4F'}">${perHariHarus>0?fmtShort(perHariHarus):'—'}</div>
+          </div>
+          <div class="ow-mini">
+            <div class="ow-mini-label">Proyeksi Akhir Bln</div>
+            <div class="ow-mini-val" style="font-size:14px;color:${paceProyeksi>=targetOmset?'#2D6A4F':'#D97706'}">${fmtShort(paceProyeksi)}</div>
+          </div>
+          <div class="ow-mini">
+            <div class="ow-mini-label">Sisa Target</div>
+            <div class="ow-mini-val" style="font-size:14px;color:${sisaTarget>0?'#C0392B':'#2D6A4F'}">${sisaTarget>0?fmtShort(sisaTarget):'✅ Done'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESTIMASI LABA BERSIH -->
+    <div class="ow-col3">
+      <div class="ow-col3-hd">
+        <span class="ow-sec-title">💰 Estimasi Laba Bersih</span>
+        <span class="ow-card-badge" style="background:${labaBg};color:${labaColor};">GM ${grossMarginPct}%</span>
+      </div>
+      <div class="ow-col3-card">
+        <div style="font-size:12px;padding:9px 12px;background:${labaBg};border-radius:8px;border-left:3px solid ${labaColor};margin-bottom:14px;color:${labaColor};font-weight:600;">
+          ${labaEstimasi>=0?'✅ Bisnis bulan ini dalam kondisi <b>profit</b>.':'🚨 Estimasi bulan ini <b>rugi</b>. Cek biaya & margin produk.'}
+          ${biayaOpsPerBulan===0?'<br><span style="font-weight:400;color:var(--dusty);">📌 Set biaya ops di menu Biaya Operasional untuk hasil akurat.</span>':''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="ow-mini">
+            <div class="ow-mini-label">Omset (Harga Jual)</div>
+            <div class="ow-mini-val" style="font-size:13px;">${fmtShort(omsetHargaJual)}</div>
+          </div>
+          <div class="ow-mini">
+            <div class="ow-mini-label">Gross Margin</div>
+            <div class="ow-mini-val" style="font-size:13px;color:#2D6A4F;">${fmtShort(grossMarginAmt)}</div>
+          </div>
+          <div class="ow-mini">
+            <div class="ow-mini-label">Biaya Ops</div>
+            <div class="ow-mini-val" style="font-size:13px;color:#C0392B;">${biayaOpsPerBulan>0?fmtShort(biayaOpsPerBulan):'Belum diset'}</div>
+          </div>
+          <div class="ow-mini" style="background:${labaBg};">
+            <div class="ow-mini-label">Est. Laba Bersih</div>
+            <div class="ow-mini-val" style="font-size:13px;color:${labaColor};font-weight:800;">${fmtShort(labaEstimasi)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKU DECLINING -->
+    <div class="ow-col3">
+      <div class="ow-col3-hd">
+        <span class="ow-sec-title">📉 SKU Menurun</span>
+        <span class="ow-card-badge ow-badge-amber">${skuDeclining.length} SKU</span>
+      </div>
+      <div class="ow-col3-card">
+        <div style="font-size:12px;padding:9px 12px;background:#FFFBF0;border-radius:8px;border-left:3px solid #D97706;margin-bottom:10px;color:#92400E;font-weight:600;">
+          ⚠️ Penjualan turun vs bulan lalu. Cek harga, stok, atau promosi.
+        </div>
+        <div class="ow-col3-scroll">
+          ${skuDeclining.length===0
+            ? `<div class="ow-empty">✅ Tidak ada SKU yang menurun signifikan</div>`
+            : skuDeclining.map(s=>`
+              <div class="ow-stok-row">
+                <span class="ow-stok-sku">${s.sku}</span>
+                <div class="ow-stok-right" style="gap:8px;">
+                  <span class="ow-stok-meta">${s.prev} → ${s.qty} pcs</span>
+                  <span style="font-size:13px;font-weight:700;color:#C0392B;min-width:42px;text-align:right;">▼${s.drop}%</span>
+                </div>
+              </div>`).join('')
+          }
+        </div>
+      </div>
+    </div>
+
   </div>`);
 
   // ─── 3. TREN 7 HARI + TARGET ───
