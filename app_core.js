@@ -222,13 +222,19 @@ const TOKO_COLORS = ['#5C3D2E','#5A7A6A','#3D7EAA','#C9A84C','#7C3AED'];
 // ── Load daftar toko dari Supabase (tabel: toko) ──
 async function loadTokoList() {
   try {
+    // Ambil SEMUA toko dulu, filter di client (handle variasi status: aktif/AKTIF/null)
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/toko?select=*&order=urutan.asc&status=eq.aktif`,
+      `${SUPABASE_URL}/rest/v1/toko?select=*&order=urutan.asc`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     if (!res.ok) return;
     const rows = await res.json();
-    window._tokoList = rows.map((r, i) => ({
+    // Filter aktif di client: status aktif / AKTIF / null / undefined semua diterima, kecuali 'nonaktif'/'arsip'
+    const aktifRows = rows.filter(r => {
+      const s = (r.status||'aktif').toLowerCase();
+      return s !== 'nonaktif' && s !== 'arsip' && s !== 'inactive';
+    });
+    window._tokoList = aktifRows.map((r, i) => ({
       kode:     r.kode,
       nama:     r.kode,                              // tampilkan kode sebagai nama (SHP.ZENOOT)
       brand:    r.brand    || 'zenOt',
@@ -1471,13 +1477,19 @@ function onJChChange() {
   const indukEl = document.getElementById('j-sku-induk');
   if (!indukEl) return;
 
-  // Filter produk yang toko-nya include channel ini
+  // Filter produk berdasarkan DB.assignChannel (dari tabel produk_toko)
+  // DB.assignChannel = { var: { toko_kode: aktif } }
+  const assignCh = DB.assignChannel || {};
+
   const indukList = [...new Set(DB.produk
     .filter(p => {
       if ((p.status_produk||'aktif') === 'arsip') return false;
-      const t = _normalizeCh(p.toko||'semua');
-      if (t === 'SEMUA') return true;
-      return t.split(',').map(x=>x.trim()).includes(chNama);
+      // Jika tidak ada data assignChannel sama sekali → tampilkan semua produk
+      if (Object.keys(assignCh).length === 0) return true;
+      // Cek apakah SKU ini di-assign ke channel yang dipilih
+      const varAssign = assignCh[p.var];
+      if (!varAssign) return true; // SKU belum diassign → tampilkan di semua channel
+      return varAssign[chNama] === true || varAssign[chNama] === 1;
     })
     .map(p=>p.induk)
   )].sort();
