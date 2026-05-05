@@ -489,15 +489,9 @@ function renderDashboard() {
 
   </div>`);
 
-  // ─── 3. TREN 7 HARI + TARGET ───
-  const trendBars = trend7.map(t=>{
-    const h = t.val===0 ? 3 : Math.round((t.val/trend7Max)*72)+8;
-    const cls = t.ds===todayStr?'today':t.val===0?'zero':'';
-    return `<div class="ow-tbar-wrap">
-      <div class="ow-tbar ${cls}" style="height:${h}px;${t.ds===todayStr?'box-shadow:0 0 0 2px var(--gold);':''}"></div>
-      <div class="ow-tbar-label">${t.label}${t.ds===todayStr?'*':''}</div>
-    </div>`;
-  }).join('');
+  // ─── 3. TREN 7 HARI + TARGET (Line Chart) ───
+  const _trend7Canvas = 'owTrend_' + Math.random().toString(36).slice(2,8);
+  const _trend7Payload = trend7.map(t=>({label:t.label+(t.ds===todayStr?'*':''),val:t.val,isToday:t.ds===todayStr}));
 
   let targetCard = '';
   if(targetOmset>0){
@@ -522,8 +516,8 @@ function renderDashboard() {
   add(`<div class="ow-row2" style="align-items:stretch;">
     <div style="display:flex;flex-direction:column;">
       <div class="ow-col3-hd"><span class="ow-sec-title">📈 Tren 7 Hari Terakhir</span><span class="ow-sec-note">* hari ini</span></div>
-      <div class="ow-col3-card">
-        <div class="ow-trend-bars">${trendBars}</div>
+      <div class="ow-col3-card" style="padding-bottom:6px;">
+        <canvas id="${_trend7Canvas}" style="width:100%;height:100px;display:block;"></canvas>
         <div style="font-size:12px;color:var(--dusty);margin-top:6px;">
           Tertinggi: <b>${fmtShort(Math.max(...trend7.map(t=>t.val)))}</b> · 
           Total 7 hari: <b>${fmtShort(trend7.reduce((s,t)=>s+t.val,0))}</b>
@@ -535,6 +529,82 @@ function renderDashboard() {
       <div class="ow-col3-card">${targetCard}</div>
     </div>
   </div>`);
+
+  // ─── Render Line Chart Tren 7 Hari ───
+  requestAnimationFrame(()=>{
+    const cvs = document.getElementById(_trend7Canvas);
+    if(!cvs) return;
+    const par = cvs.parentElement;
+    const W = par ? par.clientWidth || 320 : 320;
+    const H = 100;
+    cvs.width = W; cvs.height = H;
+    const ctx = cvs.getContext('2d');
+    ctx.clearRect(0,0,W,H);
+    const data = _trend7Payload;
+    const vals = data.map(d=>d.val);
+    const maxV = Math.max(...vals, 1);
+    const minV = 0;
+    const pad = {t:12, r:14, b:22, l:42};
+    const cw = W - pad.l - pad.r;
+    const ch = H - pad.t - pad.b;
+    const n = data.length;
+    const xOf = i => pad.l + (i/(n-1))*cw;
+    const yOf = v => pad.t + ch - ((v-minV)/(maxV-minV))*ch;
+
+    // Grid lines
+    ctx.strokeStyle = '#f0ece6';
+    ctx.lineWidth = 1;
+    [0.25,0.5,0.75,1].forEach(f=>{
+      const y = pad.t + ch*(1-f);
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+cw,y); ctx.stroke();
+      ctx.fillStyle='#c0b8af'; ctx.font='9px sans-serif'; ctx.textAlign='right';
+      const lv = Math.round(maxV*f);
+      ctx.fillText(lv>=1000?(lv/1000).toFixed(lv%1000===0?0:1)+'K':lv, pad.l-4, y+3);
+    });
+
+    // Fill gradient under line
+    const grad = ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+    grad.addColorStop(0,'rgba(184,143,73,0.22)');
+    grad.addColorStop(1,'rgba(184,143,73,0.01)');
+    ctx.beginPath();
+    data.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
+    ctx.lineTo(xOf(n-1),pad.t+ch); ctx.lineTo(xOf(0),pad.t+ch); ctx.closePath();
+    ctx.fillStyle=grad; ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle='#B38F49'; ctx.lineWidth=2.2; ctx.lineJoin='round'; ctx.lineCap='round';
+    data.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
+    ctx.stroke();
+
+    // Dots
+    data.forEach((d,i)=>{
+      ctx.beginPath();
+      ctx.arc(xOf(i),yOf(d.val), d.isToday?5:3.5, 0, Math.PI*2);
+      ctx.fillStyle = d.isToday ? '#7B4F1E' : '#B38F49';
+      ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+
+    // Labels
+    ctx.fillStyle='#a09880'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+    data.forEach((d,i)=>{ ctx.fillText(d.label, xOf(i), H-5); });
+
+    // Tooltip value on today dot
+    const todayIdx = data.findIndex(d=>d.isToday);
+    if(todayIdx>=0 && data[todayIdx].val>0){
+      const tx=xOf(todayIdx), ty=yOf(data[todayIdx].val);
+      const vStr = data[todayIdx].val>=1000000?(data[todayIdx].val/1000000).toFixed(1)+'Jt':data[todayIdx].val>=1000?(data[todayIdx].val/1000).toFixed(0)+'K':String(data[todayIdx].val);
+      const tw = ctx.measureText(vStr).width+10;
+      const bx = Math.min(Math.max(tx-tw/2, pad.l), pad.l+cw-tw);
+      const by = ty-20;
+      ctx.fillStyle='#7B4F1E'; ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx,by,tw,15,4) : (()=>{ctx.rect(bx,by,tw,15);})();
+      ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(vStr, bx+tw/2, by+10.5);
+    }
+  });
 
   // ─── 4. DEAD STOCK | STOK HABIS | PRIORITAS RESTOCK (3 kolom) ───
 
