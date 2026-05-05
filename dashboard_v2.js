@@ -7,9 +7,6 @@
 // ── Helpers ──
 const fmtShort = v => {
   v = Math.round(v||0);
-  if (v>=1000000000) return 'Rp '+(v/1000000000).toFixed(1)+'M';
-  if (v>=1000000)    return 'Rp '+(v/1000000).toFixed(1)+'jt';
-  if (v>=1000)       return 'Rp '+(v/1000).toFixed(0)+'rb';
   return 'Rp '+v.toLocaleString('id-ID');
 };
 const fmtNum = n => Number(n||0).toLocaleString('id-ID');
@@ -52,7 +49,7 @@ function _owInjectCSS() {
 .ow-dn{background:#FFF0EE;color:#9B2335;}
 .ow-flat{background:var(--cream);color:var(--dusty);}
 .ow-sec-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
-.ow-sec-title{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;color:var(--dusty);}
+.ow-sec-title{font-size:13px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--charcoal);}
 .ow-sec-note{font-size:11px;color:var(--dusty);opacity:.65;}
 .ow-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .ow-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
@@ -139,12 +136,19 @@ function renderDashboard() {
   const jBulan     = jurnal.filter(j => (j.tgl||'').startsWith(bulanStr));
   const jBulanLalu = jurnal.filter(j => (j.tgl||'').startsWith(bulanLaluStr));
 
-  const omsetHari     = jHari.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
-  const omsetKemarin  = jKemarin.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
-  const omsetBulan    = jBulan.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
-  const omsetBulanLalu= jBulanLalu.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
-  const labaBulan     = jBulan.reduce((s,j)=>s+((j.harga||0)-(j.hpp||0))*(j.qty||0),0);
-  const labaBulanLalu = jBulanLalu.reduce((s,j)=>s+((j.harga||0)-(j.hpp||0))*(j.qty||0),0);
+  // Helper: lookup HPP dari DB.produk berdasarkan var
+  const getHppProduk = varName => {
+    if (!varName) return 0;
+    const p = (DB.produk||[]).find(x => (x.var||'').toUpperCase() === (varName||'').toUpperCase());
+    return (p && p.hpp) ? p.hpp : 0;
+  };
+
+  const omsetHari     = jHari.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
+  const omsetKemarin  = jKemarin.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
+  const omsetBulan    = jBulan.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
+  const omsetBulanLalu= jBulanLalu.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
+  const labaBulan     = jBulan.reduce((s,j)=>s+((j.harga||0)-(getHppProduk(j.var)||0))*(j.qty||0),0);
+  const labaBulanLalu = jBulanLalu.reduce((s,j)=>s+((j.harga||0)-(getHppProduk(j.var)||0))*(j.qty||0),0);
   const qtyBulan      = jBulan.reduce((s,j)=>s+(j.qty||0),0);
   const trxBulan      = jBulan.length;
   const marginPct     = omsetBulan>0 ? Math.round(labaBulan/omsetBulan*100) : 0;
@@ -162,7 +166,7 @@ function renderDashboard() {
   jBulan.forEach(j=>{soldBulanMap[j.var]=(soldBulanMap[j.var]||0)+(j.qty||0);});
   jBulanLalu.forEach(j=>{soldBulanLaluMap[j.var]=(soldBulanLaluMap[j.var]||0)+(j.qty||0);});
 
-  const topSKU = Object.entries(soldBulanMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const topSKU = Object.entries(soldBulanMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const deadStock = DB.stok.filter(r=>getAkhir(r)>0&&!soldMap[r.var]);
   const deadStokNilai = deadStock.reduce((s,r)=>s+getAkhir(r)*(r.hpp||0),0);
 
@@ -175,13 +179,13 @@ function renderDashboard() {
   jBulan.forEach(j=>{
     if(!j.ch) return;
     if(!chMap[j.ch]) chMap[j.ch]={omset:0,qty:0,trx:0};
-    chMap[j.ch].omset+=(j.harga||0)*(j.qty||0);
+    chMap[j.ch].omset+=getHppProduk(j.var)*(j.qty||0);
     chMap[j.ch].qty+=(j.qty||0); chMap[j.ch].trx+=1;
   });
   jBulanLalu.forEach(j=>{
     if(!j.ch) return;
     if(!chMapLalu[j.ch]) chMapLalu[j.ch]={omset:0};
-    chMapLalu[j.ch].omset+=(j.harga||0)*(j.qty||0);
+    chMapLalu[j.ch].omset+=getHppProduk(j.var)*(j.qty||0);
   });
   const channels = Object.entries(chMap).sort((a,b)=>b[1].omset-a[1].omset);
   const totalChOmset = channels.reduce((s,[,v])=>s+v.omset,0);
@@ -215,7 +219,7 @@ function renderDashboard() {
     const d=new Date(); d.setDate(d.getDate()-i);
     const ds=d.toISOString().slice(0,10);
     const label=d.toLocaleDateString('id-ID',{weekday:'short'});
-    const val=jurnal.filter(j=>j.tgl===ds).reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+    const val=jurnal.filter(j=>j.tgl===ds).reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
     trend7.push({label,val,ds});
   }
   const trend7Max=Math.max(...trend7.map(t=>t.val),1);
@@ -234,38 +238,7 @@ function renderDashboard() {
   const sc=document.getElementById('stat-cards');
   if(sc) sc.style.display='none';
 
-  // ─── 1. INSIGHT ALERTS ───
-  const alerts=[];
-  if(stokHabis.length>0) alerts.push({cls:'red',icon:'🚨',
-    title:`${stokHabis.length} SKU stok HABIS — risiko kehilangan order`,
-    sub:stokHabis.slice(0,5).map(r=>r.var).join(', ')+(stokHabis.length>5?` +${stokHabis.length-5} lainnya`:'')});
-  if(stokKritis.length>0) alerts.push({cls:'amber',icon:'⚠️',
-    title:`${stokKritis.length} SKU kritis — stok di bawah safety stock`,
-    sub:stokKritis.slice(0,3).map(r=>`${r.var} (${getAkhir(r)} pcs)`).join(' · ')+(stokKritis.length>3?` +${stokKritis.length-3} lainnya`:'')});
-  if(deadStock.length>0) alerts.push({cls:'amber',icon:'📦',
-    title:`${deadStock.length} SKU dead stock — ${fmtShort(deadStokNilai)} modal mengendap`,
-    sub:deadStock.slice(0,4).map(r=>r.var).join(', ')+(deadStock.length>4?` +${deadStock.length-4} lainnya`:'')
-      +' — pertimbangkan clearance atau retur'});
-  if(targetOmset>0&&pctOmset<50&&daysLeft<15) alerts.push({cls:'red',icon:'🎯',
-    title:`Target bulan ini baru ${pctOmset}% — butuh ${fmtShort(perHariHarus)}/hari dalam ${daysLeft} hari`,
-    sub:`Sudah: ${fmtShort(omsetBulan)} dari target ${fmtShort(targetOmset)}`});
-  if(omsetBulan>omsetBulanLalu&&omsetBulanLalu>0) alerts.push({cls:'green',icon:'📈',
-    title:`Omset tumbuh ${Math.round((omsetBulan-omsetBulanLalu)/omsetBulanLalu*100)}% vs bulan lalu — bagus!`,
-    sub:`${fmtShort(omsetBulan)} vs ${fmtShort(omsetBulanLalu)} — pertahankan momentum`});
-  if(noHPP.length>0) alerts.push({cls:'gray',icon:'💡',
-    title:`${noHPP.length} produk belum ada HPP — data laba tidak akurat`,
-    sub:'Lengkapi di Kelola Produk untuk kalkulasi margin yang benar'});
-  if(alerts.length===0) alerts.push({cls:'green',icon:'✅',
-    title:'Semua kondisi aman — tidak ada masalah kritis',sub:'Terus pantau stok dan target harian'});
-
-  add(`<div>
-    <div class="ow-sec-hd"><span class="ow-sec-title">🧠 Insight & Action Items</span><span class="ow-sec-note">Hal yang perlu kamu tahu sekarang</span></div>
-    <div class="ow-alerts">${alerts.map(a=>`
-      <div class="ow-alert ${a.cls}">
-        <span class="ow-alert-icon">${a.icon}</span>
-        <div><div class="ow-alert-title">${a.title}</div><div class="ow-alert-sub">${a.sub}</div></div>
-      </div>`).join('')}</div>
-  </div>`);
+  // ─── 1. INSIGHT ALERTS — DIHAPUS (clean dashboard) ───
 
   // ─── 2. KPI STRIP ───
   const kpis = [
@@ -341,7 +314,7 @@ function renderDashboard() {
   // ─── 4. STOK HABIS + WAJIB RESTOCK ───
   const stokHabisHtml = stokHabis.length===0
     ? `<div class="ow-empty">✅ Tidak ada stok habis</div>`
-    : stokHabis.slice(0,8).map(r=>{
+    : stokHabis.slice(0,5).map(r=>{
         const p=(DB.produk||[]).find(x=>(x.var||'').toUpperCase()===(r.var||'').toUpperCase());
         return `<div class="ow-stok-row">
           <span class="ow-stok-sku">${r.var}</span>
@@ -351,11 +324,11 @@ function renderDashboard() {
             <span class="ow-stok-num stok-red">HABIS</span>
           </div>
         </div>`;
-      }).join('')+(stokHabis.length>8?`<div style="font-size:11px;color:var(--dusty);padding-top:6px">+${stokHabis.length-8} lainnya</div>`:'');
+      }).join('')+(stokHabis.length>5?`<div style="font-size:11px;color:var(--dusty);padding-top:6px">+${stokHabis.length-5} lainnya</div>`:'');
 
   const restockHtml = wajibRestock.length===0
     ? `<div class="ow-empty">✅ Tidak ada urgensi restock</div>`
-    : wajibRestock.map(r=>`
+    : wajibRestock.slice(0,5).map(r=>`
       <div class="ow-restock-item">
         <span style="font-size:13px">${r.akhir<=0?'🔴':'🟡'}</span>
         <span class="ow-restock-sku">${r.var}</span>
@@ -363,20 +336,20 @@ function renderDashboard() {
         <span class="ow-restock-stok ${r.akhir<=0?'stok-habis':'stok-kritis'}">${r.akhir<=0?'HABIS':r.akhir+' pcs'}</span>
       </div>`).join('');
 
-  add(`<div class="ow-row2">
-    <div>
+  add(`<div class="ow-row2" style="align-items:stretch;">
+    <div style="display:flex;flex-direction:column;">
       <div class="ow-sec-hd">
         <span class="ow-sec-title">📦 Stok Habis</span>
         <span class="ow-card-badge ${stokHabis.length>0?'ow-badge-red':'ow-badge-green'}">${stokHabis.length} SKU</span>
       </div>
-      <div class="ow-card" style="padding:14px 16px">${stokHabisHtml}</div>
+      <div class="ow-card" style="padding:14px 16px;flex:1;">${stokHabisHtml}</div>
     </div>
-    <div>
+    <div style="display:flex;flex-direction:column;">
       <div class="ow-sec-hd">
         <span class="ow-sec-title">🔁 Prioritas Restock</span>
         <span class="ow-card-badge ow-badge-amber">${wajibRestock.length} SKU</span>
       </div>
-      <div class="ow-card" style="padding:14px 16px">${restockHtml}</div>
+      <div class="ow-card" style="padding:14px 16px;flex:1;">${restockHtml}</div>
     </div>
   </div>`);
 
@@ -407,14 +380,14 @@ function renderDashboard() {
         ${deltaBadge(qty,soldBulanLaluMap[sku]||0)}
       </div>`).join('');
 
-  add(`<div class="ow-row2">
-    <div>
-      <div class="ow-sec-hd"><span class="ow-sec-title">🛍️ Channel Penjualan</span><span class="ow-sec-note">Bulan ini vs lalu</span></div>
-      <div class="ow-card" style="padding:14px 16px">${chHtml}</div>
+  add(`<div class="ow-row2" style="align-items:stretch;">
+    <div style="display:flex;flex-direction:column;">
+      <div class="ow-sec-hd"><span class="ow-sec-title" style="font-size:14px;letter-spacing:.5px;">🛍️ Channel Penjualan</span><span class="ow-sec-note">Bulan ini vs lalu</span></div>
+      <div class="ow-card" style="padding:14px 16px;flex:1;">${chHtml}</div>
     </div>
-    <div>
-      <div class="ow-sec-hd"><span class="ow-sec-title">🏆 Top SKU Bulan Ini</span><span class="ow-sec-note">vs bulan lalu</span></div>
-      <div class="ow-card" style="padding:14px 16px">${skuHtml}</div>
+    <div style="display:flex;flex-direction:column;">
+      <div class="ow-sec-hd"><span class="ow-sec-title" style="font-size:14px;letter-spacing:.5px;">🏆 Top SKU Bulan Ini</span><span class="ow-sec-note">vs bulan lalu</span></div>
+      <div class="ow-card" style="padding:14px 16px;flex:1;">${skuHtml}</div>
     </div>
   </div>`);
 
