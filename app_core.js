@@ -2605,7 +2605,7 @@ function _chRefreshList() {
     return '<div style="margin-bottom:16px;">'
       + '<div style="font-size:9px;font-weight:800;color:var(--dusty);text-transform:uppercase;letter-spacing:1px;padding:4px 4px 6px;border-bottom:1px solid var(--border);margin-bottom:6px;">'+grup+'</div>'
       + items.map(t =>
-        '<div id="ch-row-'+t.kode.replace(/[^A-Z0-9]/gi,'_')+'" onclick="chEdit(''+t.kode+'')" '
+        '<div id="ch-row-'+t.kode.replace(/[^A-Z0-9]/gi,'_')+'" onclick="chEdit('+JSON.stringify(t.kode)+')" '
         +'style="display:flex;align-items:center;gap:10px;padding:10px;background:white;'
         +'border:1.5px solid '+(_chEditKode===t.kode?'var(--rust)':'var(--border)')+';'
         +'border-radius:10px;margin-bottom:5px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.04);'
@@ -2616,8 +2616,8 @@ function _chRefreshList() {
         +'<div style="font-size:10px;color:var(--dusty);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(t.username||t.brand)+' · '+t.platform+(t.status==='nonaktif'?' · NONAKTIF':'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">'
-        +'<button onclick="chToggleStatus(''+t.kode+'')" style="width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:white;cursor:pointer;font-size:11px;line-height:1;">'+(t.status==='aktif'?'🔴':'🟢')+'</button>'
-        +'<button onclick="chHapus(''+t.kode+'')" style="width:26px;height:26px;border:1px solid #f5c6cb;border-radius:6px;background:#fff5f5;cursor:pointer;font-size:11px;line-height:1;">🗑</button>'
+        +'<button onclick="chToggleStatus('+JSON.stringify(t.kode)+')" style="width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:white;cursor:pointer;font-size:11px;line-height:1;">'+( t.status==='aktif'?'🔴':'🟢')+'</button>'
+        +'<button onclick="chHapus('+JSON.stringify(t.kode)+')" style="width:26px;height:26px;border:1px solid #f5c6cb;border-radius:6px;background:#fff5f5;cursor:pointer;font-size:11px;line-height:1;">🗑</button>'
         +'</div></div>'
       ).join('')
       + '</div>';
