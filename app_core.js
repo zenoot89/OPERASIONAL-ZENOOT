@@ -114,7 +114,7 @@ const DataLayer = {
       const channelRows = (data.channel || []).map(c => ({
         nama: c.nama, platform: c.platform, status: c.status || 'Aktif'
       }));
-      await this._upsert('channel', channelRows, 'nama');
+      await this._upsert('toko', channelRows.map(r=>({kode:r.nama||r.kode,brand:r.brand||'zenOt',platform:(r.platform||'shopee').toLowerCase(),grup:(r.platform||'SHOPEE').toUpperCase(),username:r.username||'',warna:r.warna||'#5C3D2E',urutan:r.urutan||99,status:r.status||'aktif'})), 'kode');
 
       // Jurnal — upsert by uuid (aman multi device)
       const jurnalRows = (data.jurnal || []).map(j => ({
@@ -145,7 +145,7 @@ const DataLayer = {
         this._getTable('stok'),
         this._getTable('jurnal'),
         this._getTable('restock'),
-        this._getTable('channel'),
+        this._getTable('toko'),
       ]);
 
       // Map balik ke format DB yang dipakai app
@@ -177,7 +177,7 @@ const DataLayer = {
               qty: r.qty, catatan: r.catatan
             })),
           channel: channel
-            .filter(c => c.nama !== '__assign__')  // filter row data assign
+            .filter(t => t.status === 'aktif')  // filter toko aktif
             .map(c => ({
             nama: c.nama, platform: c.platform, status: c.status
           }))
@@ -213,34 +213,37 @@ let _currentPage = 'dashboard';
 // ================================================================
 // MULTI-TOKO — State & Manager
 // ================================================================
-window._tokoList  = [];          // [{id, nama, platform, warna}]
-window._tokoAktif = null;        // id toko yang sedang aktif (null = semua)
+window._tokoList  = [];          // [{kode, nama, brand, platform, grup, username, warna, urutan}]
+window._tokoAktif = null;        // kode toko aktif (text: 'SHP.ZENOOT') atau null = semua
 
 // ── Default warna per toko ──
 const TOKO_COLORS = ['#5C3D2E','#5A7A6A','#3D7EAA','#C9A84C','#7C3AED'];
 
-// ── Load daftar toko dari Supabase (tabel: toko_list) ──
+// ── Load daftar toko dari Supabase (tabel: toko) ──
 async function loadTokoList() {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/toko_list?select=*&order=urutan.asc`,
+      `${SUPABASE_URL}/rest/v1/toko?select=*&order=urutan.asc&status=eq.aktif`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     if (!res.ok) return;
     const rows = await res.json();
     window._tokoList = rows.map((r, i) => ({
-      id:       r.id,
-      nama:     r.nama,
-      platform: r.platform || 'Shopee',
-      warna:    r.warna || TOKO_COLORS[i % TOKO_COLORS.length],
-      urutan:   r.urutan || i + 1,
+      kode:     r.kode,
+      nama:     r.kode,                              // tampilkan kode sebagai nama (SHP.ZENOOT)
+      brand:    r.brand    || 'zenOt',
+      platform: r.platform || 'shopee',
+      grup:     r.grup     || 'SHOPEE',
+      username: r.username || '',
+      warna:    r.warna    || TOKO_COLORS[i % TOKO_COLORS.length],
+      urutan:   r.urutan   || i + 1,
     }));
     // Restore toko aktif dari localStorage
     const saved = localStorage.getItem('zenot_toko_aktif');
-    if (saved && window._tokoList.find(t => t.id == saved)) {
-      window._tokoAktif = Number(saved);
+    if (saved && window._tokoList.find(t => t.kode === saved)) {
+      window._tokoAktif = saved;
     } else if (window._tokoList.length > 0) {
-      window._tokoAktif = window._tokoList[0].id;
+      window._tokoAktif = window._tokoList[0].kode;
       localStorage.setItem('zenot_toko_aktif', window._tokoAktif);
     }
     renderTokoDropdown();
@@ -250,9 +253,9 @@ async function loadTokoList() {
 }
 
 // ── Simpan toko baru ke Supabase ──
-async function saveToko(nama, platform, warna) {
+async function saveToko(kode, brand, platform, grup, username, warna) {
   const urutan = window._tokoList.length + 1;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/toko_list`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/toko`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -260,7 +263,7 @@ async function saveToko(nama, platform, warna) {
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Prefer': 'return=representation'
     },
-    body: JSON.stringify([{ nama, platform, warna, urutan }])
+    body: JSON.stringify([{ kode, brand, platform, grup, username, warna, urutan, status: 'aktif' }])
   });
   if (!res.ok) throw new Error(await res.text());
   const rows = await res.json();
@@ -268,17 +271,17 @@ async function saveToko(nama, platform, warna) {
 }
 
 // ── Hapus toko dari Supabase ──
-async function deleteToko(id) {
-  await fetch(`${SUPABASE_URL}/rest/v1/toko_list?id=eq.${id}`, {
+async function deleteToko(kode) {
+  await fetch(`${SUPABASE_URL}/rest/v1/toko?kode=eq.${encodeURIComponent(kode)}`, {
     method: 'DELETE',
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
   });
 }
 
 // ── Switch toko aktif ──
-function switchToko(id) {
-  window._tokoAktif = id ? Number(id) : null;
-  localStorage.setItem('zenot_toko_aktif', id || '');
+function switchToko(kode) {
+  window._tokoAktif = kode || null;
+  localStorage.setItem('zenot_toko_aktif', kode || '');
   renderTokoDropdown();
 
   // Re-render halaman aktif dengan filter baru
@@ -288,33 +291,28 @@ function switchToko(id) {
   else if (p === 'stok'      && typeof renderStok        === 'function') renderStok();
   else if (p === 'jurnal'    && typeof renderJurnal      === 'function') renderJurnal();
   else if (p === 'restock'   && typeof renderRestock     === 'function') renderRestock();
-  else if (p === 'channel'  && typeof renderSplitPanel  === 'function') { renderChannel(); renderSplitPanel(); }
-  // Intelligence dashboard
+  else if (p === 'channel'   && typeof renderSplitPanel  === 'function') { renderChannel(); renderSplitPanel(); }
   if (typeof renderIntelDashboard === 'function' && p === 'intel-dashboard') renderIntelDashboard();
 
-  const tokoNama = id ? (window._tokoList.find(t => t.id == id)?.nama || 'Semua Toko') : 'Semua Toko';
+  const tokoNama = kode ? (window._tokoList.find(t => t.kode === kode)?.kode || 'Semua Toko') : 'Semua Toko';
   if (typeof toast === 'function') toast(`🏪 Beralih ke: ${tokoNama}`);
 }
 
-// ── Helper: get nama toko aktif ──
+// ── Helper: get kode toko aktif ──
 function getTokoAktifNama() {
   if (!window._tokoAktif) return 'Semua Toko';
-  return window._tokoList.find(t => t.id === window._tokoAktif)?.nama || 'Semua Toko';
+  return window._tokoList.find(t => t.kode === window._tokoAktif)?.kode || 'Semua Toko';
 }
 
 // ── Helper: filter DB.jurnal sesuai toko aktif ──
-// Field toko di jurnal: j.toko (id toko)
-// Produk punya field toko juga → mapping var → toko_id
+// jurnal.ch = kode toko: 'SHP.ZENOOT', 'WA.DIRECT', dst
 function getJurnalFiltered() {
   if (!window._tokoAktif) return DB.jurnal;
   return DB.jurnal.filter(j => {
-    // Cek via field toko di jurnal langsung
-    if (j.toko && Number(j.toko) === window._tokoAktif) return true;
-    // Fallback: cek produk.toko
-    const p = DB.produk.find(x => x.var === j.var);
-    if (p && p.toko && Number(p.toko) === window._tokoAktif) return true;
-    // Jika toko di jurnal = null dan toko aktif = toko pertama → include (legacy data)
-    if (!j.toko && !p?.toko && window._tokoList.length > 0 && window._tokoAktif === window._tokoList[0].id) return true;
+    // Match langsung via ch (kode toko)
+    if (j.ch && j.ch === window._tokoAktif) return true;
+    // Legacy: field j.toko (lama pakai id angka atau kode)
+    if (j.toko && j.toko === window._tokoAktif) return true;
     return false;
   });
 }
@@ -322,8 +320,9 @@ function getJurnalFiltered() {
 function getProdukFiltered() {
   if (!window._tokoAktif) return DB.produk;
   return DB.produk.filter(p => {
-    if (!p.toko || p.toko === 'semua') return true; // produk lama tanpa tag toko
-    return Number(p.toko) === window._tokoAktif;
+    if (!p.toko || p.toko === 'semua') return true; // produk tanpa tag toko = tampil semua
+    // Support multi-toko: toko bisa 'SHP.ZENOOT,SHP.ELENZ'
+    return p.toko.split(',').map(x => x.trim()).includes(window._tokoAktif);
   });
 }
 
@@ -333,7 +332,7 @@ function renderTokoDropdown() {
   if (!el) return;
 
   const toko = window._tokoAktif
-    ? window._tokoList.find(t => t.id === window._tokoAktif)
+    ? window._tokoList.find(t => t.kode === window._tokoAktif)
     : null;
   const warna = toko?.warna || '#5C3D2E';
   const nama  = toko?.nama  || 'Semua Toko';
@@ -362,16 +361,12 @@ function renderTokoDropdown() {
           Semua Toko
         </div>
 
-        <!-- List toko -->
-        ${window._tokoList.map(t => `
-          <div onclick="switchToko(${t.id});toggleTokoMenu()"
-            style="display:flex;align-items:center;gap:9px;padding:10px 14px;cursor:pointer;
-                   font-size:12px;font-weight:600;color:var(--charcoal);
-                   background:${window._tokoAktif===t.id?'var(--cream)':'white'};">
-            <span style="width:9px;height:9px;border-radius:50%;background:${t.warna};flex-shrink:0;"></span>
-            ${t.nama}
-            <span style="margin-left:auto;font-size:10px;color:var(--dusty);">${t.platform}</span>
-          </div>`).join('')}
+        <!-- List toko per grup -->
+        ${[...new Set(window._tokoList.map(t=>t.grup))].map(grup=>{
+          const items=window._tokoList.filter(t=>t.grup===grup);
+          return '<div style="padding:4px 14px 2px;font-size:9px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.8px;border-top:1px solid var(--border);">'+grup+'</div>'
+            +items.map(t=>'<div onclick="switchToko(\''+t.kode+'\');toggleTokoMenu()" style="display:flex;align-items:center;gap:9px;padding:8px 14px 8px 20px;cursor:pointer;font-size:12px;font-weight:600;color:var(--charcoal);background:'+(window._tokoAktif===t.kode?'var(--cream)':'white')+';"><span style="width:9px;height:9px;border-radius:50%;background:'+t.warna+';flex-shrink:0;"></span>'+t.kode+'<span style="margin-left:auto;font-size:10px;color:var(--dusty);">'+(t.username||t.brand)+'</span></div>').join('');
+        }).join('')}
 
         <!-- Tambah Toko -->
         <div onclick="openModalTambahToko()"
@@ -469,13 +464,16 @@ async function submitTambahToko() {
   const statusEl = document.getElementById('toko-save-status');
 
   if (!nama) { if (statusEl) statusEl.innerHTML = '<span style="color:#C0392B">⚠️ Nama toko wajib diisi</span>'; return; }
-  if (window._tokoList.length >= 10) { if (statusEl) statusEl.innerHTML = '<span style="color:#C0392B">Maksimal 10 toko</span>'; return; }
+  if (window._tokoList.length >= 20) { if (statusEl) statusEl.innerHTML = '<span style="color:#C0392B">Maksimal 20 toko</span>'; return; }
+  // Generate kode otomatis dari nama (uppercase, max 15 char)
+  const kode = nama.toUpperCase().replace(/[^A-Z0-9.]/g,'').substring(0,15) || nama.substring(0,10).toUpperCase();
+  if (window._tokoList.find(t => t.kode === kode)) { if (statusEl) statusEl.innerHTML = '<span style="color:#C0392B">⚠️ Kode sudah ada: '+kode+'</span>'; return; }
 
   if (statusEl) statusEl.textContent = '⏳ Menyimpan...';
   try {
-    const row = await saveToko(nama, platform, warna);
-    window._tokoList.push({ id: row.id, nama, platform, warna, urutan: row.urutan });
-    switchToko(row.id);
+    const row = await saveToko(kode, 'zenOt', platform, platform.toUpperCase(), '', warna);
+    window._tokoList.push({ kode: row.kode, nama: row.kode, brand: row.brand, platform: row.platform, grup: row.grup, username: row.username||'', warna, urutan: row.urutan });
+    switchToko(row.kode);
     document.getElementById('modal-tambah-toko')?.remove();
     if (typeof toast === 'function') toast(`✅ Toko "${nama}" berhasil ditambahkan!`);
   } catch(e) {
@@ -575,37 +573,33 @@ async function loadDB() {
         if (saved.stok)    DB.stok    = saved.stok;
         if (saved.jurnal)  DB.jurnal  = saved.jurnal;
         if (saved.restock) DB.restock = saved.restock;
-        if (saved.channel) DB.channel = saved.channel;
+        if (saved.channel) DB.channel = saved.channel; // legacy fallback
         // Simpan ke localStorage sebagai cache
         DataLayer.saveLocal(DB);
         // Load assignChannel dari Supabase dulu, fallback localStorage
         try {
+          // Load assignChannel dari produk_toko (tabel proper)
           const chRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/channel?nama=eq.__assign__&select=*`,
+            `${SUPABASE_URL}/rest/v1/produk_toko?select=var,toko_kode,aktif`,
             { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
           );
           if (chRes.ok) {
             const chRows = await chRes.json();
-            if (chRows && chRows[0] && chRows[0].status) {
-              DB.assignChannel = JSON.parse(chRows[0].status);
+            if (chRows && chRows.length > 0) {
+              // Rebuild assignChannel: { var: { toko_kode: aktif } }
+              DB.assignChannel = {};
+              chRows.forEach(r => {
+                if (!DB.assignChannel[r.var]) DB.assignChannel[r.var] = {};
+                DB.assignChannel[r.var][r.toko_kode] = r.aktif;
+              });
             } else {
-              // Supabase kosong — migrate dari localStorage
+              // Fallback dari localStorage jika produk_toko kosong
               const ac = localStorage.getItem('zenot_assign_channel');
               if (ac) {
                 try {
                   DB.assignChannel = JSON.parse(ac);
-                  // Push ke Supabase supaya sync antar device
-                  const assignStr = JSON.stringify(DB.assignChannel);
-                  fetch(`${SUPABASE_URL}/rest/v1/channel`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'apikey': SUPABASE_KEY,
-                      'Authorization': `Bearer ${SUPABASE_KEY}`,
-                      'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify([{ nama: '__assign__', platform: '__data__', status: assignStr }])
-                  }).catch(() => {});
+                  // Migrate ke produk_toko
+                  _syncAssignToSupabase().catch(()=>{});
                 } catch(e) {}
               }
             }
@@ -628,7 +622,7 @@ async function loadDB() {
       if (local.stok)    DB.stok    = local.stok;
       if (local.jurnal)  DB.jurnal  = local.jurnal;
       if (local.restock) DB.restock = local.restock;
-      if (local.channel) DB.channel = local.channel;
+      if (local.channel) DB.channel = local.channel; // legacy fallback
       // Load assignChannel dari localStorage
       try {
         const ac = localStorage.getItem('zenot_assign_channel');
@@ -658,15 +652,19 @@ function _applyCloudData(d) {
   if (d.stok)    DB.stok    = d.stok;
   if (d.jurnal)  DB.jurnal  = d.jurnal;
   if (d.restock) DB.restock = d.restock;
-  if (d.channel) DB.channel = d.channel;
-  // Reload assignChannel dari Supabase sekalian saat sync
+  if (d.channel) DB.channel = d.channel; // legacy fallback
+  // Reload assignChannel dari produk_toko saat sync
   if (SUPABASE_URL) {
-    fetch(`${SUPABASE_URL}/rest/v1/channel?nama=eq.__assign__&select=*`, {
+    fetch(`${SUPABASE_URL}/rest/v1/produk_toko?select=var,toko_kode,aktif`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     }).then(r => r.ok ? r.json() : [])
       .then(rows => {
-        if (rows && rows[0] && rows[0].status) {
-          try { DB.assignChannel = JSON.parse(rows[0].status); } catch(e) {}
+        if (rows && rows.length > 0) {
+          DB.assignChannel = {};
+          rows.forEach(r => {
+            if (!DB.assignChannel[r.var]) DB.assignChannel[r.var] = {};
+            DB.assignChannel[r.var][r.toko_kode] = r.aktif;
+          });
         }
       }).catch(() => {});
   }
@@ -1210,7 +1208,7 @@ function _syncAllDropdowns() {
   const supplierOpts = suppliers.map(s=>`<option value="${s}">${s}</option>`).join('');
 
   // Channel list dari DB.channel
-  const channels = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>c.nama);
+  const channels = window._tokoList.map(t=>t.kode);
   const channelOpts = channels.map(c=>`<option value="${c}">${c}</option>`).join('');
 
   // Populate semua supplier dropdown
@@ -1362,7 +1360,7 @@ function editRestock(i) {
   document.getElementById('er-tgl').value = r.tgl;
   document.getElementById('er-qty').value = r.qty;
   // Populate supplier
-  const supOpts = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>`<option>${c.nama}</option>`).join('');
+  const supOpts = window._tokoList.map(t=>`<option>${t.kode}</option>`).join('');
   document.getElementById('er-supplier').innerHTML = `<option value="">— Pilih Supplier —</option>${supOpts}`;
   if (r.supplier) document.getElementById('er-supplier').value = r.supplier;
   modal._editIdx = i;
@@ -1449,7 +1447,7 @@ function renderLowStock() {
 // ================================================================
 function populateJInduk() {
   // Isi channel dropdown dulu
-  const allChannels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama)).sort();
+  const allChannels = window._tokoList.map(t=>t.kode).sort();
   const chEl = document.getElementById('j-ch');
   if (chEl) {
     const curCh = chEl.value;
@@ -1501,7 +1499,7 @@ function onJIndukChange() {
 
 function _syncChannelDropdowns() {
   // Untuk edit jurnal — tetap tampilkan semua channel
-  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama)).sort();
+  const channels = window._tokoList.map(t=>t.kode).sort();
   const opts = channels.map(c=>`<option>${c}</option>`).join('');
   ['ej-ch'].forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
@@ -1558,7 +1556,7 @@ function _populateJurnalChannelFilter(){
   const sel=document.getElementById('j-fil-ch'); if(!sel)return;
   const cur=sel.value;
   // SINGLE SOURCE: hanya dari DB.channel (Supabase)
-  const channels=(DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>_normalizeCh(c.nama)).sort();
+  const channels=window._tokoList.map(t=>t.kode).sort();
   sel.innerHTML='<option value="">Semua Channel</option>'+channels.map(c=>`<option>${c}</option>`).join('');
   if(cur)sel.value=cur;
 }
@@ -1592,7 +1590,7 @@ function openEditJurnal(idx) {
   // Populate channel dropdown dari DB.channel
   const chSel = document.getElementById('ej-ch');
   if (chSel) {
-    const channels = (DB.channel||[]).filter(c=>c.nama!=='__assign__').map(c=>c.nama);
+    const channels = window._tokoList.map(t=>t.kode);
     chSel.innerHTML = channels.map(c=>`<option value="${c}" ${r.ch===c?'selected':''}>${c}</option>`).join('');
   }
 
@@ -2218,7 +2216,7 @@ function doInputMassal() {
 let _tokoChanged = false;
 
 function renderTokoManager() {
-  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const channels = window._tokoList.map(t=>t.kode);
   const q = (document.getElementById('toko-search')?.value||'').toLowerCase();
   const filterToko = document.getElementById('toko-filter-select')?.value||'semua';
 
@@ -2354,7 +2352,7 @@ function updateTokoSaveBtn() {
 }
 
 function saveTokoAssign() {
-  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const channels = window._tokoList.map(t=>t.kode);
   const tokoMap = {};
   document.querySelectorAll('#toko-assign-body input[data-type="var"]').forEach(cb => {
     const v = cb.dataset.var;
@@ -2395,7 +2393,7 @@ function saveTokoAssign() {
 // ================================================================
 function renderChannel() {
   const body=document.getElementById('channel-body'); if(!body)return;
-  const channels=DB.channel||[];
+  const channels=window._tokoList;
   if (!channels.length) { body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--dusty)">Belum ada channel.</td></tr>'; return; }
   const platformColor={Shopee:'#EE4D2D',Lazada:'#0F146D','TikTok Shop':'#1C1C1E',Offline:'#8C8C8C',Lainnya:'#8C7B6B'};
   body.innerHTML=channels.map((c,i)=>`<tr>
@@ -2410,24 +2408,25 @@ function tambahChannel() {
   const platform=document.getElementById('ch-platform').value;
   const status=document.getElementById('ch-status').value;
   if (!nama) { toast('Nama channel wajib diisi!','err'); return; }
-  if (!DB.channel) DB.channel=[];
-  if (DB.channel.find(c=>c.nama===nama)) { toast('Channel sudah ada!','err'); return; }
-  DB.channel.push({nama,platform,status});
+  // Channel add now handled via Supabase toko table
+  toast('Tambah toko via menu Tambah Toko di topbar','err'); return;
   document.getElementById('ch-nama').value='';
   saveDB(); closeModal('modal-tambah-channel'); renderChannel(); renderSplitPanel();
   _syncChannelDropdowns(); // langsung sync ke dropdown jurnal
   toast(`✅ Channel ${nama} ditambahkan!`);
 }
 function toggleChannelStatus(idx) {
-  if(!DB.channel[idx])return;
-  DB.channel[idx].status=DB.channel[idx].status==='Aktif'?'Nonaktif':'Aktif';
+  const t=window._tokoList[idx]; if(!t)return;
+  const newStatus=t.status==='aktif'?'nonaktif':'aktif';
+  fetch(`${SUPABASE_URL}/rest/v1/toko?kode=eq.${encodeURIComponent(t.kode)}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Prefer':'return=minimal'},body:JSON.stringify({status:newStatus})}).then(()=>{t.status=newStatus;renderChannel();toast(`Status ${t.kode} → ${newStatus}`);}).catch(e=>toast('Gagal: '+e.message,'err'));
   saveDB(); renderChannel();
   _syncChannelDropdowns();
 }
 function hapusChannel(idx) {
-  if (!confirm(`Hapus channel "${DB.channel[idx]?.nama}"?`)) return;
-  const chNama = DB.channel[idx]?.nama;
-  DB.channel.splice(idx, 1);
+  const t=window._tokoList[idx]; if(!t)return;
+  if (!confirm(`Hapus toko "${t.kode}"?`)) return;
+  const chNama=t.kode;
+  window._tokoList.splice(idx,1);
   // Bersihkan assign data untuk channel ini
   if (DB.assignChannel && chNama) {
     Object.keys(DB.assignChannel).forEach(induk => {
@@ -2573,7 +2572,7 @@ let _splitActiveChannel = null;
 
 function renderSplitPanel() {
   _renderSplitChannelList();
-  const channels = (DB.channel||[]);
+  const channels = window._tokoList;
   if (channels.length && !_splitActiveChannel) {
     _splitSelectChannel(channels[0].nama);
   } else if (_splitActiveChannel) {
@@ -2590,7 +2589,7 @@ const _platformAccOpen = {};
 function _renderSplitChannelList() {
   const list = document.getElementById('ch-split-channel-list');
   if (!list) return;
-  const channels = (DB.channel||[]).filter(c => c.nama !== '__assign__');
+  const channels = window._tokoList;
   if (!channels.length) {
     list.innerHTML = '<div style="padding:20px 16px;color:var(--dusty);font-size:12px;">Belum ada channel.</div>';
     return;
@@ -2710,7 +2709,7 @@ function _splitSelectChannel(chNama) {
   document.querySelectorAll('.ch-split-ch-item').forEach(el => {
     el.classList.toggle('active', el.querySelector('.ch-split-ch-name')?.textContent === chNama);
   });
-  const ch = (DB.channel||[]).find(c=>c.nama===chNama);
+  const ch = window._tokoList.find(t=>t.kode===chNama);
   if (!ch) return;
 
   // — Header 4 bagian —
@@ -2745,7 +2744,7 @@ function _splitSelectChannel(chNama) {
   // Tombol di header kiri
   const toggleBtn = document.getElementById('ch-left-toggle-btn');
   const hapusBtn  = document.getElementById('ch-left-hapus-btn');
-  const chIdx = (DB.channel||[]).findIndex(c => c.nama === chNama);
+  const chIdx = window._tokoList.findIndex(t => t.kode === chNama);
   if (toggleBtn) {
     toggleBtn.style.display = chIdx >= 0 ? 'inline-block' : 'none';
     if (ch.status === 'Aktif') {
@@ -2896,7 +2895,7 @@ function _renderVarianPanel(induk, chNama) {
 
 function _splitToggleVarian(varNama, induk, chNama, val) {
   const groups = _buildProdukGroups();
-  const allChannels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const allChannels = window._tokoList.map(t=>t.kode);
   const p = (groups[induk]||[]).find(p => p.var === varNama);
   if (!p) return;
   let tokoArr = (p.toko && p.toko !== 'semua')
@@ -2926,7 +2925,7 @@ function _splitToggleVarian(varNama, induk, chNama, val) {
 function _splitToggleProduk(induk, chNama, val) {
   // Tulis ke DB.produk.toko — single source of truth
   const groups = _buildProdukGroups();
-  const allChannels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const allChannels = window._tokoList.map(t=>t.kode);
   (groups[induk]||[]).forEach(p => {
     let tokoArr = (p.toko && p.toko !== 'semua')
       ? p.toko.split(',').map(x=>x.trim())
@@ -2952,7 +2951,7 @@ function _splitToggleProduk(induk, chNama, val) {
 
 function _splitToggleAll(chNama, val) {
   const groups = _buildProdukGroups();
-  const allChannels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const allChannels = window._tokoList.map(t=>t.kode);
   Object.keys(groups).forEach(induk => {
     (groups[induk]||[]).forEach(p => {
       let tokoArr = (p.toko && p.toko !== 'semua')
@@ -2979,28 +2978,32 @@ function _splitToggleAll(chNama, val) {
 function _persistAssign() {
   // Simpan ke localStorage sebagai cache offline
   try { localStorage.setItem('zenot_assign_channel', JSON.stringify(DB.assignChannel)); } catch(e) {}
-  // Sync ke Supabase — simpan assign sebagai JSON di tabel channel (field assign_json)
+  // Sync ke Supabase — simpan ke tabel produk_toko (proper table, bukan hack)
   if (SUPABASE_URL && DB.assignChannel) {
-    const assignStr = JSON.stringify(DB.assignChannel);
-    fetch(`${SUPABASE_URL}/rest/v1/channel?nama=eq.__assign__`, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    }).then(() => {
-      return fetch(`${SUPABASE_URL}/rest/v1/channel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify([{ nama: '__assign__', platform: '__data__', status: assignStr }])
-      });
-    }).catch(e => console.warn('[persistAssign]', e.message));
+    _syncAssignToSupabase().catch(e => console.warn('[persistAssign]', e.message));
   }
+}
+
+async function _syncAssignToSupabase() {
+  // Build rows: { var, toko_kode, aktif }
+  const rows = [];
+  for (const [var_, tokoMap] of Object.entries(DB.assignChannel || {})) {
+    for (const [tokoKode, aktif] of Object.entries(tokoMap || {})) {
+      rows.push({ var: var_, toko_kode: tokoKode, aktif: aktif === true });
+    }
+  }
+  if (!rows.length) return;
+  // Upsert ke produk_toko
+  await fetch(`${SUPABASE_URL}/rest/v1/produk_toko`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(rows)
+  });
 }
 
 function _updateHeaderCounter(chNama) {
@@ -3047,23 +3050,23 @@ function _splitToggleActiveChannel() {
 }
 
 function _splitToggleStatus(idx) {
-  if (!DB.channel[idx]) return;
-  DB.channel[idx].status = DB.channel[idx].status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+  const tk=window._tokoList[idx]; if(!tk) return;
+  tk.status = tk.status === 'aktif' ? 'nonaktif' : 'aktif';
   saveDB();
   renderChannel();
   renderSplitPanel();
-  toast('Status ' + DB.channel[idx].nama + ' diubah ke ' + DB.channel[idx].status);
+  toast('Status ' + (window._tokoList[idx]?.kode||'') + ' diubah');
 }
 
 function _splitHapusActive() {
   if (!_splitActiveChannel) return;
-  const idx = (DB.channel||[]).findIndex(c => c.nama === _splitActiveChannel);
+  const idx = window._tokoList.findIndex(t => t.kode === _splitActiveChannel);
   if (idx < 0) return;
   _splitHapus(idx);
 }
 
 function _splitHapus(idx) {
-  const ch = DB.channel[idx];
+  const ch = window._tokoList[idx];
   if (!ch) return;
   if (DB.assignChannel) {
     Object.keys(DB.assignChannel).forEach(induk => {
@@ -3078,7 +3081,7 @@ function _splitHapus(idx) {
     if (toggleBtn) toggleBtn.style.display = 'none';
     if (hapusBtn)  hapusBtn.style.display  = 'none';
   }
-  DB.channel.splice(idx, 1);
+  window._tokoList.splice(idx, 1);
   saveDB();
   _persistAssign();
   renderChannel();
