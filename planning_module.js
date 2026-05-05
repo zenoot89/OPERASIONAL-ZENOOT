@@ -271,67 +271,133 @@ async function savePlanningKPI() {
 async function renderPlanningOps() {
   const el = document.getElementById('page-planning-ops');
   if (!el) return;
-  const channels = (typeof DB!=='undefined'?DB.channel||[]:[]).filter(c=>c.nama!=='__assign__');
+  const channels = window._tokoList && window._tokoList.length > 0
+    ? window._tokoList
+    : (typeof DB!=='undefined'?DB.channel||[]:[]).filter(c=>c.nama!=='__assign__');
+
+  const fmtRp = v => v ? 'Rp '+Number(v).toLocaleString('id-ID') : '—';
 
   el.innerHTML = `
   <style>
     .ops-toko-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:14px;}
     .ops-toko-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
     .ops-toko-name{font-size:15px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);}
-    .ops-toko-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+    .ops-4col{display:grid;grid-template-columns:1fr 1fr 1fr 1.2fr;gap:12px;align-items:end;}
+    @media(max-width:800px){.ops-4col{grid-template-columns:1fr 1fr;}}
+    @media(max-width:480px){.ops-4col{grid-template-columns:1fr;}}
     .plan-field{display:flex;flex-direction:column;gap:5px;}
     .plan-label{font-size:10px;font-weight:700;color:var(--dusty);letter-spacing:.5px;text-transform:uppercase;}
     .plan-input{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--charcoal);background:var(--card);outline:none;width:100%;box-sizing:border-box;transition:border-color .2s;}
     .plan-input:focus{border-color:var(--brown);}
-    .ops-save-btn{margin-top:12px;padding:8px 20px;background:var(--brown);color:var(--cream);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;}
+    .ops-result-box{background:var(--cream);border:2px solid var(--brown);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;}
+    .ops-result-label{font-size:10px;font-weight:700;color:var(--brown);letter-spacing:.5px;text-transform:uppercase;}
+    .ops-result-val{font-size:18px;font-weight:900;font-family:'DM Serif Display',serif;color:var(--charcoal);}
+    .ops-result-sub{font-size:11px;color:var(--dusty);font-weight:600;}
+    .ops-save-btn{margin-top:14px;padding:8px 20px;background:var(--brown);color:var(--cream);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;}
+    .ops-save-btn:hover{opacity:.85;}
+    .ops-formula-hint{font-size:11px;color:var(--dusty);margin-top:4px;font-style:italic;}
   </style>
   <div style="margin-bottom:24px;">
-    <div style="font-size:22px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);">Operasional <span style="color:var(--brown)">per Toko</span></div>
-    <div style="font-size:12px;color:var(--dusty);margin-top:6px;">Target & biaya spesifik per channel. ☁️ Sync ke Supabase.</div>
+    <div style="font-size:22px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);">Biaya <span style="color:var(--brown)">Operasional</span></div>
+    <div style="font-size:12px;color:var(--dusty);margin-top:6px;">Input biaya & rasio per toko → Target Omzet dihitung otomatis. ☁️ Sync ke Supabase.</div>
   </div>
   ${channels.length===0
     ? `<div style="color:var(--dusty);font-size:13px;padding:20px;">Belum ada channel aktif.</div>`
     : channels.map(ch => {
-        const d = PLAN.loadSync(ch.nama) || {};
-        const pStyle = typeof _platformStyle==='function'?_platformStyle(ch.platform):{bg:'#8C7B6B',color:'#fff'};
+        const chNama = ch.kode || ch.nama;
+        const platform = ch.platform || 'lainnya';
+        const d = PLAN.loadSync(chNama) || {};
+        const biaya = d.biayaOps || 0;
+        const rasio = d.rasioOps || 0;
+        const targetBulan = (rasio > 0 && biaya > 0) ? Math.round(biaya / (rasio / 100)) : 0;
+        const targetHarian = targetBulan > 0 ? Math.round(targetBulan / 30) : 0;
+        const pStyle = typeof _platformStyle==='function'?_platformStyle(platform):{bg:'#8C7B6B',color:'#fff'};
         return `
         <div class="ops-toko-card">
           <div class="ops-toko-header">
-            <span style="padding:3px 10px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-size:10px;font-weight:700;">${ch.platform}</span>
-            <span class="ops-toko-name">${ch.nama}</span>
+            <span style="padding:3px 10px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-size:10px;font-weight:700;">${platform}</span>
+            <span class="ops-toko-name">${chNama}</span>
           </div>
-          <div class="ops-toko-grid">
-            <div class="plan-field"><div class="plan-label">Target Omset (Rp)</div>
-              <input class="plan-input" type="number" id="ops-omset-${ch.nama}" placeholder="0" value="${d.targetOmset||''}"></div>
-            <div class="plan-field"><div class="plan-label">Budget Iklan (Rp)</div>
-              <input class="plan-input" type="number" id="ops-iklan-${ch.nama}" placeholder="0" value="${d.budgetIklan||''}"></div>
-            <div class="plan-field"><div class="plan-label">Fee Platform (%)</div>
-              <input class="plan-input" type="number" id="ops-fee-${ch.nama}" placeholder="0" value="${d.feePlatform||''}" step="0.1"></div>
-            <div class="plan-field"><div class="plan-label">Target ROAS (x)</div>
-              <input class="plan-input" type="number" id="ops-roas-${ch.nama}" placeholder="0" value="${d.targetROAS||''}" step="0.1"></div>
+          <div class="ops-4col">
+
+            <div class="plan-field">
+              <div class="plan-label">Channel</div>
+              <div style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--dusty);background:var(--bg);font-family:'DM Mono',monospace;">${chNama}</div>
+            </div>
+
+            <div class="plan-field">
+              <div class="plan-label">Biaya Operasional (Rp)</div>
+              <input class="plan-input" type="number" id="ops-biaya-${chNama}" placeholder="0"
+                value="${biaya||''}"
+                oninput="recalcOpsTarget('${chNama}')">
+              <div class="ops-formula-hint">Gaji, sewa, utilitas, dll</div>
+            </div>
+
+            <div class="plan-field">
+              <div class="plan-label">Rasio Operasional (%)</div>
+              <input class="plan-input" type="number" id="ops-rasio-${chNama}" placeholder="0"
+                value="${rasio||''}" step="0.1" min="0.1" max="100"
+                oninput="recalcOpsTarget('${chNama}')">
+              <div class="ops-formula-hint">Target % ops dari omzet</div>
+            </div>
+
+            <div class="ops-result-box" id="ops-result-${chNama}">
+              <div class="ops-result-label">🎯 Target Omzet</div>
+              <div class="ops-result-val" id="ops-result-bulan-${chNama}">${targetBulan>0?fmtRp(targetBulan):'—'}</div>
+              <div class="ops-result-sub" id="ops-result-harian-${chNama}">${targetHarian>0?fmtRp(targetHarian)+' / hari':'Isi biaya & rasio dulu'}</div>
+            </div>
+
           </div>
-          <button class="ops-save-btn" onclick="saveOpsToko('${ch.nama}')">💾 Simpan</button>
+          <button class="ops-save-btn" onclick="saveOpsToko('${chNama}')">💾 Simpan</button>
         </div>`;
       }).join('')
   }`;
 }
 
+function recalcOpsTarget(chNama) {
+  const biaya  = parseFloat(document.getElementById(`ops-biaya-${chNama}`)?.value) || 0;
+  const rasio  = parseFloat(document.getElementById(`ops-rasio-${chNama}`)?.value) || 0;
+  const valEl  = document.getElementById(`ops-result-bulan-${chNama}`);
+  const subEl  = document.getElementById(`ops-result-harian-${chNama}`);
+  const boxEl  = document.getElementById(`ops-result-${chNama}`);
+  if (!valEl || !subEl) return;
+  if (biaya > 0 && rasio > 0) {
+    const targetBulan  = Math.round(biaya / (rasio / 100));
+    const targetHarian = Math.round(targetBulan / 30);
+    const fmt = v => 'Rp '+Number(v).toLocaleString('id-ID');
+    valEl.textContent = fmt(targetBulan) + ' / bln';
+    subEl.textContent = fmt(targetHarian) + ' / hari';
+    if (boxEl) boxEl.style.borderColor = 'var(--brown)';
+  } else {
+    valEl.textContent = '—';
+    subEl.textContent = 'Isi biaya & rasio dulu';
+    if (boxEl) boxEl.style.borderColor = 'var(--border)';
+  }
+}
+
 async function saveOpsToko(chNama) {
+  const biaya = parseFloat(document.getElementById(`ops-biaya-${chNama}`)?.value)||0;
+  const rasio = parseFloat(document.getElementById(`ops-rasio-${chNama}`)?.value)||0;
+  const targetBulan = (rasio > 0 && biaya > 0) ? Math.round(biaya / (rasio / 100)) : 0;
   const data = {
-    targetOmset : parseFloat(document.getElementById(`ops-omset-${chNama}`)?.value)||0,
-    budgetIklan : parseFloat(document.getElementById(`ops-iklan-${chNama}`)?.value)||0,
-    feePlatform : parseFloat(document.getElementById(`ops-fee-${chNama}`)?.value)||0,
-    targetROAS  : parseFloat(document.getElementById(`ops-roas-${chNama}`)?.value)||0,
+    biayaOps    : biaya,
+    rasioOps    : rasio,
+    targetOmset : targetBulan,
+    // preserve field lama supaya tidak hilang
+    budgetIklan : parseFloat((PLAN.loadSync(chNama)||{}).budgetIklan)||0,
+    feePlatform : parseFloat((PLAN.loadSync(chNama)||{}).feePlatform)||0,
+    targetROAS  : parseFloat((PLAN.loadSync(chNama)||{}).targetROAS)||0,
   };
   await PLAN.save(chNama, null, data);
-  if (typeof toast==='function') toast(`✅ Target ${chNama} tersimpan!`);
+  if (typeof toast==='function') toast(`✅ ${chNama} — Target Omzet tersimpan!`);
 }
 
 // ─── EXPOSE ─────────────────────────────────────────────────────
-window.renderPlanningKPI = renderPlanningKPI;
-window.renderPlanningOps = renderPlanningOps;
-window.savePlanningKPI   = savePlanningKPI;
-window.saveOpsToko       = saveOpsToko;
-window.PLAN              = PLAN;
+window.renderPlanningKPI  = renderPlanningKPI;
+window.renderPlanningOps  = renderPlanningOps;
+window.savePlanningKPI    = savePlanningKPI;
+window.saveOpsToko        = saveOpsToko;
+window.recalcOpsTarget    = recalcOpsTarget;
+window.PLAN               = PLAN;
 
 })();
