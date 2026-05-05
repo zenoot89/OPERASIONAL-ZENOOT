@@ -275,86 +275,155 @@ async function renderPlanningOps() {
     ? window._tokoList
     : (typeof DB!=='undefined'?DB.channel||[]:[]).filter(c=>c.nama!=='__assign__');
 
-  const fmtRp = v => v ? 'Rp '+Number(v).toLocaleString('id-ID') : '—';
+  const fmtRp  = v => v ? 'Rp '+Number(v).toLocaleString('id-ID') : '—';
+  const fmtNum = v => v ? Number(v).toLocaleString('id-ID') : '—';
+
+  // Build table rows
+  const rows = channels.map(ch => {
+    const chNama  = ch.kode || ch.nama;
+    const platform = ch.platform || 'lainnya';
+    const d = PLAN.loadSync(chNama) || {};
+    const biaya   = d.biayaOps || 0;
+    const rasio   = d.rasioOps || 0;
+    const target  = (rasio > 0 && biaya > 0) ? Math.round(biaya / (rasio/100)) : 0;
+    const harian  = target > 0 ? Math.round(target/30) : 0;
+    const pStyle  = typeof _platformStyle==='function' ? _platformStyle(platform) : {bg:'#8C7B6B',color:'#fff'};
+    return `
+      <tr class="ops-tr" onclick="opsSelectRow('${chNama}')" data-ch="${chNama}">
+        <td class="ops-td">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span style="padding:2px 8px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-size:9px;font-weight:700;white-space:nowrap;">${platform}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--charcoal);">${chNama}</span>
+          </div>
+        </td>
+        <td class="ops-td ops-num" id="opsrow-biaya-${chNama}">${biaya>0?fmtNum(biaya):'—'}</td>
+        <td class="ops-td ops-num" id="opsrow-rasio-${chNama}">${rasio>0?rasio+'%':'—'}</td>
+        <td class="ops-td ops-num" id="opsrow-target-${chNama}">${target>0?fmtRp(target):'—'}</td>
+        <td class="ops-td ops-num" id="opsrow-harian-${chNama}" style="color:var(--dusty);font-size:11px;">${harian>0?fmtRp(harian)+'/hr':'—'}</td>
+        <td class="ops-td" style="text-align:center;">
+          <button class="ops-edit-btn" onclick="event.stopPropagation();opsSelectRow('${chNama}')">✏️ Edit</button>
+        </td>
+      </tr>`;
+  }).join('');
 
   el.innerHTML = `
   <style>
-    .ops-toko-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:8px;}
-    .ops-toko-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-    .ops-toko-name{font-size:14px;font-weight:700;font-family:'DM Serif Display',serif;color:var(--charcoal);}
-    .ops-4col{display:grid;grid-template-columns:1fr 1fr 1fr 1.2fr;gap:8px;align-items:end;}
-    @media(max-width:800px){.ops-4col{grid-template-columns:1fr 1fr;}}
-    @media(max-width:480px){.ops-4col{grid-template-columns:1fr;}}
-    .plan-field{display:flex;flex-direction:column;gap:3px;}
-    .plan-label{font-size:9px;font-weight:600;color:var(--dusty);letter-spacing:.5px;text-transform:uppercase;}
-    .plan-input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:400;font-family:'DM Mono',monospace;color:var(--charcoal);background:var(--card);outline:none;width:100%;box-sizing:border-box;transition:border-color .2s;}
-    .plan-input:focus{border-color:var(--brown);}
-    .ops-result-box{background:var(--cream);border:2px solid var(--brown);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:3px;}
-    .ops-result-label{font-size:9px;font-weight:700;color:var(--brown);letter-spacing:.5px;text-transform:uppercase;}
-    .ops-result-val{font-size:16px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);}
-    .ops-result-sub{font-size:10px;color:var(--dusty);font-weight:500;}
-    .ops-save-btn{margin-top:10px;padding:6px 16px;background:var(--brown);color:var(--cream);border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .2s;}
+    .ops-layout{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;}
+    @media(max-width:768px){.ops-layout{grid-template-columns:1fr;}}
+    .ops-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+    .ops-table{width:100%;border-collapse:collapse;}
+    .ops-th{padding:9px 12px;font-size:9px;font-weight:700;color:var(--dusty);letter-spacing:.6px;text-transform:uppercase;background:var(--bg);border-bottom:2px solid var(--border);text-align:left;}
+    .ops-th.ops-num{text-align:right;}
+    .ops-td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+    .ops-td.ops-num{text-align:right;font-family:'DM Mono',monospace;font-size:12px;}
+    .ops-tr{cursor:pointer;transition:background .15s;}
+    .ops-tr:hover{background:var(--cream);}
+    .ops-tr.ops-active{background:color-mix(in srgb, var(--brown) 8%, transparent);border-left:3px solid var(--brown);}
+    .ops-tr:last-child td{border-bottom:none;}
+    .ops-edit-btn{padding:3px 10px;font-size:11px;font-weight:600;background:var(--cream);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--charcoal);transition:all .15s;}
+    .ops-edit-btn:hover{background:var(--brown);color:var(--cream);border-color:var(--brown);}
+    .ops-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:sticky;top:16px;}
+    .ops-panel-title{font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+    .ops-panel-ch{font-size:11px;color:var(--brown);font-weight:700;background:color-mix(in srgb,var(--brown) 10%,transparent);padding:3px 10px;border-radius:20px;margin-bottom:12px;}
+    .ops-field{margin-bottom:10px;}
+    .ops-field-label{font-size:9px;font-weight:600;color:var(--dusty);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;}
+    .ops-input{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:400;font-family:'DM Mono',monospace;color:var(--charcoal);background:var(--bg);outline:none;width:100%;box-sizing:border-box;transition:border-color .2s;}
+    .ops-input:focus{border-color:var(--brown);background:var(--card);}
+    .ops-input:disabled{opacity:.45;cursor:not-allowed;}
+    .ops-hint{font-size:10px;color:var(--dusty);margin-top:3px;font-style:italic;}
+    .ops-result-mini{background:var(--cream);border:1.5px solid var(--brown);border-radius:8px;padding:8px 10px;margin:10px 0;}
+    .ops-result-mini-label{font-size:9px;font-weight:700;color:var(--brown);letter-spacing:.5px;text-transform:uppercase;}
+    .ops-result-mini-val{font-size:15px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);margin-top:1px;}
+    .ops-result-mini-sub{font-size:10px;color:var(--dusty);font-weight:500;}
+    .ops-save-btn{width:100%;padding:9px;background:var(--brown);color:var(--cream);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px;}
     .ops-save-btn:hover{opacity:.85;}
-    .ops-formula-hint{font-size:10px;color:var(--dusty);margin-top:2px;font-style:italic;}
+    .ops-save-btn:disabled{opacity:.45;cursor:not-allowed;}
+    .ops-empty{text-align:center;padding:20px;color:var(--dusty);font-size:12px;}
   </style>
-  <div style="margin-bottom:24px;">
-    <div style="font-size:22px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);">Biaya <span style="color:var(--brown)">Operasional</span></div>
-    <div style="font-size:12px;color:var(--dusty);margin-top:6px;">Input biaya & rasio per toko → Target Omzet dihitung otomatis. ☁️ Sync ke Supabase.</div>
+  <div style="margin-bottom:16px;">
+    <div style="font-size:20px;font-weight:800;font-family:'DM Serif Display',serif;color:var(--charcoal);">Biaya <span style="color:var(--brown)">Operasional</span></div>
+    <div style="font-size:11px;color:var(--dusty);margin-top:4px;">Klik row atau tombol Edit → isi panel kanan → Simpan. ☁️ Sync Supabase.</div>
   </div>
-  ${channels.length===0
-    ? `<div style="color:var(--dusty);font-size:13px;padding:20px;">Belum ada channel aktif.</div>`
-    : channels.map(ch => {
-        const chNama = ch.kode || ch.nama;
-        const platform = ch.platform || 'lainnya';
-        const d = PLAN.loadSync(chNama) || {};
-        const biaya = d.biayaOps || 0;
-        const rasio = d.rasioOps || 0;
-        const targetBulan = (rasio > 0 && biaya > 0) ? Math.round(biaya / (rasio / 100)) : 0;
-        const targetHarian = targetBulan > 0 ? Math.round(targetBulan / 30) : 0;
-        const pStyle = typeof _platformStyle==='function'?_platformStyle(platform):{bg:'#8C7B6B',color:'#fff'};
-        return `
-        <div class="ops-toko-card">
-          <div class="ops-toko-header">
-            <span style="padding:3px 10px;border-radius:20px;background:${pStyle.bg};color:${pStyle.color};font-size:10px;font-weight:700;">${platform}</span>
-            <span class="ops-toko-name">${chNama}</span>
-          </div>
-          <div class="ops-4col">
+  <div class="ops-layout">
+    <!-- TABEL -->
+    <div class="ops-table-wrap">
+      ${channels.length===0
+        ? `<div class="ops-empty">Belum ada channel aktif.</div>`
+        : `<table class="ops-table">
+            <thead>
+              <tr>
+                <th class="ops-th">Channel</th>
+                <th class="ops-th ops-num">Biaya Ops (Rp)</th>
+                <th class="ops-th ops-num">Rasio %</th>
+                <th class="ops-th ops-num">Target Omzet/bln</th>
+                <th class="ops-th ops-num">Target/hari</th>
+                <th class="ops-th" style="text-align:center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="ops-tbody">${rows}</tbody>
+          </table>`
+      }
+    </div>
+    <!-- PANEL KANAN -->
+    <div class="ops-panel" id="ops-panel">
+      <div class="ops-panel-title">✏️ Perbarui Data</div>
+      <div id="ops-panel-ch" class="ops-panel-ch" style="display:none;"></div>
+      <div id="ops-panel-empty" style="text-align:center;padding:20px 0;color:var(--dusty);font-size:12px;">
+        👆 Pilih channel dari tabel
+      </div>
+      <div id="ops-panel-form" style="display:none;">
+        <div class="ops-field">
+          <div class="ops-field-label">Biaya Operasional (Rp)</div>
+          <input class="ops-input" type="text" id="ops-panel-biaya" placeholder="0" oninput="opsPanelRecalc()">
+          <div class="ops-hint">Gaji, sewa, utilitas, dll</div>
+        </div>
+        <div class="ops-field">
+          <div class="ops-field-label">Rasio Operasional (%)</div>
+          <input class="ops-input" type="number" id="ops-panel-rasio" placeholder="0" step="0.1" min="0.1" max="100" oninput="opsPanelRecalc()">
+          <div class="ops-hint">Target % ops dari omzet</div>
+        </div>
+        <div class="ops-result-mini" id="ops-panel-result">
+          <div class="ops-result-mini-label">🎯 Target Omzet</div>
+          <div class="ops-result-mini-val" id="ops-panel-result-val">—</div>
+          <div class="ops-result-mini-sub" id="ops-panel-result-sub">Isi biaya & rasio dulu</div>
+        </div>
+        <button class="ops-save-btn" id="ops-panel-save-btn" onclick="opsPanelSave()">💾 Simpan</button>
+      </div>
+    </div>
+  </div>`;
 
-            <div class="plan-field">
-              <div class="plan-label">Channel</div>
-              <div style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--dusty);background:var(--bg);font-family:'DM Mono',monospace;">${chNama}</div>
-            </div>
-
-            <div class="plan-field">
-              <div class="plan-label">Biaya Operasional (Rp)</div>
-              <input class="plan-input" type="text" id="ops-biaya-${chNama}" placeholder="0"
-                value="${biaya>0?Number(biaya).toLocaleString('id-ID'):''}"
-                oninput="formatOpsInput(this,'${chNama}')">
-              <div class="ops-formula-hint">Gaji, sewa, utilitas, dll</div>
-            </div>
-
-            <div class="plan-field">
-              <div class="plan-label">Rasio Operasional (%)</div>
-              <input class="plan-input" type="number" id="ops-rasio-${chNama}" placeholder="0"
-                value="${rasio||''}" step="0.1" min="0.1" max="100"
-                oninput="recalcOpsTarget('${chNama}')">
-              <div class="ops-formula-hint">Target % ops dari omzet</div>
-            </div>
-
-            <div class="ops-result-box" id="ops-result-${chNama}">
-              <div class="ops-result-label">🎯 Target Omzet</div>
-              <div class="ops-result-val" id="ops-result-bulan-${chNama}">${targetBulan>0?fmtRp(targetBulan):'—'}</div>
-              <div class="ops-result-sub" id="ops-result-harian-${chNama}">${targetHarian>0?fmtRp(targetHarian)+' / hari':'Isi biaya & rasio dulu'}</div>
-            </div>
-
-          </div>
-          <button class="ops-save-btn" onclick="saveOpsToko('${chNama}')">💾 Simpan</button>
-        </div>`;
-      }).join('')
-  }`;
+  // attach hidden state
+  window._opsPanelCh = null;
 }
 
-function formatOpsInput(el, chNama) {
+function opsSelectRow(chNama) {
+  // highlight active row
+  document.querySelectorAll('.ops-tr').forEach(r => r.classList.remove('ops-active'));
+  const row = document.querySelector(`.ops-tr[data-ch="${chNama}"]`);
+  if (row) row.classList.add('ops-active');
+
+  // load data into panel
+  const d = PLAN.loadSync(chNama) || {};
+  const biaya = d.biayaOps || 0;
+  const rasio = d.rasioOps || 0;
+
+  document.getElementById('ops-panel-ch').textContent = chNama;
+  document.getElementById('ops-panel-ch').style.display = 'block';
+  document.getElementById('ops-panel-empty').style.display = 'none';
+  document.getElementById('ops-panel-form').style.display = 'block';
+
+  const biayaEl = document.getElementById('ops-panel-biaya');
+  const rasioEl = document.getElementById('ops-panel-rasio');
+  if (biayaEl) biayaEl.value = biaya > 0 ? Number(biaya).toLocaleString('id-ID') : '';
+  if (rasioEl) rasioEl.value = rasio || '';
+
+  window._opsPanelCh = chNama;
+  opsPanelRecalc();
+}
+
+function opsPanelFormatBiaya() {
+  const el = document.getElementById('ops-panel-biaya');
+  if (!el) return;
   const raw = el.value.replace(/[^\d]/g,'');
   const num = parseInt(raw)||0;
   const pos = el.selectionStart;
@@ -362,47 +431,68 @@ function formatOpsInput(el, chNama) {
   el.value = num>0 ? num.toLocaleString('id-ID') : '';
   const diff = el.value.length - prevLen;
   try { el.setSelectionRange(pos+diff, pos+diff); } catch(e){}
-  recalcOpsTarget(chNama);
 }
 
-function recalcOpsTarget(chNama) {
-  const rawBiaya = (document.getElementById(`ops-biaya-${chNama}`)?.value||'').replace(/[^\d]/g,'');
-  const biaya  = parseInt(rawBiaya)||0;
-  const rasio  = parseFloat(document.getElementById(`ops-rasio-${chNama}`)?.value) || 0;
-  const valEl  = document.getElementById(`ops-result-bulan-${chNama}`);
-  const subEl  = document.getElementById(`ops-result-harian-${chNama}`);
-  const boxEl  = document.getElementById(`ops-result-${chNama}`);
+function opsPanelRecalc() {
+  opsPanelFormatBiaya();
+  const biaya = parseInt((document.getElementById('ops-panel-biaya')?.value||'').replace(/[^\d]/g,''))||0;
+  const rasio = parseFloat(document.getElementById('ops-panel-rasio')?.value)||0;
+  const valEl = document.getElementById('ops-panel-result-val');
+  const subEl = document.getElementById('ops-panel-result-sub');
   if (!valEl || !subEl) return;
   if (biaya > 0 && rasio > 0) {
-    const targetBulan  = Math.round(biaya / (rasio / 100));
-    const targetHarian = Math.round(targetBulan / 30);
+    const target  = Math.round(biaya / (rasio/100));
+    const harian  = Math.round(target/30);
     const fmt = v => 'Rp '+Number(v).toLocaleString('id-ID');
-    valEl.textContent = fmt(targetBulan) + ' / bln';
-    subEl.textContent = fmt(targetHarian) + ' / hari';
-    if (boxEl) boxEl.style.borderColor = 'var(--brown)';
+    valEl.textContent = fmt(target)+' / bln';
+    subEl.textContent = fmt(harian)+' / hari';
   } else {
     valEl.textContent = '—';
     subEl.textContent = 'Isi biaya & rasio dulu';
-    if (boxEl) boxEl.style.borderColor = 'var(--border)';
   }
 }
 
-async function saveOpsToko(chNama) {
-  const biaya = parseInt((document.getElementById(`ops-biaya-${chNama}`)?.value||'').replace(/[^\d]/g,''))||0;
-  const rasio = parseFloat(document.getElementById(`ops-rasio-${chNama}`)?.value)||0;
-  const targetBulan = (rasio > 0 && biaya > 0) ? Math.round(biaya / (rasio / 100)) : 0;
+async function opsPanelSave() {
+  const chNama = window._opsPanelCh;
+  if (!chNama) return;
+  const btn = document.getElementById('ops-panel-save-btn');
+  if (btn) { btn.disabled=true; btn.textContent='Menyimpan...'; }
+
+  const biaya = parseInt((document.getElementById('ops-panel-biaya')?.value||'').replace(/[^\d]/g,''))||0;
+  const rasio = parseFloat(document.getElementById('ops-panel-rasio')?.value)||0;
+  const targetBulan = (rasio>0 && biaya>0) ? Math.round(biaya/(rasio/100)) : 0;
+  const harian = targetBulan > 0 ? Math.round(targetBulan/30) : 0;
+
   const data = {
     biayaOps    : biaya,
     rasioOps    : rasio,
     targetOmset : targetBulan,
-    // preserve field lama supaya tidak hilang
     budgetIklan : parseFloat((PLAN.loadSync(chNama)||{}).budgetIklan)||0,
     feePlatform : parseFloat((PLAN.loadSync(chNama)||{}).feePlatform)||0,
     targetROAS  : parseFloat((PLAN.loadSync(chNama)||{}).targetROAS)||0,
   };
   await PLAN.save(chNama, null, data);
-  if (typeof toast==='function') toast(`✅ ${chNama} — Target Omzet tersimpan!`);
+
+  // update row cells live
+  const fmt  = v => v>0 ? Number(v).toLocaleString('id-ID') : '—';
+  const fmtRp = v => v>0 ? 'Rp '+Number(v).toLocaleString('id-ID') : '—';
+  const bEl = document.getElementById(`opsrow-biaya-${chNama}`);
+  const rEl = document.getElementById(`opsrow-rasio-${chNama}`);
+  const tEl = document.getElementById(`opsrow-target-${chNama}`);
+  const hEl = document.getElementById(`opsrow-harian-${chNama}`);
+  if (bEl) bEl.textContent = fmt(biaya);
+  if (rEl) rEl.textContent = rasio>0 ? rasio+'%' : '—';
+  if (tEl) tEl.textContent = fmtRp(targetBulan);
+  if (hEl) hEl.textContent = harian>0 ? fmtRp(harian)+'/hr' : '—';
+
+  if (btn) { btn.disabled=false; btn.textContent='✅ Tersimpan!'; setTimeout(()=>{ if(btn)btn.textContent='💾 Simpan'; },2000); }
+  if (typeof toast==='function') toast(`✅ ${chNama} — tersimpan!`);
 }
+
+// legacy compat — keep old function names working
+function saveOpsToko(chNama) { return opsPanelSave(); }
+function recalcOpsTarget(chNama) { opsPanelRecalc(); }
+function formatOpsInput(el, chNama) { opsPanelRecalc(); }
 
 // ─── EXPOSE ─────────────────────────────────────────────────────
 window.renderPlanningKPI  = renderPlanningKPI;
@@ -412,5 +502,8 @@ window.saveOpsToko        = saveOpsToko;
 window.recalcOpsTarget    = recalcOpsTarget;
 window.formatOpsInput     = formatOpsInput;
 window.PLAN               = PLAN;
+window.opsSelectRow       = opsSelectRow;
+window.opsPanelRecalc     = opsPanelRecalc;
+window.opsPanelSave       = opsPanelSave;
 
 })();
