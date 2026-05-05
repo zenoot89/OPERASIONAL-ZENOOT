@@ -1289,35 +1289,60 @@ function renderDashboard() {
         ${deltaBadge(qty,soldBulanLaluMap[sku]||0)}
       </div>`).join('');
 
-  add(`<div class="ow-row2" style="align-items:stretch;">
-    <div style="display:flex;flex-direction:column;">
-      <div class="ow-col3-hd"><span class="ow-sec-title">🛍️ Channel Penjualan</span><span class="ow-sec-note">Bulan ini vs lalu</span></div>
-      <div class="ow-col3-card">${chHtml}</div>
-    </div>
-    <div style="display:flex;flex-direction:column;">
-      <div class="ow-col3-hd"><span class="ow-sec-title">🏆 Top SKU Bulan Ini</span><span class="ow-sec-note">vs bulan lalu</span></div>
-      <div class="ow-col3-card">${skuHtml}</div>
-    </div>
-  </div>`);
+  // ─── 5 & 7 GABUNGAN: Stok per Supplier | Channel Penjualan | Top SKU ───
+  // Bar chart vertikal untuk supplier
+  const supBarMaxH = 120; // tinggi maksimum bar dalam px
+  const supBarHtml = suppliers.length === 0
+    ? `<div class="ow-empty">Belum ada data stok</div>`
+    : `<div style="display:flex;align-items:flex-end;gap:10px;height:${supBarMaxH+70}px;padding:0 4px;">
+        ${suppliers.map(([sup,v])=>{
+          const barH = Math.max(8, Math.round(v.nilai/supMax*supBarMaxH));
+          const habisColor = v.habis>0 ? '#C0392B' : '#2D6A4F';
+          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;gap:4px;">
+            <div style="font-size:11px;font-weight:700;color:var(--charcoal);text-align:center;">${fmtShort(v.nilai)}</div>
+            <div style="width:100%;background:var(--sage);border-radius:6px 6px 0 0;height:${barH}px;position:relative;cursor:default;"
+                 title="${sup}: Nilai ${fmtShort(v.nilai)} | SKU ${v.sku} | Habis ${v.habis}">
+            </div>
+            <div style="font-size:10px;font-weight:700;color:var(--charcoal);text-align:center;word-break:break-word;line-height:1.2;">${sup}</div>
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+              <span style="font-size:10px;color:var(--dusty);">${v.sku} SKU</span>
+              <span style="font-size:10px;font-weight:700;color:${habisColor};">${v.habis} habis</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
 
-  // ─── 6. DEAD STOCK sudah dipindah ke section 4 (3 kolom) ───
+  add(`<div class="ow-row3col" style="align-items:stretch;">
 
-  // ─── 7. SUPPLIER MAP ───
-  add(`<div>
-    <div class="ow-col3-hd"><span class="ow-sec-title">🏭 Stok per Supplier</span><span class="ow-sec-note">Nilai stok berdasarkan HPP</span></div>
-    <div class="ow-col3-card">
-      <div style="display:grid;grid-template-columns:110px 1fr 75px 45px 45px;gap:8px;padding:0 0 10px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.8px;">
-        <span>Supplier</span><span>Nilai Stok</span><span style="text-align:right">Nilai</span><span style="text-align:right">SKU</span><span style="text-align:right">Habis</span>
+    <!-- Stok per Supplier (Bar Chart) -->
+    <div class="ow-col3" style="display:flex;flex-direction:column;">
+      <div class="ow-col3-hd">
+        <span class="ow-sec-title">🏭 Stok per Supplier</span>
+        <span class="ow-sec-note">Nilai stok berdasarkan HPP</span>
       </div>
-      ${suppliers.map(([sup,v])=>`
-        <div class="ow-sup-row">
-          <span class="ow-sup-name">${sup}</span>
-          <div class="ow-sup-bar"><div class="ow-sup-fill" style="width:${Math.round(v.nilai/supMax*100)}%"></div></div>
-          <span style="text-align:right;font-weight:700;font-size:13px">${fmtShort(v.nilai)}</span>
-          <span style="text-align:right;font-size:13px;color:var(--dusty)">${v.sku}</span>
-          <span style="text-align:right;font-size:13px;font-weight:700;color:${v.habis>0?'#C0392B':'#2D6A4F'}">${v.habis}</span>
-        </div>`).join('')}
+      <div class="ow-col3-card" style="flex:1;">
+        ${supBarHtml}
+      </div>
     </div>
+
+    <!-- Channel Penjualan -->
+    <div class="ow-col3" style="display:flex;flex-direction:column;">
+      <div class="ow-col3-hd">
+        <span class="ow-sec-title">🛍️ Channel Penjualan</span>
+        <span class="ow-sec-note">Bulan ini vs lalu</span>
+      </div>
+      <div class="ow-col3-card" style="flex:1;">${chHtml}</div>
+    </div>
+
+    <!-- Top SKU Bulan Ini -->
+    <div class="ow-col3" style="display:flex;flex-direction:column;">
+      <div class="ow-col3-hd">
+        <span class="ow-sec-title">🏆 Top SKU Bulan Ini</span>
+        <span class="ow-sec-note">vs bulan lalu</span>
+      </div>
+      <div class="ow-col3-card" style="flex:1;">${skuHtml}</div>
+    </div>
+
   </div>`);
 
   // ─── 8. RINGKASAN KEUANGAN DETAIL ───
