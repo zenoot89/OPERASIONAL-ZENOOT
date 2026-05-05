@@ -192,8 +192,17 @@ function renderDashboard() {
 
   const yr = new Date().getFullYear();
   const mo = String(new Date().getMonth()+1).padStart(2,'0');
+  const bulanKey = `${yr}-${mo}`;
+  // Ambil target dari PLAN.loadSync (Supabase-aware, multi-toko) — key 'global'
   let plan={};
-  try{plan=JSON.parse(localStorage.getItem(`zenot_planning_${yr}_${mo}`)||'{}');}catch(e){}
+  try {
+    if (typeof PLAN !== 'undefined' && PLAN.loadSync) {
+      plan = PLAN.loadSync('global', bulanKey) || {};
+    } else {
+      // fallback legacy
+      plan = JSON.parse(localStorage.getItem(`zenot_planning_${yr}_${mo}`)||'{}');
+    }
+  } catch(e) {}
   const targetOmset = plan.targetOmset||0;
   const pctOmset    = targetOmset>0 ? Math.min(100,Math.round(omsetBulan/targetOmset*100)) : 0;
   const daysLeft    = getDaysInMonth()-getDayOfMonth();
@@ -240,14 +249,12 @@ function renderDashboard() {
 
   // ─── 1. INSIGHT ALERTS — DIHAPUS (clean dashboard) ───
 
-  // ─── 2. KPI STRIP ───
+  // ─── 2. KPI STRIP — 4 kartu ───
   const kpis = [
     {label:'Omset Hari Ini', val:fmtShort(omsetHari), accent:'var(--gold)',
       sub:[deltaBadge(omsetHari,omsetKemarin),'<span>vs kemarin</span>'].join(' ')},
     {label:'Omset Bulan Ini', val:fmtShort(omsetBulan), accent:'var(--brown)',
       sub:[deltaBadge(omsetBulan,omsetBulanLalu),`<span>vs bln lalu · proyeksi ${fmtShort(proyeksi)}</span>`].join(' ')},
-    {label:'Laba Kotor Bulan', val:fmtShort(labaBulan), accent:marginPct>=20?'var(--sage)':'#E6A817',
-      sub:`<b style="color:${marginPct>=20?'#2D6A4F':'#D97706'}">${marginPct}% margin</b> ${deltaBadge(marginPct,marginLaluPct)}`},
     {label:'Nilai Stok (HPP)', val:fmtShort(nilaiStok), accent:'#3D7EAA',
       sub:`<span>${fmtNum(totalStok)} pcs · ${DB.stok.length} SKU</span>`},
     {label:'Stok Bermasalah', val:`${stokHabis.length+stokKritis.length} SKU`, accent:stokHabis.length>0?'#C0392B':'#E6A817',
