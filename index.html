@@ -245,68 +245,64 @@
 ════════════════════════════════════════════════════════════════ -->
 <div class="page active" id="page-dashboard">
 
-  <!-- ROW 1: Stat Cards -->
+  <!-- ROW 1: Stat Cards — dirender oleh dashboard_v2.js -->
   <div id="stat-cards" class="db-stat-grid"></div>
 
-  <!-- ROW 2: KONDISI STOK — Stok Habis + Kritis -->
-  <div class="db-row2-wide">
-    <div class="db-card db-card-urgent">
-      <div class="db-card-title">KONDISI STOK — Stok Habis dan Kritis</div>
-      <div id="notif-area"></div>
-    </div>
-    <div class="db-card db-card-urgent">
-      <div class="db-card-title">WAJIB RESTOCK — Stok Rendah + Pernah Terjual</div>
-      <div class="db-card-sub">Prioritas tinggi — urutkan dari yang paling banyak terjual</div>
-      <div id="db-wajib-restock"></div>
-    </div>
-  </div>
+  <!-- DASHBOARD V2 inject di sini via renderDashboard() -->
 
-  <!-- ROW 3: KEUANGAN HARI INI -->
-  <div style="margin-bottom:12px;">
-    <div class="db-card">
-      <div class="db-card-title">KEUANGAN — Omset Hari Ini, Kemarin, Bulan Ini, dan Laba Kotor</div>
-      <div id="progress-area"></div>
-    </div>
-  </div>
+  <!-- ── LEGACY WIDGETS (hidden by default, dipakai fallback) ── -->
+  <div id="db-legacy-wrap" style="display:none;">
 
-  <!-- ROW 4: TARGET BULANAN + CHANNEL -->
-  <div style="margin-bottom:12px;">
-    <div class="db-card">
-      <div class="db-card-title">TARGET BULANAN — Progress Omset, Produksi, dan Per Channel</div>
-      <div id="db-target-channel"></div>
+    <!-- ROW A+B: Stok Habis/Kritis + Target Channel -->
+    <div class="db-row2-wide" style="margin-bottom:12px;">
+      <div class="db-card db-card-urgent">
+        <div class="db-card-title">KONDISI STOK — Stok Habis dan Kritis</div>
+        <div id="notif-area"></div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">TARGET BULANAN — Progress Per Channel</div>
+        <div id="db-target-channel"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- ROW 5: SKU TERLARIS + CHANNEL AKTIF -->
-  <div class="db-row2-wide">
-    <div class="db-card">
-      <div class="db-card-title">SKU TERLARIS — Bulan Ini (Top 10)</div>
-      <div id="db-top-sku"></div>
+    <!-- ROW C+D: Restock + Keuangan -->
+    <div class="db-row2-wide" style="margin-bottom:12px;">
+      <div class="db-card db-card-urgent">
+        <div class="db-card-title">WAJIB RESTOCK — Prioritas Tertinggi</div>
+        <div id="db-wajib-restock"></div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">KEUANGAN — Progress Omset & Produksi</div>
+        <div id="progress-area"></div>
+      </div>
     </div>
-    <div class="db-card">
-      <div class="db-card-title">AKTIFITAS PER CHANNEL — Omset Bulan Ini</div>
-      <div id="chart-bars"></div>
-      <div id="chart-leg" style="display:none"></div>
-    </div>
-  </div>
 
-  <!-- ROW 6: TRANSAKSI TERBARU -->
-  <div style="margin-bottom:12px;">
-    <div class="db-card">
-      <div class="db-card-title">TRANSAKSI TERBARU (12 Terakhir)</div>
-      <div id="last-sales"></div>
+    <!-- ROW E+F: SKU Terlaris + Aktifitas Channel -->
+    <div class="db-row2-wide" style="margin-bottom:12px;">
+      <div class="db-card">
+        <div class="db-card-title">SKU TERLARIS — Bulan Ini (Top 5)</div>
+        <div id="db-top-sku"></div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">AKTIFITAS PER CHANNEL — Omset Bulan Ini</div>
+        <div id="chart-bars"></div>
+        <div id="chart-leg" style="display:none"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- ROW 7: SUPPLIER -->
-  <div style="margin-bottom:12px;">
-    <div class="db-card">
-      <div class="db-card-title">STOK PER SUPPLIER — Jumlah SKU, Total Stok, dan Nilai</div>
-      <div id="db-stok-supplier"></div>
+    <!-- ROW G+H: Transaksi Terbaru + Supplier -->
+    <div class="db-row2-wide" style="margin-bottom:12px;">
+      <div class="db-card">
+        <div class="db-card-title">TRANSAKSI TERBARU (6 Terakhir)</div>
+        <div id="last-sales"></div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">STOK PER SUPPLIER</div>
+        <div id="db-stok-supplier"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- Alert section akan di-inject di sini oleh dashboard_v2.js -->
+  </div><!-- /db-legacy-wrap -->
 
 </div>
 

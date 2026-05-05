@@ -983,13 +983,39 @@ function renderDashboard() {
 }
 
 function renderChartBars() {
-  const top=DB.stok.map(r=>({...r,akhir:getAkhir(r)})).sort((a,b)=>b.akhir-a.akhir).slice(0,8);
-  const max=top.reduce((m,r)=>Math.max(m,r.akhir),1);
-  const colors=['#5C3D2E','#5A7A6A','#C9A84C','#C0392B','#3D7EAA','#8C7B6B','#7C3AED','#0D9488'];
   const el=document.getElementById('chart-bars');
-  const lg=document.getElementById('chart-leg');
-  if(el) el.innerHTML=top.map((r,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:100%;background:${colors[i%colors.length]};border-radius:3px 3px 0 0;height:${Math.max(4,r.akhir/max*80)}px;transition:height .5s;"></div><div style="font-size:9px;color:var(--dusty);text-align:center;">${r.akhir}</div></div>`).join('');
-  if(lg) lg.innerHTML=top.map((r,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dusty)"><div style="width:7px;height:7px;border-radius:2px;background:${colors[i%colors.length]};flex-shrink:0"></div>${r.var.length>13?r.var.substring(0,11)+'…':r.var}</div>`).join('');
+  if(!el) return;
+  // Hitung omset aktual per channel dari jurnal bulan ini (HPP x qty)
+  const bulanStr = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  const chMap={};
+  DB.jurnal.filter(j=>(j.tgl||'').startsWith(bulanStr)).forEach(j=>{
+    if(!j.ch) return;
+    const prod=(DB.produk||[]).find(p=>(p.var||'').toUpperCase()===(j.var||'').toUpperCase());
+    const val=(prod?prod.hpp||0:0)*(j.qty||0);
+    chMap[j.ch]=(chMap[j.ch]||0)+val;
+  });
+  const sorted=Object.entries(chMap).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length){
+    el.innerHTML='<div style="color:var(--dusty);font-size:12px;padding:8px 0;">Belum ada penjualan bulan ini</div>';
+    return;
+  }
+  const maxVal=sorted[0][1]||1;
+  const totalVal=sorted.reduce((s,[,v])=>s+v,0);
+  const fmtRp=v=>'Rp '+Number(Math.round(v)).toLocaleString('id-ID');
+  el.style.cssText='display:flex;flex-direction:column;gap:8px;padding:4px 0;';
+  el.innerHTML=sorted.map(([ch,val])=>{
+    const barW=Math.round(val/maxVal*100);
+    const share=totalVal>0?Math.round(val/totalVal*100):0;
+    const cls=ch.toLowerCase().includes('laz')?'ch-l':ch.toLowerCase().includes('tt')?'ch-t':ch.toLowerCase().includes('shp')||ch.toLowerCase().includes('sho')?'ch-s':'ch-o';
+    return `<div style="display:flex;align-items:center;gap:8px;">
+      <span class="chtag ${cls}" style="min-width:95px;font-size:11px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ch}</span>
+      <div style="flex:1;height:8px;background:var(--cream);border-radius:99px;overflow:hidden;">
+        <div style="height:100%;width:${barW}%;background:var(--brown);border-radius:99px;"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:var(--charcoal);min-width:100px;text-align:right;">${fmtRp(val)}</span>
+      <span style="font-size:11px;color:var(--dusty);min-width:28px;">${share}%</span>
+    </div>`;
+  }).join('');
 }
 
 function renderNotif() {
@@ -1160,7 +1186,7 @@ function renderTargetPerChannel() {
     const yr=new Date().getFullYear(), mo=String(new Date().getMonth()+1).padStart(2,'0');
     let target=0;
     try {
-      const key=`zenot_plan_${chNama}_${yr}_${mo}`;
+      const key=`zenot_plan_${chNama}_${yr}-${mo}`;
       const d=JSON.parse(localStorage.getItem(key)||'{}');
       target=d.targetOmset||0;
     } catch(e){}
