@@ -998,65 +998,50 @@ function renderDashboard() {
     },{capture:true});
 
     // ── Target card ──
-    // ── Target Harian — derived dari targetOmset / jumlah hari bulan ini ──
-    const targetHarian   = targetOmset > 0 ? Math.round(targetOmset / getDaysInMonth()) : 0;
-    const pctHari        = targetHarian > 0 ? Math.min(100, Math.round(omsetHari / targetHarian * 100)) : 0;
-    const sisaHari       = Math.max(0, targetHarian - omsetHari);
-    const hariColor      = pctHari >= 100 ? '#2D6A4F' : pctHari >= 60 ? '#D97706' : '#C0392B';
-    const hariStatus     = pctHari >= 100 ? '✅ Tercapai!' : pctHari >= 60 ? '⚡ On track' : '🔴 Di bawah target';
-    const qtyHari        = jHari.reduce((s,j)=>s+(j.qty||0),0);
-    const qtyKemarin     = jKemarin.reduce((s,j)=>s+(j.qty||0),0);
-    const trxHari        = jHari.length;
-    const avgPerTrxHari  = trxHari > 0 ? Math.round(omsetHari / trxHari) : 0;
+    // ── Target Harian ──
+    const targetHarian = targetOmset > 0 ? Math.round(targetOmset / getDaysInMonth()) : 0;
+    const pctHari      = targetHarian > 0 ? Math.min(100, Math.round(omsetHari / targetHarian * 100)) : 0;
+    const sisaHari     = Math.max(0, targetHarian - omsetHari);
+    const hariColor    = pctHari >= 100 ? '#2D6A4F' : pctHari >= 60 ? '#D97706' : '#C0392B';
 
     let targetCard = '';
     if(targetOmset>0){
       targetCard = `
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
           <span style="font-weight:700">📅 Target Bulanan</span>
-          <span style="color:var(--dusty)">${fmtShort(omsetBulan)} / ${fmtShort(targetOmset)}</span>
+          <span style="color:var(--dusty);font-size:12px;">${fmtShort(omsetBulan)} / ${fmtShort(targetOmset)}</span>
         </div>
         ${progressBar(pctOmset)}
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dusty);margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dusty);margin-bottom:16px;">
           <span style="font-weight:700;color:${pctOmset>=70?'#2D6A4F':'#D97706'}">${pctOmset}% tercapai</span>
           <span>${daysLeft} hari tersisa</span>
         </div>
-        <div class="ow-mini-grid" style="margin-bottom:16px;">
+        <div class="ow-mini-grid" style="margin-bottom:18px;">
           <div class="ow-mini"><div class="ow-mini-label">Sisa Target</div><div class="ow-mini-val" style="font-size:15px;color:${sisaTarget>0?'#C0392B':'#2D6A4F'}">${fmtShort(sisaTarget)}</div></div>
           <div class="ow-mini"><div class="ow-mini-label">Per Hari Perlu</div><div class="ow-mini-val" style="font-size:15px;color:#D97706">${perHariHarus>0?fmtShort(perHariHarus):'🎉 Done!'}</div></div>
         </div>
 
-        <div style="height:1px;background:var(--border);margin-bottom:14px;"></div>
+        <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
           <span style="font-weight:700">☀️ Target Harian</span>
-          <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${pctHari>=100?'#EFF7F3':pctHari>=60?'#FFFBF0':'#FFF0EE'};color:${hariColor};">${hariStatus}</span>
+          <span style="color:var(--dusty);font-size:12px;">${fmtShort(omsetHari)} / ${fmtShort(targetHarian)}</span>
         </div>
         ${progressBar(pctHari, hariColor)}
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dusty);margin-bottom:12px;">
-          <span style="font-weight:700;color:${hariColor}">${pctHari}% dari Rp ${(targetHarian/1000).toFixed(0)}K</span>
-          <span>${fmtShort(omsetHari)} hari ini</span>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dusty);margin-bottom:16px;">
+          <span style="font-weight:700;color:${hariColor}">${pctHari}% tercapai</span>
+          <span>${sisaHari>0?fmtShort(sisaHari)+' lagi':'✅ Done!'}</span>
         </div>
         <div class="ow-mini-grid">
           <div class="ow-mini">
             <div class="ow-mini-label">Omset Hari Ini</div>
-            <div class="ow-mini-val" style="font-size:14px;color:${hariColor}">${fmtShort(omsetHari)}</div>
-            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">${deltaBadge(omsetHari,omsetKemarin)} vs kemarin</div>
+            <div class="ow-mini-val" style="font-size:15px;color:${hariColor}">${fmtShort(omsetHari)}</div>
+            <div style="font-size:10px;color:var(--dusty);margin-top:4px;">${deltaBadge(omsetHari,omsetKemarin)} vs kemarin</div>
           </div>
           <div class="ow-mini">
             <div class="ow-mini-label">Sisa Target Hari</div>
-            <div class="ow-mini-val" style="font-size:14px;color:${sisaHari>0?'#C0392B':'#2D6A4F'}">${sisaHari>0?fmtShort(sisaHari):'✅ Done!'}</div>
-            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">target ${fmtShort(targetHarian)}/hari</div>
-          </div>
-          <div class="ow-mini">
-            <div class="ow-mini-label">Order Hari Ini</div>
-            <div class="ow-mini-val" style="font-size:14px;">${fmtNum(trxHari)} trx</div>
-            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">${fmtNum(qtyHari)} pcs terjual</div>
-          </div>
-          <div class="ow-mini">
-            <div class="ow-mini-label">Avg / Transaksi</div>
-            <div class="ow-mini-val" style="font-size:14px;">${avgPerTrxHari>0?fmtShort(avgPerTrxHari):'—'}</div>
-            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">${deltaBadge(qtyHari,qtyKemarin)} qty vs kmrn</div>
+            <div class="ow-mini-val" style="font-size:15px;color:${sisaHari>0?'#C0392B':'#2D6A4F'}">${sisaHari>0?fmtShort(sisaHari):'✅ Done!'}</div>
+            <div style="font-size:10px;color:var(--dusty);margin-top:4px;">target ${fmtShort(targetHarian)}/hari</div>
           </div>
         </div>`;
     } else {
@@ -1067,15 +1052,11 @@ function renderDashboard() {
     add(`<div class="ow-row2" style="align-items:stretch;">
       <!-- Tren Chart -->
       <div id="${WRAP_ID}" style="display:flex;flex-direction:column;">
-        <div class="ow-col3-hd" style="align-items:flex-start;flex-direction:column;gap:10px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-            <span class="ow-sec-title">📈 Tren Penjualan</span>
-            <div class="ow-metric-tabs">
-              <div class="ow-metric-tab active" id="owTabOmset" onclick="_owSetMetric('omset')">Omset</div>
-              <div class="ow-metric-tab" id="owTabQty" onclick="_owSetMetric('qty')">Qty</div>
-            </div>
-          </div>
-          <div class="ow-period-bar">
+        <div class="ow-col3-hd">
+          <span class="ow-sec-title">📈 Tren Penjualan</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="ow-metric-tab" id="owTabQty" onclick="_owSetMetric('qty')">Qty</div>
+            <div class="ow-metric-tab active" id="owTabOmset" onclick="_owSetMetric('omset')">Omset</div>
             <div style="position:relative;">
               <button class="ow-period-btn" id="owPeriodBtn" onclick="_owTogglePeriodDrop()">
                 <span id="owPeriodBtnLbl">Real-time · Hari Ini</span>
