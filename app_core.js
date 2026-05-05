@@ -942,56 +942,249 @@ function toast(msg, type='ok') {
 // DASHBOARD
 // ================================================================
 function renderDashboard() {
-  const totalStok=DB.stok.reduce((s,r)=>s+getAkhir(r),0);
-  const nilaiStok=DB.stok.reduce((s,r)=>s+(getAkhir(r)*r.hpp),0);
-  const totalRev =DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
-  const totalLaba=DB.jurnal.reduce((s,r)=>s+((r.harga-r.hpp)*r.qty),0);
-  const lowCount =DB.stok.filter(r=>getAkhir(r)<=(r.safety||4)&&getAkhir(r)>0).length;
-  const habisCount=DB.stok.filter(r=>getAkhir(r)<=0).length;
+  const totalStok  = DB.stok.reduce((s,r)=>s+getAkhir(r),0);
+  const nilaiStok  = DB.stok.reduce((s,r)=>s+(getAkhir(r)*r.hpp),0);
+  const totalRev   = DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
+  const totalLaba  = DB.jurnal.reduce((s,r)=>s+((r.harga-r.hpp)*r.qty),0);
+  const lowCount   = DB.stok.filter(r=>getAkhir(r)>0&&getAkhir(r)<=(r.safety||4)).length;
+  const habisCount = DB.stok.filter(r=>getAkhir(r)<=0).length;
+
+  // stat cards — lebih compact
   document.getElementById('stat-cards').innerHTML=`
-    <div class="stat c1"><div class="stat-label">Total Stok Aktif</div><div class="stat-val">${totalStok.toLocaleString('id-ID')} <span style="font-size:14px">pcs</span></div><div class="stat-sub">${DB.stok.length} SKU terdaftar</div></div>
-    <div class="stat c2"><div class="stat-label">Nilai Stok</div><div class="stat-val" style="font-size:18px">${fmt(nilaiStok)}</div><div class="stat-sub">berdasarkan HPP</div></div>
-    <div class="stat c3"><div class="stat-label">Omset</div><div class="stat-val" style="font-size:18px">${fmt(totalRev)}</div><div class="stat-sub">${DB.jurnal.length} transaksi</div></div>
-    <div class="stat c4"><div class="stat-label">Stok Kritis</div><div class="stat-val">${lowCount+habisCount} <span style="font-size:14px">SKU</span></div><div class="stat-sub">${habisCount} habis · ${lowCount} rendah</div></div>`;
-  renderChartBars(); renderNotif(); renderProgress(); renderLastSales();
+    <div class="stat c1">
+      <div class="stat-label">Total Stok Aktif</div>
+      <div class="stat-val">${totalStok.toLocaleString('id-ID')} <span style="font-size:13px;font-weight:400">pcs</span></div>
+      <div class="stat-sub">${DB.stok.length} SKU terdaftar</div>
+    </div>
+    <div class="stat c2">
+      <div class="stat-label">Nilai Stok</div>
+      <div class="stat-val" style="font-size:17px">${fmt(nilaiStok)}</div>
+      <div class="stat-sub">berdasarkan HPP</div>
+    </div>
+    <div class="stat c3">
+      <div class="stat-label">Omset</div>
+      <div class="stat-val" style="font-size:17px">${fmt(totalRev)}</div>
+      <div class="stat-sub">${DB.jurnal.length} transaksi</div>
+    </div>
+    <div class="stat c4">
+      <div class="stat-label">Stok Kritis</div>
+      <div class="stat-val">${lowCount+habisCount} <span style="font-size:13px;font-weight:400">SKU</span></div>
+      <div class="stat-sub">${habisCount} habis · ${lowCount} rendah</div>
+    </div>`;
+
+  renderChartBars();
+  renderNotif();
+  renderProgress();
+  renderLastSales();
+  renderTopSKU();
+  renderStokPerSupplier();
+  renderWajibRestock();
+  renderTargetPerChannel();
 }
 
 function renderChartBars() {
   const top=DB.stok.map(r=>({...r,akhir:getAkhir(r)})).sort((a,b)=>b.akhir-a.akhir).slice(0,8);
   const max=top.reduce((m,r)=>Math.max(m,r.akhir),1);
   const colors=['#5C3D2E','#5A7A6A','#C9A84C','#C0392B','#3D7EAA','#8C7B6B','#7C3AED','#0D9488'];
-  document.getElementById('chart-bars').innerHTML=top.map((r,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="width:100%;background:${colors[i%colors.length]};border-radius:4px 4px 0 0;height:${Math.max(4,r.akhir/max*90)}px;min-height:4px;transition:height .6s;"></div><div style="font-size:9px;color:var(--dusty);text-align:center;line-height:1.2;">${r.akhir}</div></div>`).join('');
-  document.getElementById('chart-leg').innerHTML=top.map((r,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--dusty)"><div style="width:8px;height:8px;border-radius:2px;background:${colors[i%colors.length]};flex-shrink:0"></div>${r.var.length>14?r.var.substring(0,12)+'…':r.var}</div>`).join('');
+  const el=document.getElementById('chart-bars');
+  const lg=document.getElementById('chart-leg');
+  if(el) el.innerHTML=top.map((r,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:100%;background:${colors[i%colors.length]};border-radius:3px 3px 0 0;height:${Math.max(4,r.akhir/max*80)}px;transition:height .5s;"></div><div style="font-size:9px;color:var(--dusty);text-align:center;">${r.akhir}</div></div>`).join('');
+  if(lg) lg.innerHTML=top.map((r,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dusty)"><div style="width:7px;height:7px;border-radius:2px;background:${colors[i%colors.length]};flex-shrink:0"></div>${r.var.length>13?r.var.substring(0,11)+'…':r.var}</div>`).join('');
 }
 
 function renderNotif() {
   const criticals=DB.stok.filter(r=>getAkhir(r)<=0);
   const lows=DB.stok.filter(r=>getAkhir(r)>0&&getAkhir(r)<=(r.safety||4));
   let html='';
-  criticals.slice(0,4).forEach(r=>{html+=`<div class="alert al-d"><span>🚨</span><div><strong>${r.var}</strong> — Stok HABIS!</div></div>`;});
-  lows.slice(0,4).forEach(r=>{html+=`<div class="alert al-w"><span>⚠️</span><div><strong>${r.var}</strong> — Sisa ${getAkhir(r)} pcs (safety: ${r.safety||4})</div></div>`;});
-  if (!html) html='<div class="alert al-s"><span>✅</span><div>Semua stok aman!</div></div>';
-  document.getElementById('notif-area').innerHTML=html;
+  criticals.slice(0,5).forEach(r=>{
+    html+=`<div class="db-alert db-alert-red"><span>🚨</span><div><span class="db-alert-name">${r.var}</span> <span class="db-alert-msg">Stok HABIS</span></div></div>`;
+  });
+  lows.slice(0,5).forEach(r=>{
+    html+=`<div class="db-alert db-alert-yellow"><span>⚠️</span><div><span class="db-alert-name">${r.var}</span> <span class="db-alert-msg">Sisa ${getAkhir(r)} pcs</span></div></div>`;
+  });
+  if (!html) html='<div class="db-alert db-alert-green"><span>✅</span><div>Semua stok aman!</div></div>';
+  const el=document.getElementById('notif-area');
+  if(el) el.innerHTML=html;
 }
 
 function renderProgress() {
-  const _planKey = `zenot_planning_${new Date().getFullYear()}_${String(new Date().getMonth()+1).padStart(2,'0')}`;
-  const _plan = JSON.parse(localStorage.getItem(_planKey)||'{}');
-  const targetPcs = _plan.targetProduksi || 0;
-  const targetRev = _plan.targetOmset || 0;
-  const totalKeluar = DB.stok.reduce((s,r)=>s+(r.keluar||0),0);
-  const totalRev = DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
-  const pctVal = targetPcs > 0 ? Math.min(100,Math.round(totalKeluar/targetPcs*100)) : 0;
-  const revPct = targetRev > 0 ? Math.min(100,Math.round(totalRev/targetRev*100)) : 0;
-  document.getElementById('progress-area').innerHTML=`
-    <div class="prog-wrap"><div class="prog-lbl"><span>📦 Volume Produksi</span><span>${totalKeluar}/${targetPcs>0?targetPcs:'—'} pcs</span></div><div class="prog-bar"><div class="prog-fill fb" style="width:${pctVal}%"></div></div></div>
-    <div class="prog-wrap"><div class="prog-lbl"><span>💰 Target Revenue</span><span>${revPct}%</span></div><div class="prog-bar"><div class="prog-fill fs" style="width:${revPct}%"></div></div></div>`;
+  const yr=new Date().getFullYear(), mo=String(new Date().getMonth()+1).padStart(2,'0');
+  const _plan=JSON.parse(localStorage.getItem(`zenot_planning_${yr}_${mo}`)||'{}');
+  const targetPcs=_plan.targetProduksi||0;
+  const targetRev=_plan.targetOmset||0;
+  const totalKeluar=DB.stok.reduce((s,r)=>s+(r.keluar||0),0);
+  const totalRev=DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
+  const pctPcs=targetPcs>0?Math.min(100,Math.round(totalKeluar/targetPcs*100)):0;
+  const pctRev=targetRev>0?Math.min(100,Math.round(totalRev/targetRev*100)):0;
+  const bar=(pct,color)=>`<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .6s;"></div></div>`;
+  const el=document.getElementById('progress-area');
+  if(el) el.innerHTML=`
+    <div class="db-prog-row">
+      <div class="db-prog-label"><span>📦 Volume Produksi</span><span class="db-prog-val">${totalKeluar}/${targetPcs||'—'} pcs</span></div>
+      ${bar(pctPcs,'var(--brown)')}
+      <div class="db-prog-pct">${pctPcs}%</div>
+    </div>
+    <div class="db-prog-row" style="margin-top:10px;">
+      <div class="db-prog-label"><span>💰 Target Revenue</span><span class="db-prog-val">${fmt(totalRev)}</span></div>
+      ${bar(pctRev,'var(--sage)')}
+      <div class="db-prog-pct">${pctRev}%</div>
+    </div>`;
 }
 
 function renderLastSales() {
-  const recent=DB.jurnal.slice(0,5);
-  if (!recent.length) { document.getElementById('last-sales').innerHTML='<div style="color:var(--dusty);font-size:13px">Belum ada transaksi</div>'; return; }
-  document.getElementById('last-sales').innerHTML=recent.map(r=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;"><div><div style="font-weight:600">${r.var}</div><div style="color:var(--dusty)">${r.tgl} · ${chTag(r.ch)}</div></div><div style="font-family:'DM Mono',monospace;font-weight:600">${r.qty}x</div></div>`).join('');
+  const el=document.getElementById('last-sales');
+  if(!el) return;
+  const recent=DB.jurnal.slice(0,6);
+  if (!recent.length) { el.innerHTML='<div style="color:var(--dusty);font-size:12px;padding:8px 0;">Belum ada transaksi</div>'; return; }
+  el.innerHTML=recent.map(r=>`
+    <div class="db-sale-row">
+      <div class="db-sale-info">
+        <div class="db-sale-name">${r.var}</div>
+        <div class="db-sale-meta">${r.tgl} · ${chTag(r.ch)}</div>
+      </div>
+      <div class="db-sale-qty">${r.qty}x</div>
+    </div>`).join('');
+}
+
+// ── WIDGET BARU 1: Top 5 SKU Terlaris ──────────────────────────
+function renderTopSKU() {
+  const el=document.getElementById('db-top-sku');
+  if(!el) return;
+  // Agregasi qty per SKU dari jurnal
+  const map={};
+  DB.jurnal.forEach(r=>{ map[r.var]=(map[r.var]||0)+r.qty; });
+  const top=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(!top.length){ el.innerHTML='<div style="color:var(--dusty);font-size:12px;padding:8px 0;">Belum ada data jurnal</div>'; return; }
+  const maxQ=top[0][1]||1;
+  const colors=['#5C3D2E','#5A7A6A','#C9A84C','#C0392B','#3D7EAA'];
+  el.innerHTML=top.map(([sku,qty],i)=>`
+    <div class="db-rank-row">
+      <div class="db-rank-num" style="background:${colors[i]};color:#fff;">${i+1}</div>
+      <div class="db-rank-info">
+        <div class="db-rank-name">${sku}</div>
+        <div class="db-rank-bar-wrap"><div class="db-rank-bar" style="width:${Math.round(qty/maxQ*100)}%;background:${colors[i]};"></div></div>
+      </div>
+      <div class="db-rank-qty">${qty} <span style="font-size:9px;color:var(--dusty)">pcs</span></div>
+    </div>`).join('');
+}
+
+// ── WIDGET BARU 2: Stok per Supplier ───────────────────────────
+function renderStokPerSupplier() {
+  const el=document.getElementById('db-stok-supplier');
+  if(!el) return;
+  // Gabungkan DB.stok dengan DB.produk untuk dapat supplier
+  const supMap={};
+  DB.stok.forEach(r=>{
+    const p=DB.produk.find(x=>(x.var||'').toUpperCase()===(r.var||'').toUpperCase());
+    const sup=(p&&p.suplaier)||'Lainnya';
+    if(!supMap[sup]) supMap[sup]={stok:0,sku:0,nilai:0};
+    supMap[sup].stok+=getAkhir(r);
+    supMap[sup].sku+=1;
+    supMap[sup].nilai+=(getAkhir(r)*r.hpp);
+  });
+  const sorted=Object.entries(supMap).sort((a,b)=>b[1].stok-a[1].stok).slice(0,6);
+  if(!sorted.length){ el.innerHTML='<div style="color:var(--dusty);font-size:12px;padding:8px 0;">Belum ada data</div>'; return; }
+  el.innerHTML=`
+    <table class="db-sup-table">
+      <thead><tr><th>Supplier</th><th>SKU</th><th>Stok</th><th>Nilai</th></tr></thead>
+      <tbody>
+        ${sorted.map(([sup,d])=>`
+          <tr>
+            <td class="db-sup-name">${sup}</td>
+            <td class="db-sup-num">${d.sku}</td>
+            <td class="db-sup-num">${d.stok.toLocaleString('id-ID')}</td>
+            <td class="db-sup-num">${fmt(d.nilai)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── WIDGET BARU 3: Produk WAJIB Restock ────────────────────────
+// Kriteria: stok rendah/habis DAN ada di jurnal (pernah terjual)
+function renderWajibRestock() {
+  const el=document.getElementById('db-wajib-restock');
+  if(!el) return;
+  // Hitung total terjual per SKU dari jurnal
+  const soldMap={};
+  DB.jurnal.forEach(r=>{ soldMap[r.var]=(soldMap[r.var]||0)+r.qty; });
+  // Filter: stok <= safety DAN pernah terjual, urutkan by (terjual desc)
+  const list=DB.stok
+    .filter(r=> getAkhir(r)<=(r.safety||4) && soldMap[r.var])
+    .map(r=>({
+      var:r.var,
+      akhir:getAkhir(r),
+      safety:r.safety||4,
+      terjual:soldMap[r.var]||0,
+      hpp:r.hpp||0
+    }))
+    .sort((a,b)=>b.terjual-a.terjual)
+    .slice(0,7);
+  if(!list.length){
+    el.innerHTML='<div style="color:var(--dusty);font-size:12px;padding:8px 0;">✅ Tidak ada produk yang perlu restock</div>';
+    return;
+  }
+  el.innerHTML=list.map(r=>{
+    const isHabis=r.akhir<=0;
+    const badge=isHabis
+      ? `<span class="db-rs-badge db-rs-habis">HABIS</span>`
+      : `<span class="db-rs-badge db-rs-rendah">Sisa ${r.akhir}</span>`;
+    return `
+      <div class="db-rs-row">
+        <div class="db-rs-info">
+          <div class="db-rs-name">${r.var}</div>
+          <div class="db-rs-meta">Terjual <b>${r.terjual} pcs</b> · Safety ${r.safety}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${badge}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── WIDGET BARU 4: Target Omzet vs Aktual per Channel ──────────
+function renderTargetPerChannel() {
+  const el=document.getElementById('db-target-channel');
+  if(!el) return;
+  const channels=(window._tokoList&&window._tokoList.length>0)
+    ? window._tokoList
+    : (typeof DB!=='undefined'?DB.channel||[]:[]).filter(c=>c.nama!=='__assign__');
+  if(!channels.length){ el.innerHTML='<div style="color:var(--dusty);font-size:12px;padding:8px 0;">Belum ada channel</div>'; return; }
+
+  // Hitung omset aktual per channel dari jurnal
+  const aktualMap={};
+  DB.jurnal.forEach(r=>{ aktualMap[r.ch]=(aktualMap[r.ch]||0)+(r.hpp*r.qty); });
+
+  const rows=channels.map(ch=>{
+    const chNama=ch.kode||ch.nama;
+    // Load target dari PLAN localStorage
+    const yr=new Date().getFullYear(), mo=String(new Date().getMonth()+1).padStart(2,'0');
+    let target=0;
+    try {
+      const key=`zenot_plan_${chNama}_${yr}_${mo}`;
+      const d=JSON.parse(localStorage.getItem(key)||'{}');
+      target=d.targetOmset||0;
+    } catch(e){}
+    const aktual=aktualMap[chNama]||0;
+    const pct=target>0?Math.min(100,Math.round(aktual/target*100)):0;
+    const pStyle=typeof _platformStyle==='function'?_platformStyle(ch.platform||'lainnya'):{bg:'#8C7B6B',color:'#fff'};
+    const barColor=pct>=100?'#16a34a':pct>=60?'var(--sage)':pct>=30?'var(--gold)':'var(--rust)';
+    return `
+      <div class="db-ch-row">
+        <div class="db-ch-head">
+          <span class="db-ch-badge" style="background:${pStyle.bg};color:${pStyle.color};">${ch.platform||'lainnya'}</span>
+          <span class="db-ch-name">${chNama}</span>
+          <span class="db-ch-pct" style="color:${barColor};">${pct}%</span>
+        </div>
+        <div class="db-ch-bar-wrap">
+          <div class="db-ch-bar" style="width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div class="db-ch-nums">
+          <span>${fmt(aktual)}</span>
+          <span style="color:var(--dusty);">/ ${target>0?fmt(target):'— target'}</span>
+        </div>
+      </div>`;
+  }).join('');
+  el.innerHTML=rows;
 }
 
 // ================================================================

@@ -244,28 +244,56 @@
      PAGE: DASHBOARD
 ════════════════════════════════════════════════════════════════ -->
 <div class="page active" id="page-dashboard">
-  <div id="stat-cards" class="grid4"></div>
-  <div class="grid2">
-    <div class="card">
-      <div class="card-title">📊 Stok per SKU (Top 8)</div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:100px;" id="chart-bars"></div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;" id="chart-leg"></div>
+
+  <!-- ROW 1: Stat Cards -->
+  <div id="stat-cards" class="db-stat-grid"></div>
+
+  <!-- ROW 2: Chart + Notifikasi Stok -->
+  <div class="db-row2">
+    <div class="db-card">
+      <div class="db-card-title">📊 Stok per SKU (Top 8)</div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:90px;" id="chart-bars"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;" id="chart-leg"></div>
     </div>
-    <div class="card">
-      <div class="card-title">🚨 Notifikasi Stok</div>
+    <div class="db-card">
+      <div class="db-card-title">🚨 Notifikasi Stok</div>
       <div id="notif-area"></div>
     </div>
-  </div>
-  <div class="grid2">
-    <div class="card">
-      <div class="card-title">🎯 Progress Bulanan</div>
+    <div class="db-card">
+      <div class="db-card-title">🎯 Progress Bulanan</div>
       <div id="progress-area"></div>
     </div>
-    <div class="card">
-      <div class="card-title">🕒 Transaksi Terakhir</div>
+  </div>
+
+  <!-- ROW 3: Top SKU + Wajib Restock -->
+  <div class="db-row2">
+    <div class="db-card">
+      <div class="db-card-title">🏆 Top 5 SKU Terlaris</div>
+      <div id="db-top-sku"></div>
+    </div>
+    <div class="db-card db-card-urgent">
+      <div class="db-card-title">🔴 Produk Wajib Restock</div>
+      <div class="db-card-sub">Stok rendah + pernah terjual — prioritas tinggi</div>
+      <div id="db-wajib-restock"></div>
+    </div>
+    <div class="db-card">
+      <div class="db-card-title">🕒 Transaksi Terakhir</div>
       <div id="last-sales"></div>
     </div>
   </div>
+
+  <!-- ROW 4: Supplier + Target per Channel -->
+  <div class="db-row2-wide">
+    <div class="db-card">
+      <div class="db-card-title">📦 Ringkasan Stok per Supplier</div>
+      <div id="db-stok-supplier"></div>
+    </div>
+    <div class="db-card">
+      <div class="db-card-title">🎯 Target Omzet vs Aktual per Channel</div>
+      <div id="db-target-channel"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════

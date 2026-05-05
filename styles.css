@@ -1962,3 +1962,138 @@ html{scroll-behavior:smooth;}
 }
 
 
+
+/* ═══════════════════════════════════════════════════════
+   DASHBOARD — REDESIGN COMPACT & CLEAN
+═══════════════════════════════════════════════════════ */
+
+/* Stat grid */
+.db-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media(max-width:900px){ .db-stat-grid{ grid-template-columns:1fr 1fr; } }
+@media(max-width:480px){ .db-stat-grid{ grid-template-columns:1fr 1fr; } }
+
+/* Row layouts */
+.db-row2 {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.db-row2-wide {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media(max-width:1000px){
+  .db-row2       { grid-template-columns: 1fr 1fr; }
+  .db-row2-wide  { grid-template-columns: 1fr; }
+}
+@media(max-width:640px){
+  .db-row2       { grid-template-columns: 1fr; }
+  .db-row2-wide  { grid-template-columns: 1fr; }
+}
+
+/* Card */
+.db-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.db-card-urgent {
+  border-color: rgba(200,60,60,.25);
+  background: color-mix(in srgb, #fff0f0 40%, var(--card));
+}
+.db-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--charcoal);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: .2px;
+}
+.db-card-sub {
+  font-size: 10px;
+  color: var(--dusty);
+  margin-top: -7px;
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+/* Alert rows */
+.db-alert {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+.db-alert-red    { background: rgba(200,50,50,.08); border:1px solid rgba(200,50,50,.18); }
+.db-alert-yellow { background: rgba(212,160,23,.08); border:1px solid rgba(212,160,23,.2); }
+.db-alert-green  { background: rgba(90,122,106,.08); border:1px solid rgba(90,122,106,.2); }
+.db-alert-name   { font-weight: 700; color: var(--charcoal); }
+.db-alert-msg    { color: var(--dusty); }
+
+/* Progress */
+.db-prog-row    { margin-bottom: 4px; }
+.db-prog-label  { display:flex; justify-content:space-between; font-size:11px; color:var(--charcoal); margin-bottom:3px; }
+.db-prog-val    { font-family:'DM Mono',monospace; font-size:11px; color:var(--dusty); }
+.db-prog-pct    { font-size:10px; color:var(--dusty); text-align:right; margin-top:2px; }
+
+/* Last sales */
+.db-sale-row  { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); }
+.db-sale-row:last-child { border-bottom:none; }
+.db-sale-info { flex:1; min-width:0; }
+.db-sale-name { font-size:12px; font-weight:600; color:var(--charcoal); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.db-sale-meta { font-size:10px; color:var(--dusty); margin-top:1px; }
+.db-sale-qty  { font-family:'DM Mono',monospace; font-size:12px; font-weight:700; color:var(--brown); margin-left:8px; white-space:nowrap; }
+
+/* Top SKU ranking */
+.db-rank-row  { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--border); }
+.db-rank-row:last-child { border-bottom:none; }
+.db-rank-num  { width:20px; height:20px; border-radius:50%; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.db-rank-info { flex:1; min-width:0; }
+.db-rank-name { font-size:11px; font-weight:600; color:var(--charcoal); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.db-rank-bar-wrap { height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin-top:3px; }
+.db-rank-bar  { height:100%; border-radius:2px; transition:width .5s; }
+.db-rank-qty  { font-family:'DM Mono',monospace; font-size:12px; font-weight:700; color:var(--charcoal); white-space:nowrap; }
+
+/* Supplier table */
+.db-sup-table { width:100%; border-collapse:collapse; font-size:11px; }
+.db-sup-table thead th { text-align:left; font-size:9px; font-weight:700; color:var(--dusty); text-transform:uppercase; letter-spacing:.5px; padding:4px 6px; border-bottom:2px solid var(--border); }
+.db-sup-table tbody tr:hover { background:var(--bg); }
+.db-sup-name { padding:6px 6px; color:var(--charcoal); font-weight:600; }
+.db-sup-num  { padding:6px 6px; text-align:right; font-family:'DM Mono',monospace; color:var(--charcoal); border-bottom:1px solid var(--border); }
+.db-sup-table tbody tr:last-child td { border-bottom:none; }
+
+/* Wajib Restock */
+.db-rs-row   { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
+.db-rs-row:last-child { border-bottom:none; }
+.db-rs-info  { flex:1; min-width:0; }
+.db-rs-name  { font-size:12px; font-weight:700; color:var(--charcoal); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.db-rs-meta  { font-size:10px; color:var(--dusty); margin-top:1px; }
+.db-rs-badge { font-size:9px; font-weight:800; padding:3px 8px; border-radius:20px; letter-spacing:.5px; white-space:nowrap; }
+.db-rs-habis { background:rgba(200,50,50,.12); color:#C83232; border:1px solid rgba(200,50,50,.2); }
+.db-rs-rendah{ background:rgba(212,160,23,.12); color:#9a6f00; border:1px solid rgba(212,160,23,.25); }
+
+/* Target per Channel */
+.db-ch-row   { padding:7px 0; border-bottom:1px solid var(--border); }
+.db-ch-row:last-child { border-bottom:none; }
+.db-ch-head  { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.db-ch-badge { font-size:9px; font-weight:700; padding:2px 7px; border-radius:20px; }
+.db-ch-name  { font-size:12px; font-weight:600; color:var(--charcoal); flex:1; }
+.db-ch-pct   { font-size:12px; font-weight:800; font-family:'DM Mono',monospace; }
+.db-ch-bar-wrap { height:5px; background:var(--border); border-radius:3px; overflow:hidden; margin-bottom:3px; }
+.db-ch-bar   { height:100%; border-radius:3px; transition:width .6s; }
+.db-ch-nums  { display:flex; justify-content:space-between; font-size:10px; font-family:'DM Mono',monospace; }
+
