@@ -2401,166 +2401,221 @@ function renderChannel() {
   const wrap = document.getElementById('page-channel');
   if (!wrap) return;
 
-  const PLATFORM_COLOR = {
-    shopee:'#EE4D2D', lazada:'#0F146D', tiktok:'#1C1C1E',
-    whatsapp:'#25D366', offline:'#8C8C8C', direct:'#8B7355', reseller:'#8B7355'
-  };
   const PLATFORM_OPTS = ['shopee','lazada','tiktok','whatsapp','offline','direct','reseller'];
   const GRUP_OPTS     = ['SHOPEE','LAZADA','TIKTOK','OFFLINE','RESELLER','LAINNYA'];
   const COLORS        = ['#5C3D2E','#C9785A','#9D4EDD','#3D7EAA','#2A5F8A','#7C3AED','#5A7A6A','#8B7355','#C0392B','#0D9488'];
-
-  // Group toko by grup
-  const grups = [...new Set(window._tokoList.map(t => t.grup))];
+  const grups         = [...new Set(window._tokoList.map(t => t.grup))];
+  const total         = window._tokoList.length;
 
   wrap.innerHTML = `
-    <div style="max-width:700px;margin:0 auto;padding:24px 16px;">
+    <div style="display:flex;height:calc(100vh - 56px);overflow:hidden;">
 
-      <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-        <div>
-          <h2 style="font-size:22px;font-weight:800;color:var(--charcoal);margin:0;">Channel Penjualan</h2>
-          <div style="font-size:12px;color:var(--dusty);margin-top:2px;">${window._tokoList.length} channel aktif • data tersimpan di Supabase</div>
+      <!-- KOLOM KIRI — List Channel (fixed, scrollable) -->
+      <div style="width:320px;flex-shrink:0;display:flex;flex-direction:column;border-right:1.5px solid var(--border);background:var(--cream);overflow:hidden;">
+
+        <!-- Header kiri -->
+        <div style="padding:20px 16px 12px;border-bottom:1px solid var(--border);background:var(--cream);">
+          <div style="font-size:16px;font-weight:800;color:var(--charcoal);">Channel Penjualan</div>
+          <div style="font-size:11px;color:var(--dusty);margin-top:2px;">${total} channel • Supabase</div>
+          <button onclick="chShowForm()" class="btn btn-p"
+            style="width:100%;margin-top:10px;padding:9px;border-radius:10px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-size:15px;line-height:1;">＋</span> Tambah Channel
+          </button>
         </div>
-        <button onclick="chShowForm()" class="btn btn-p" style="display:flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;font-size:12px;">
-          <span style="font-size:16px;line-height:1;">＋</span> Tambah Channel
-        </button>
+
+        <!-- List scroll -->
+        <div style="flex:1;overflow-y:auto;padding:12px 12px 20px;" id="ch-list-scroll">
+          ${grups.length === 0 ? `
+            <div style="text-align:center;padding:40px 16px;color:var(--dusty);">
+              <div style="font-size:28px;margin-bottom:8px;">🏪</div>
+              <div style="font-size:13px;font-weight:600;">Belum ada channel</div>
+            </div>` :
+            grups.map(grup => {
+              const items = window._tokoList.filter(t => t.grup === grup);
+              return `
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:9px;font-weight:800;color:var(--dusty);text-transform:uppercase;
+                              letter-spacing:1px;padding:4px 4px 6px;border-bottom:1px solid var(--border);margin-bottom:6px;">${grup}</div>
+                  ${items.map(t => `
+                    <div id="ch-row-${t.kode.replace(/[^A-Z0-9]/gi,'_')}"
+                      onclick="chEdit('${t.kode}')"
+                      style="display:flex;align-items:center;gap:10px;padding:10px 10px;background:white;
+                             border:1.5px solid ${_chEditKode===t.kode?'var(--rust)':'var(--border)'};
+                             border-radius:10px;margin-bottom:5px;cursor:pointer;
+                             box-shadow:0 1px 3px rgba(0,0,0,.04);
+                             opacity:${t.status==='nonaktif'?'.4':'1'};
+                             transition:border .15s;">
+                      <span style="width:9px;height:9px;border-radius:50%;background:${t.warna};flex-shrink:0;"></span>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:700;color:var(--charcoal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.kode}</div>
+                        <div style="font-size:10px;color:var(--dusty);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                          ${t.username||t.brand} · ${t.platform}${t.status==='nonaktif'?' · NONAKTIF':''}
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
+                        <button onclick="chToggleStatus('${t.kode}')" title="${t.status==='aktif'?'Nonaktifkan':'Aktifkan'}"
+                          style="width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:white;cursor:pointer;font-size:11px;line-height:1;">${t.status==='aktif'?'🔴':'🟢'}</button>
+                        <button onclick="chHapus('${t.kode}')" title="Hapus"
+                          style="width:26px;height:26px;border:1px solid #f5c6cb;border-radius:6px;background:#fff5f5;cursor:pointer;font-size:11px;line-height:1;">🗑</button>
+                      </div>
+                    </div>`).join('')}
+                </div>`;
+            }).join('')}
+        </div>
       </div>
 
-      <!-- Form Tambah/Edit (hidden by default) -->
-      <div id="ch-form-wrap" style="display:none;background:white;border:1.5px solid var(--border);border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,.06);">
-        <div style="font-size:14px;font-weight:700;color:var(--charcoal);margin-bottom:16px;" id="ch-form-title">＋ Tambah Channel Baru</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Kode Unik *</label>
-            <input id="ch-f-kode" class="inp" placeholder="SHP.ZENOOT" style="width:100%;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
-            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">Format: PLATFORM.BRAND — tidak bisa diubah</div>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Brand</label>
-            <input id="ch-f-brand" class="inp" placeholder="zenOt / elenz / alley" style="width:100%;">
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Platform</label>
-            <select id="ch-f-platform" class="sel" style="width:100%;">
-              ${PLATFORM_OPTS.map(p=>`<option value="${p}">${p}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Grup</label>
-            <select id="ch-f-grup" class="sel" style="width:100%;">
-              ${GRUP_OPTS.map(g=>`<option value="${g}">${g}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Username Marketplace</label>
-            <input id="ch-f-username" class="inp" placeholder="zenootsweater" style="width:100%;">
-          </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Warna Label</label>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
-              ${COLORS.map((c,i)=>`<div onclick="chPickColor('${c}')" data-color="${c}" class="ch-color-dot"
-                style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${i===0?'#000':'transparent'};transition:border .15s;flex-shrink:0;"></div>`).join('')}
+      <!-- KOLOM KANAN — Form Edit/Tambah (sticky, muncul saat dipilih) -->
+      <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:32px 24px;overflow-y:auto;background:white;">
+
+        <!-- State kosong -->
+        <div id="ch-form-empty" style="text-align:center;padding:60px 20px;color:var(--dusty);width:100%;max-width:420px;">
+          <div style="font-size:40px;margin-bottom:12px;">✏️</div>
+          <div style="font-size:14px;font-weight:600;color:var(--charcoal);">Pilih channel untuk edit</div>
+          <div style="font-size:12px;margin-top:6px;">Klik salah satu channel di kiri,<br>atau tambah channel baru.</div>
+        </div>
+
+        <!-- Form panel -->
+        <div id="ch-form-wrap" style="display:none;width:100%;max-width:420px;">
+          <div style="font-size:16px;font-weight:800;color:var(--charcoal);margin-bottom:20px;padding-bottom:12px;border-bottom:1.5px solid var(--border);" id="ch-form-title">＋ Tambah Channel Baru</div>
+
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Kode Unik *</label>
+              <input id="ch-f-kode" class="inp" placeholder="SHP.ZENOOT" style="width:100%;font-weight:700;text-transform:uppercase;font-size:14px;" oninput="this.value=this.value.toUpperCase()">
+              <div style="font-size:10px;color:var(--dusty);margin-top:3px;">Format: PLATFORM.BRAND — tidak bisa diubah setelah disimpan</div>
             </div>
-            <input type="hidden" id="ch-f-warna" value="${COLORS[0]}">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Brand</label>
+                <input id="ch-f-brand" class="inp" placeholder="zenOt / elenz / alley" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Username</label>
+                <input id="ch-f-username" class="inp" placeholder="zenootsweater" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Platform</label>
+                <select id="ch-f-platform" class="sel" style="width:100%;">
+                  ${PLATFORM_OPTS.map(p=>`<option value="${p}">${p}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px;">Grup</label>
+                <select id="ch-f-grup" class="sel" style="width:100%;">
+                  ${GRUP_OPTS.map(g=>`<option value="${g}">${g}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--dusty);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">Warna Label</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                ${COLORS.map((c,i)=>`<div onclick="chPickColor('${c}')" data-color="${c}" class="ch-color-dot"
+                  style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;
+                         border:3px solid ${i===0?'#000':'transparent'};transition:border .15s;flex-shrink:0;"></div>`).join('')}
+              </div>
+              <input type="hidden" id="ch-f-warna" value="${COLORS[0]}">
+            </div>
+
+            <div style="display:flex;gap:8px;padding-top:8px;">
+              <button onclick="chHideForm()" class="btn btn-s" style="flex:1;padding:10px;font-size:13px;">Batal</button>
+              <button onclick="chSimpan()" class="btn btn-p" style="flex:2;padding:10px;font-size:13px;font-weight:700;" id="ch-btn-simpan">✅ Simpan</button>
+            </div>
+            <div id="ch-form-status" style="font-size:11px;color:var(--dusty);text-align:center;"></div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button onclick="chHideForm()" class="btn btn-s" style="padding:8px 18px;font-size:12px;">Batal</button>
-          <button onclick="chSimpan()" class="btn btn-p" style="padding:8px 18px;font-size:12px;" id="ch-btn-simpan">✅ Simpan</button>
-        </div>
-        <div id="ch-form-status" style="font-size:11px;color:var(--dusty);text-align:right;margin-top:6px;"></div>
       </div>
 
-      <!-- List toko per grup -->
-      ${grups.length === 0 ? `
-        <div style="text-align:center;padding:60px 20px;color:var(--dusty);">
-          <div style="font-size:32px;margin-bottom:12px;">🏪</div>
-          <div style="font-size:14px;font-weight:600;">Belum ada channel</div>
-          <div style="font-size:12px;margin-top:4px;">Klik "Tambah Channel" untuk mulai</div>
-        </div>` :
-        grups.map(grup => {
-          const items = window._tokoList.filter(t => t.grup === grup);
-          return `
-            <div style="margin-bottom:20px;">
-              <div style="font-size:10px;font-weight:800;color:var(--dusty);text-transform:uppercase;letter-spacing:1px;
-                          padding:6px 0;border-bottom:1.5px solid var(--border);margin-bottom:8px;">${grup}</div>
-              ${items.map(t => `
-                <div id="ch-row-${t.kode.replace(/\./g,'-')}"
-                  style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:white;
-                         border:1px solid var(--border);border-radius:12px;margin-bottom:8px;
-                         box-shadow:0 1px 4px rgba(0,0,0,.04);opacity:${t.status==='nonaktif'?'.45':'1'};">
-                  <span style="width:10px;height:10px;border-radius:50%;background:${t.warna};flex-shrink:0;"></span>
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-size:13px;font-weight:700;color:var(--charcoal);">${t.kode}</div>
-                    <div style="font-size:11px;color:var(--dusty);margin-top:1px;">
-                      ${t.username ? `<span style="font-weight:600;">${t.username}</span> · ` : ''}
-                      ${t.brand} · ${t.platform}
-                      ${t.status==='nonaktif' ? ' · <span style="color:#C0392B;font-weight:700;">NONAKTIF</span>' : ''}
-                    </div>
-                  </div>
-                  <div style="display:flex;gap:6px;flex-shrink:0;">
-                    <button onclick="chEdit('${t.kode}')" title="Edit"
-                      style="width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:white;cursor:pointer;font-size:13px;">✏️</button>
-                    <button onclick="chToggleStatus('${t.kode}')" title="${t.status==='aktif'?'Nonaktifkan':'Aktifkan'}"
-                      style="width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:white;cursor:pointer;font-size:13px;">${t.status==='aktif'?'🔴':'🟢'}</button>
-                    <button onclick="chHapus('${t.kode}')" title="Hapus"
-                      style="width:30px;height:30px;border:1px solid #f5c6cb;border-radius:8px;background:#fff5f5;cursor:pointer;font-size:13px;">🗑</button>
-                  </div>
-                </div>`).join('')}
-            </div>`;
-        }).join('')}
     </div>
   `;
 }
 
 function chShowForm(fillData) {
-  const wrap = document.getElementById('ch-form-wrap');
+  const wrap  = document.getElementById('ch-form-wrap');
+  const empty = document.getElementById('ch-form-empty');
   if (!wrap) return;
+
+  // Tampilkan form, sembunyikan empty state
+  wrap.style.display  = 'block';
+  if (empty) empty.style.display = 'none';
+
   if (fillData) {
-    document.getElementById('ch-f-kode').value = fillData.kode;
-    document.getElementById('ch-f-kode').disabled = true; // kode tidak bisa diubah
-    document.getElementById('ch-f-brand').value = fillData.brand || '';
-    document.getElementById('ch-f-platform').value = fillData.platform || 'shopee';
-    document.getElementById('ch-f-grup').value = fillData.grup || 'SHOPEE';
-    document.getElementById('ch-f-username').value = fillData.username || '';
-    document.getElementById('ch-f-warna').value = fillData.warna || '#5C3D2E';
-    document.getElementById('ch-form-title').textContent = `✏️ Edit: ${fillData.kode}`;
-    document.getElementById('ch-btn-simpan').textContent = '✅ Update';
-    // Highlight warna aktif
+    document.getElementById('ch-f-kode').value    = fillData.kode;
+    document.getElementById('ch-f-kode').disabled = true;
+    document.getElementById('ch-f-brand').value   = fillData.brand    || '';
+    document.getElementById('ch-f-platform').value= fillData.platform || 'shopee';
+    document.getElementById('ch-f-grup').value    = fillData.grup     || 'SHOPEE';
+    document.getElementById('ch-f-username').value= fillData.username || '';
+    document.getElementById('ch-f-warna').value   = fillData.warna    || '#5C3D2E';
+    document.getElementById('ch-form-title').textContent    = `✏️ Edit: ${fillData.kode}`;
+    document.getElementById('ch-btn-simpan').textContent    = '✅ Update';
     document.querySelectorAll('.ch-color-dot').forEach(el => {
-      el.style.border = el.dataset.color === fillData.warna ? '2px solid #000' : '2px solid transparent';
+      el.style.border = el.dataset.color === fillData.warna ? '3px solid #000' : '3px solid transparent';
     });
     _chEditKode = fillData.kode;
   } else {
-    document.getElementById('ch-f-kode').value = '';
+    document.getElementById('ch-f-kode').value    = '';
     document.getElementById('ch-f-kode').disabled = false;
-    document.getElementById('ch-f-brand').value = '';
-    document.getElementById('ch-f-platform').value = 'shopee';
-    document.getElementById('ch-f-grup').value = 'SHOPEE';
-    document.getElementById('ch-f-username').value = '';
-    document.getElementById('ch-f-warna').value = '#5C3D2E';
+    document.getElementById('ch-f-brand').value   = '';
+    document.getElementById('ch-f-platform').value= 'shopee';
+    document.getElementById('ch-f-grup').value    = 'SHOPEE';
+    document.getElementById('ch-f-username').value= '';
+    document.getElementById('ch-f-warna').value   = '#5C3D2E';
     document.getElementById('ch-form-title').textContent = '＋ Tambah Channel Baru';
     document.getElementById('ch-btn-simpan').textContent = '✅ Simpan';
     document.querySelectorAll('.ch-color-dot').forEach((el,i) => {
-      el.style.border = i === 0 ? '2px solid #000' : '2px solid transparent';
+      el.style.border = i === 0 ? '3px solid #000' : '3px solid transparent';
     });
     _chEditKode = null;
   }
-  wrap.style.display = 'block';
-  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function chHideForm() {
-  const wrap = document.getElementById('ch-form-wrap');
-  if (wrap) wrap.style.display = 'none';
+  const wrap  = document.getElementById('ch-form-wrap');
+  const empty = document.getElementById('ch-form-empty');
+  if (wrap)  wrap.style.display  = 'none';
+  if (empty) empty.style.display = 'block';
   _chEditKode = null;
+  // Re-render list untuk hilangkan highlight
+  _chRefreshList();
 }
 
 function chPickColor(color) {
   document.getElementById('ch-f-warna').value = color;
   document.querySelectorAll('.ch-color-dot').forEach(el => {
-    el.style.border = el.dataset.color === color ? '2px solid #000' : '2px solid transparent';
+    el.style.border = el.dataset.color === color ? '3px solid #000' : '3px solid transparent';
   });
+}
+
+// Re-render hanya list kiri (tanpa reset kanan)
+function _chRefreshList() {
+  const scroll = document.getElementById('ch-list-scroll');
+  if (!scroll) return;
+  const grups = [...new Set(window._tokoList.map(t => t.grup))];
+  if (!grups.length) { scroll.innerHTML = '<div style="text-align:center;padding:40px 16px;color:var(--dusty);"><div style="font-size:28px;margin-bottom:8px;">🏪</div><div style="font-size:13px;font-weight:600;">Belum ada channel</div></div>'; return; }
+  scroll.innerHTML = grups.map(grup => {
+    const items = window._tokoList.filter(t => t.grup === grup);
+    return '<div style="margin-bottom:16px;">'
+      + '<div style="font-size:9px;font-weight:800;color:var(--dusty);text-transform:uppercase;letter-spacing:1px;padding:4px 4px 6px;border-bottom:1px solid var(--border);margin-bottom:6px;">'+grup+'</div>'
+      + items.map(t =>
+        '<div id="ch-row-'+t.kode.replace(/[^A-Z0-9]/gi,'_')+'" onclick="chEdit(''+t.kode+'')" '
+        +'style="display:flex;align-items:center;gap:10px;padding:10px;background:white;'
+        +'border:1.5px solid '+(_chEditKode===t.kode?'var(--rust)':'var(--border)')+';'
+        +'border-radius:10px;margin-bottom:5px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.04);'
+        +'opacity:'+(t.status==='nonaktif'?'.4':'1')+';transition:border .15s;">'
+        +'<span style="width:9px;height:9px;border-radius:50%;background:'+t.warna+';flex-shrink:0;"></span>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:12px;font-weight:700;color:var(--charcoal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+t.kode+'</div>'
+        +'<div style="font-size:10px;color:var(--dusty);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(t.username||t.brand)+' · '+t.platform+(t.status==='nonaktif'?' · NONAKTIF':'')+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">'
+        +'<button onclick="chToggleStatus(''+t.kode+'')" style="width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:white;cursor:pointer;font-size:11px;line-height:1;">'+(t.status==='aktif'?'🔴':'🟢')+'</button>'
+        +'<button onclick="chHapus(''+t.kode+'')" style="width:26px;height:26px;border:1px solid #f5c6cb;border-radius:6px;background:#fff5f5;cursor:pointer;font-size:11px;line-height:1;">🗑</button>'
+        +'</div></div>'
+      ).join('')
+      + '</div>';
+  }).join('');
 }
 
 async function chSimpan() {
@@ -2615,7 +2670,7 @@ async function chSimpan() {
       toast(`✅ Channel ${kode} ditambahkan!`);
     }
     chHideForm();
-    renderChannel();
+    _chRefreshList();
     renderTokoDropdown();
   } catch(e) {
     statusEl.innerHTML = `<span style="color:#C0392B">❌ Gagal: ${e.message}</span>`;
@@ -2642,7 +2697,7 @@ async function chToggleStatus(kode) {
       body: JSON.stringify({ status: newStatus })
     });
     t.status = newStatus;
-    renderChannel();
+    _chRefreshList();
     renderTokoDropdown();
     toast(`${kode} → ${newStatus}`);
   } catch(e) { toast('Gagal: ' + e.message, 'err'); }
@@ -2657,8 +2712,10 @@ async function chHapus(kode) {
     });
     const idx = window._tokoList.findIndex(t => t.kode === kode);
     if (idx !== -1) window._tokoList.splice(idx, 1);
-    renderChannel();
+    _chRefreshList();
     renderTokoDropdown();
+    // Tutup form jika yang dihapus sedang diedit
+    if (_chEditKode === kode) chHideForm();
     toast(`🗑 ${kode} dihapus`);
   } catch(e) { toast('Gagal: ' + e.message, 'err'); }
 }
@@ -2667,8 +2724,8 @@ function tambahChannel() { chShowForm(); } // backward compat
 function toggleChannelStatus(idx) {
   const t=window._tokoList[idx]; if(!t)return;
   const newStatus=t.status==='aktif'?'nonaktif':'aktif';
-  fetch(`${SUPABASE_URL}/rest/v1/toko?kode=eq.${encodeURIComponent(t.kode)}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Prefer':'return=minimal'},body:JSON.stringify({status:newStatus})}).then(()=>{t.status=newStatus;renderChannel();toast(`Status ${t.kode} → ${newStatus}`);}).catch(e=>toast('Gagal: '+e.message,'err'));
-  saveDB(); renderChannel();
+  fetch(`${SUPABASE_URL}/rest/v1/toko?kode=eq.${encodeURIComponent(t.kode)}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Prefer':'return=minimal'},body:JSON.stringify({status:newStatus})}).then(()=>{t.status=newStatus;_chRefreshList();renderTokoDropdown();toast(`Status ${t.kode} → ${newStatus}`);}).catch(e=>toast('Gagal: '+e.message,'err'));
+  saveDB(); _chRefreshList();
   _syncChannelDropdowns();
 }
 function hapusChannel(idx) {
@@ -2684,7 +2741,7 @@ function hapusChannel(idx) {
     _persistAssign();
   }
   saveDB();
-  renderChannel();
+  _chRefreshList();
 }
 
 // ================================================================
@@ -3302,7 +3359,7 @@ function _splitToggleStatus(idx) {
   const tk=window._tokoList[idx]; if(!tk) return;
   tk.status = tk.status === 'aktif' ? 'nonaktif' : 'aktif';
   saveDB();
-  renderChannel();
+  _chRefreshList();
   renderSplitPanel();
   toast('Status ' + (window._tokoList[idx]?.kode||'') + ' diubah');
 }
@@ -3333,7 +3390,7 @@ function _splitHapus(idx) {
   window._tokoList.splice(idx, 1);
   saveDB();
   _persistAssign();
-  renderChannel();
+  _chRefreshList();
   renderSplitPanel();
   toast('Channel ' + ch.nama + ' dihapus.');
 }
