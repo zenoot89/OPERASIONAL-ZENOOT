@@ -69,14 +69,8 @@
         <span class="nav-acc-chevron"></span>
       </div>
       <div class="nav-acc-body open">
-        <div class="nav-item" onclick="go('planning-ops',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span>Biaya Operasional</span>
-        </div>
-        <div class="nav-item" onclick="go('planning-kpi',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          <span>Target Omzet</span>
-        </div>
+
+
         <div class="nav-item" onclick="goIntelFromSidebar('intel-cashflow',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           <span>Cash Flow</span>
@@ -102,14 +96,37 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           <span>Jurnal Penjualan</span>
         </div>
+
+      </div>
+    </div>
+
+
+    <!-- DATABASE TOKO -->
+    <div class="nav-accordion">
+      <div class="nav-acc-header open" onclick="toggleAcc(this)">
+        <div class="nav-acc-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          <span>Database Toko</span>
+        </div>
+        <span class="nav-acc-chevron"></span>
+      </div>
+      <div class="nav-acc-body open">
         <div class="nav-item" onclick="go('channel',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg>
           <span>Channel</span>
         </div>
+        <div class="nav-item" onclick="go('planning-ops',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Biaya Operasional</span>
+        </div>
+        <div class="nav-item" onclick="go('planning-kpi',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Target Omzet</span>
+        </div>
       </div>
     </div>
 
-    <!-- DASHBOARD TOKO -->
+        <!-- DASHBOARD TOKO -->
     <div class="nav-accordion">
       <div class="nav-acc-header open" onclick="toggleAcc(this)">
         <div class="nav-acc-label">
