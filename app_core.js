@@ -1877,27 +1877,60 @@ function addJurnal() {
   if (!tgl||!varName||qty<=0) { toast('Lengkapi Tanggal, SKU, dan Qty','err'); return; }
   const p=DB.produk.find(x=>x.var===varName);
   const hpp=p?p.hpp:0;
-  // FIX: ambil harga dari field — fallback ke price list (p.jual), terakhir baru 0
   const hargaInput=+document.getElementById('j-harga')?.value||0;
   const harga=hargaInput>0 ? hargaInput : (p&&p.jual>0 ? p.jual : hpp);
-  const newEntry = {uuid: DataLayer._uuid(), tgl, ch, var:varName, qty, harga, hpp};
+  const newEntry = {uuid: DataLayer._uuid(), tgl, ch, var:varName, qty, harga, hpp, _saving: true};
   DB.jurnal.unshift(newEntry);
   if (!DB.stok.find(x=>x.var===varName)) DB.stok.push({var:varName,awal:0,masuk:0,keluar:0,hpp,safety:4});
   recalcStok();
   document.getElementById('j-qty').value='';
   const hargaElC=document.getElementById('j-harga'); if(hargaElC) hargaElC.value='';
-  // POIN 3: tutup modal & render DULU — sync cloud di background
+
+  // 1. Tutup modal & render LANGSUNG — data sudah ada di DB.jurnal
   closeModal('modal-tambah-jurnal');
   renderJurnal();
   renderStok();
   renderDashboard();
-  toast(`✅ ${qty} pcs ${varName} @ ${fmt(harga)} disimpan!`);
-  // Simpan ke localStorage & sync cloud background (tidak blokir UI)
+
+  // 2. Tandai baris baru dengan indikator "⏳ Menyimpan..."
+  const jBody = document.getElementById('jurnal-body');
+  const firstRow = jBody?.querySelector('tr:first-child');
+  if (firstRow) {
+    const lastCell = firstRow.querySelector('td:last-child');
+    if (lastCell) {
+      lastCell._origHTML = lastCell.innerHTML;
+      lastCell.innerHTML = `<span style="font-size:11px;color:var(--dusty);font-style:italic;">⏳ Menyimpan...</span>`;
+    }
+  }
+
+  // 3. Simpan lokal dulu
+  delete newEntry._saving;
   saveDB();
+
+  // 4. Sync cloud background — update indikator setelah selesai
+  const syncStart = Date.now();
   DataLayer._upsert('jurnal',[{
     uuid:newEntry.uuid, tgl:newEntry.tgl, ch:newEntry.ch,
     var:newEntry.var, qty:newEntry.qty, harga:newEntry.harga, hpp:newEntry.hpp
-  }],'uuid').catch(()=>{});
+  }],'uuid').then(()=>{
+    // Berhasil — restore tombol aksi normal
+    const row = jBody?.querySelector('tr:first-child');
+    if (row) {
+      const lastCell = row.querySelector('td:last-child');
+      const idx = DB.jurnal.indexOf(newEntry);
+      if (lastCell) lastCell.innerHTML = `<button class="btn btn-o btn-sm" onclick="openEditJurnal(${idx})">✏️</button><button class="btn btn-d btn-sm" onclick="deleteJurnal(${idx})">🗑</button>`;
+    }
+    toast(`✅ ${qty} pcs ${varName} @ ${fmt(harga)} tersimpan!`);
+  }).catch(()=>{
+    // Gagal cloud — tetap ada di lokal, info admin
+    const row = jBody?.querySelector('tr:first-child');
+    if (row) {
+      const lastCell = row.querySelector('td:last-child');
+      const idx = DB.jurnal.indexOf(newEntry);
+      if (lastCell) lastCell.innerHTML = `<span title="Tersimpan lokal, sync cloud gagal" style="font-size:10px;color:var(--amber);margin-right:4px;">⚠️</span><button class="btn btn-o btn-sm" onclick="openEditJurnal(${idx})">✏️</button><button class="btn btn-d btn-sm" onclick="deleteJurnal(${idx})">🗑</button>`;
+    }
+    toast(`✅ ${qty} pcs ${varName} tersimpan lokal · ⚠️ sync cloud tertunda`, 'warn');
+  });
 }
 
 // ═══ JURNAL FILTER STATE ═══
