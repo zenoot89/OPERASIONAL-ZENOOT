@@ -83,14 +83,19 @@ function _owInjectCSS() {
 .ow-pbar-fill{height:100%;border-radius:99px;transition:width .5s;}
 
 /* Stok rows */
-.ow-stok-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.ow-stok-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
 .ow-stok-row:last-child{border-bottom:none;}
-.ow-stok-sku{font-weight:600;color:var(--charcoal);font-family:'DM Mono',monospace;font-size:12.5px;flex:1;}
-.ow-stok-right{display:flex;align-items:center;gap:10px;}
-.ow-stok-num{font-weight:700;font-family:'DM Mono',monospace;font-size:14px;}
-.stok-red{color:#C0392B;} .stok-amber{color:#D97706;} .stok-green{color:#2D6A4F;}
-.ow-stok-meta{font-size:12px;color:var(--dusty);}
-.ow-empty{padding:24px;text-align:center;font-size:13px;color:var(--dusty);background:var(--cream);border-radius:12px;}
+.ow-stok-sku{font-weight:600;color:var(--charcoal);font-family:'DM Mono',monospace;font-size:13.5px;flex:1;line-height:1.3;}
+.ow-stok-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.ow-stok-num{font-weight:700;font-family:'DM Mono',monospace;font-size:14px;min-width:64px;text-align:center;padding:3px 8px;border-radius:8px;}
+.stok-red{color:#C0392B;background:#FFF0EE;} .stok-amber{color:#D97706;background:#FFFBF0;} .stok-green{color:#2D6A4F;}
+.ow-stok-meta{font-size:12.5px;color:var(--dusty);white-space:nowrap;}
+.ow-empty{padding:24px;text-align:center;font-size:14px;color:var(--dusty);background:var(--cream);border-radius:12px;}
+@media(max-width:600px){
+  .ow-stok-sku{font-size:12.5px;}
+  .ow-stok-num{font-size:13px;min-width:54px;}
+  .ow-stok-meta{font-size:11.5px;}
+}
 
 /* Channel rows */
 .ow-ch-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
@@ -1185,12 +1190,12 @@ function renderDashboard() {
         // Tampilkan nama induk hanya di baris pertama tiap grup
         const prevInduk = i>0 ? restockBestSeller[i-1]._induk : null;
         const showInduk = r._induk !== prevInduk;
-        return (showInduk ? `<div style="font-size:11px;font-weight:700;color:var(--brown);text-transform:uppercase;letter-spacing:.7px;padding:${i===0?'0':'8px'} 0 3px;">🏆 ${r._induk} · ${r._indukSales} terjual</div>` : '')
+        return (showInduk ? `<div style="font-size:12.5px;font-weight:700;color:var(--brown);text-transform:uppercase;letter-spacing:.7px;padding:${i===0?'0':'8px'} 0 4px;">🏆 ${r._induk} · ${r._indukSales} terjual</div>` : '')
           + `<div class="ow-stok-row">
               <span class="ow-stok-sku" ${r.var}>${r.var}</span>
               <div class="ow-stok-right">
                 <span class="ow-stok-meta">${soldBulanMap[r.var]||0} bln ini</span>
-                <span class="ow-stok-num ${cls}" style="min-width:48px;text-align:right">${label}</span>
+                <span class="ow-stok-num ${cls}">${label}</span>
               </div>
             </div>`;
       }).join('');
@@ -1218,15 +1223,27 @@ function renderDashboard() {
       overflow:hidden;
     }
 
-    /* Scroll jika isi terlalu panjang — max 480px */
+    /* Scroll jika isi terlalu panjang */
     .ow-col3-scroll{
       max-height:440px;
       overflow-y:auto;
       overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
     }
     .ow-col3-scroll::-webkit-scrollbar{width:3px;}
     .ow-col3-scroll::-webkit-scrollbar-track{background:transparent;}
     .ow-col3-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    /* Responsive: laptop, Android, iPhone */
+    @media(max-width:900px){
+      .ow-row3col{grid-template-columns:1fr;}
+      .ow-col3-scroll{max-height:320px;}
+      .ow-col3-card{padding:14px 14px;}
+      .ow-col3-hd{height:auto;margin-bottom:6px;padding:2px 0;}
+    }
+    @media(max-width:480px){
+      .ow-col3-scroll{max-height:260px;}
+      .ow-col3-card{padding:12px 12px;border-radius:12px;}
+    }
   </style>
   <div class="ow-row3col">
 
