@@ -2639,12 +2639,12 @@ function onResetIndukChange() {
   document.getElementById('reset-stok-confirm').value = '';
   document.getElementById('btn-confirm-reset-stok').disabled = true;
   if (!induk) { preview.style.display = 'none'; return; }
-  // Hitung dampak
-  const stokTerdampak = (DB.stok || []).filter(s => s.induk === induk);
-  const varSet = new Set(stokTerdampak.map(s => s.var));
+  // Hitung dampak (gunakan DB.produk sebagai master)
+  const varSet = new Set((DB.produk || []).filter(p => p.induk === induk).map(p => p.var));
+  const stokTerdampak = (DB.stok || []).filter(s => varSet.has(s.var));
   const jurnalTerdampak = (DB.jurnal || []).filter(j => varSet.has(j.var));
   detail.innerHTML =
-    `<div>✅ <strong>${stokTerdampak.length}</strong> SKU variasi → Stok Awal, Masuk & Keluar di-nol-kan</div>` +
+    `<div>✅ <strong>${varSet.size}</strong> SKU variasi → Stok Awal, Masuk & Keluar di-nol-kan</div>` +
     `<div>✅ <strong>${jurnalTerdampak.length}</strong> transaksi jurnal → dihapus</div>`;
   preview.style.display = '';
 }
@@ -2664,12 +2664,12 @@ async function eksekusiResetStok() {
     closeModalResetStok();
     toast('⏳ Mereset stok & jurnal untuk SKU ' + induk + '...', 'info');
 
-    // Cari semua var yang berasal dari induk ini
-    const varSet = new Set((DB.stok || []).filter(s => s.induk === induk).map(s => s.var));
+    // Cari semua var yang berasal dari induk ini (dari DB.produk sebagai master data)
+    const varSet = new Set((DB.produk || []).filter(p => p.induk === induk).map(p => p.var));
 
     // Reset stok: awal, masuk, keluar = 0
     DB.stok.forEach(s => {
-      if (s.induk === induk) { s.awal = 0; s.masuk = 0; s.keluar = 0; }
+      if (varSet.has(s.var)) { s.awal = 0; s.masuk = 0; s.keluar = 0; }
     });
 
     // Hapus jurnal yang var-nya ada di set ini
