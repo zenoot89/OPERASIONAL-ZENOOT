@@ -348,6 +348,7 @@
       <button class="btn btn-s" onclick="openModal('modal-restock-quick')">➕ Input Masuk</button>
       <button class="btn btn-o" onclick="openModal('modal-stok-massal')">📋 Massal</button>
       <button class="btn btn-o" onclick="syncStokDanRender()">🔄 Sync</button>
+      <button class="btn btn-d btn-sm" onclick="openModalResetStok()" style="padding:0 12px;" title="Reset Stok &amp; Jurnal per SKU">🗑 Reset</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -1061,6 +1062,60 @@
     <div style="display:flex;gap:10px;">
       <button class="btn btn-d btn-full" id="btn-confirm-reset-jurnal" disabled onclick="resetJurnalDanStok()">🗑 Ya, Reset Sekarang</button>
       <button class="btn btn-o" onclick="closeModal('modal-reset-jurnal-stok');document.getElementById('reset-jurnal-confirm').value='';document.getElementById('btn-confirm-reset-jurnal').disabled=true;">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset Stok per SKU Induk -->
+<div class="overlay" id="modal-reset-stok-induk">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-hd">🗑 Reset Stok & Jurnal per SKU <button class="modal-close" onclick="closeModalResetStok()">×</button></div>
+    <div class="alert al-d" style="margin-bottom:14px;"><span>⚠️</span><div><strong>TIDAK BISA DIBATALKAN.</strong> Stok Awal, Masuk, Keluar akan di-nol-kan. Semua transaksi jurnal untuk SKU ini akan dihapus.</div></div>
+
+    <!-- Pilihan Mode -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-o btn-full" id="btn-mode-per-sku" onclick="setResetStokMode('per-sku')" style="font-weight:600;">📦 Per SKU Induk</button>
+      <button class="btn btn-o btn-full" id="btn-mode-semua" onclick="setResetStokMode('semua')">🗑 Reset Semua</button>
+    </div>
+
+    <!-- Mode: Per SKU -->
+    <div id="reset-stok-per-sku-panel">
+      <div class="fg" style="margin-bottom:10px;">
+        <label class="lbl">Pilih SKU Induk yang akan di-reset</label>
+        <select class="sel" id="reset-stok-induk-select" style="width:100%" onchange="onResetIndukChange()">
+          <option value="">— Pilih SKU Induk —</option>
+        </select>
+      </div>
+      <div id="reset-stok-preview" style="background:var(--bg2);border-radius:8px;padding:10px;font-size:13px;color:var(--dusty);margin-bottom:14px;display:none;">
+        <div style="margin-bottom:4px;color:var(--fg);">Yang akan terdampak:</div>
+        <div id="reset-stok-preview-detail"></div>
+        <div style="margin-top:8px;color:var(--sage);">Yang AMAN (tidak ikut terhapus):</div>
+        <div>🔒 Data Produk & HPP</div>
+        <div>🔒 Channel / Toko</div>
+        <div>🔒 SKU Induk lainnya</div>
+      </div>
+    </div>
+
+    <!-- Mode: Semua -->
+    <div id="reset-stok-semua-panel" style="display:none;">
+      <div style="background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--dusty);">
+        <div style="margin-bottom:6px;">Yang akan di-reset:</div>
+        <div>✅ Jurnal Penjualan — semua transaksi dihapus</div>
+        <div>✅ Stok Awal, Masuk & Keluar — semua di-nol-kan</div>
+        <div style="margin-top:8px;color:var(--sage);">Yang AMAN (tidak ikut terhapus):</div>
+        <div>🔒 Kelola Produk & HPP</div>
+        <div>🔒 Channel / Toko</div>
+        <div>🔒 Supplier</div>
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:16px;">
+      <label class="lbl">Ketik <strong>RESET</strong> untuk konfirmasi</label>
+      <input class="inp" id="reset-stok-confirm" type="text" placeholder="Ketik RESET" oninput="onResetStokConfirmInput()">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-d btn-full" id="btn-confirm-reset-stok" disabled onclick="eksekusiResetStok()">🗑 Ya, Reset Sekarang</button>
+      <button class="btn btn-o" onclick="closeModalResetStok()">Batal</button>
     </div>
   </div>
 </div>

@@ -2581,6 +2581,152 @@ function resetProdukSaja() {
   renderProduk(); renderHarga(); renderDashboard(); toast('✅ Semua produk dihapus.');
 }
 
+
+// ================================================================
+// RESET STOK & JURNAL PER SKU INDUK
+// ================================================================
+
+let _resetStokMode = 'per-sku'; // 'per-sku' | 'semua'
+
+function openModalResetStok() {
+  // Populate dropdown SKU Induk
+  const sel = document.getElementById('reset-stok-induk-select');
+  const indukList = [...new Set((DB.stok || []).map(s => s.induk).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">— Pilih SKU Induk —</option>';
+  indukList.forEach(ind => {
+    const opt = document.createElement('option');
+    opt.value = ind;
+    opt.textContent = ind;
+    sel.appendChild(opt);
+  });
+  // Reset state modal
+  _resetStokMode = 'per-sku';
+  setResetStokMode('per-sku');
+  document.getElementById('reset-stok-confirm').value = '';
+  document.getElementById('btn-confirm-reset-stok').disabled = true;
+  document.getElementById('reset-stok-preview').style.display = 'none';
+  openModal('modal-reset-stok-induk');
+}
+
+function closeModalResetStok() {
+  closeModal('modal-reset-stok-induk');
+  document.getElementById('reset-stok-confirm').value = '';
+  document.getElementById('btn-confirm-reset-stok').disabled = true;
+}
+
+function setResetStokMode(mode) {
+  _resetStokMode = mode;
+  // Styling tombol aktif
+  document.getElementById('btn-mode-per-sku').style.background = mode === 'per-sku' ? 'var(--primary)' : '';
+  document.getElementById('btn-mode-per-sku').style.color = mode === 'per-sku' ? '#fff' : '';
+  document.getElementById('btn-mode-semua').style.background = mode === 'semua' ? 'var(--danger,#dc2626)' : '';
+  document.getElementById('btn-mode-semua').style.color = mode === 'semua' ? '#fff' : '';
+  // Tampil panel
+  document.getElementById('reset-stok-per-sku-panel').style.display = mode === 'per-sku' ? '' : 'none';
+  document.getElementById('reset-stok-semua-panel').style.display = mode === 'semua' ? '' : 'none';
+  // Reset konfirmasi
+  document.getElementById('reset-stok-confirm').value = '';
+  document.getElementById('btn-confirm-reset-stok').disabled = true;
+  if (mode === 'semua') {
+    document.getElementById('reset-stok-preview').style.display = 'none';
+  }
+}
+
+function onResetIndukChange() {
+  const induk = document.getElementById('reset-stok-induk-select').value;
+  const preview = document.getElementById('reset-stok-preview');
+  const detail = document.getElementById('reset-stok-preview-detail');
+  document.getElementById('reset-stok-confirm').value = '';
+  document.getElementById('btn-confirm-reset-stok').disabled = true;
+  if (!induk) { preview.style.display = 'none'; return; }
+  // Hitung dampak
+  const stokTerdampak = (DB.stok || []).filter(s => s.induk === induk);
+  const varSet = new Set(stokTerdampak.map(s => s.var));
+  const jurnalTerdampak = (DB.jurnal || []).filter(j => varSet.has(j.var));
+  detail.innerHTML =
+    `<div>✅ <strong>${stokTerdampak.length}</strong> SKU variasi → Stok Awal, Masuk & Keluar di-nol-kan</div>` +
+    `<div>✅ <strong>${jurnalTerdampak.length}</strong> transaksi jurnal → dihapus</div>`;
+  preview.style.display = '';
+}
+
+function onResetStokConfirmInput() {
+  const val = document.getElementById('reset-stok-confirm').value;
+  const induk = document.getElementById('reset-stok-induk-select').value;
+  let valid = val === 'RESET';
+  if (_resetStokMode === 'per-sku' && !induk) valid = false;
+  document.getElementById('btn-confirm-reset-stok').disabled = !valid;
+}
+
+async function eksekusiResetStok() {
+  if (_resetStokMode === 'per-sku') {
+    const induk = document.getElementById('reset-stok-induk-select').value;
+    if (!induk) return;
+    closeModalResetStok();
+    toast('⏳ Mereset stok & jurnal untuk SKU ' + induk + '...', 'info');
+
+    // Cari semua var yang berasal dari induk ini
+    const varSet = new Set((DB.stok || []).filter(s => s.induk === induk).map(s => s.var));
+
+    // Reset stok: awal, masuk, keluar = 0
+    DB.stok.forEach(s => {
+      if (s.induk === induk) { s.awal = 0; s.masuk = 0; s.keluar = 0; }
+    });
+
+    // Hapus jurnal yang var-nya ada di set ini
+    DB.jurnal = (DB.jurnal || []).filter(j => !varSet.has(j.var));
+
+    saveDB();
+
+    // Sync ke Supabase
+    if (SUPABASE_URL) {
+      try {
+        await DataLayer._replaceAll('stok', DB.stok);
+      } catch(e) { console.warn('[ZENOOT] Reset stok cloud gagal:', e.message); }
+      // Hapus jurnal di Supabase untuk var terdampak
+      for (const varName of varSet) {
+        try {
+          await DataLayer._fetch(`${SUPABASE_URL}/rest/v1/jurnal?var=eq.${encodeURIComponent(varName)}`, {
+            method: 'DELETE',
+            headers: DataLayer._headers()
+          });
+        } catch(e) { console.warn('[ZENOOT] Hapus jurnal cloud gagal untuk var ' + varName + ':', e.message); }
+      }
+    }
+
+    renderStok();
+    renderJurnal();
+    renderDashboard();
+    toast('✅ Reset SKU ' + induk + ' berhasil!');
+
+  } else {
+    // Reset Semua — sama seperti resetJurnalDanStok() tapi awal juga di-nol-kan
+    closeModalResetStok();
+    toast('⏳ Mereset semua stok & jurnal...', 'info');
+
+    DB.jurnal = [];
+    DB.stok.forEach(s => { s.awal = 0; s.masuk = 0; s.keluar = 0; });
+
+    saveDB();
+
+    if (SUPABASE_URL) {
+      try {
+        await DataLayer._fetch(`${SUPABASE_URL}/rest/v1/jurnal?id=gte.1`, {
+          method: 'DELETE',
+          headers: DataLayer._headers()
+        });
+      } catch(e) { console.warn('[ZENOOT] Reset jurnal cloud gagal:', e.message); }
+      try {
+        await DataLayer._replaceAll('stok', DB.stok);
+      } catch(e) { console.warn('[ZENOOT] Reset stok cloud gagal:', e.message); }
+    }
+
+    renderStok();
+    renderJurnal();
+    renderDashboard();
+    toast('✅ Semua stok & jurnal berhasil di-reset!');
+  }
+}
+
 // ── Reset Jurnal + Stok Keluar/Masuk ─────────────────────────────
 async function resetJurnalDanStok() {
   closeModal('modal-reset-jurnal-stok');
