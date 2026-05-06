@@ -60,7 +60,7 @@ function _owInjectCSS() {
 
 /* Section headers */
 .ow-sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.ow-sec-title{font-size:14px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--charcoal);}
+.ow-sec-title{font-size:15px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--charcoal);}
 .ow-sec-note{font-size:12px;color:var(--dusty);opacity:.7;}
 
 /* 2-col & 3-col grids — align-items:stretch agar sama tinggi */
@@ -95,6 +95,7 @@ function _owInjectCSS() {
   .ow-stok-sku{font-size:12.5px;}
   .ow-stok-num{font-size:13px;min-width:54px;}
   .ow-stok-meta{font-size:11.5px;}
+  .ow-sec-title{font-size:13.5px;}
 }
 
 /* Channel rows */
@@ -116,6 +117,7 @@ function _owInjectCSS() {
 
 /* Supplier rows */
 .ow-sup-row{display:grid;grid-template-columns:110px 1fr 75px 45px 45px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+@media(max-width:600px){.ow-sup-row{grid-template-columns:1fr auto;}.ow-sup-row>*:nth-child(3),.ow-sup-row>*:nth-child(5){display:none;}}
 .ow-sup-row:last-child{border-bottom:none;}
 .ow-sup-name{font-weight:700;color:var(--charcoal);}
 .ow-sup-bar{height:6px;background:var(--cream);border-radius:99px;overflow:hidden;}
@@ -189,6 +191,72 @@ function _owInjectCSS() {
 .ow-restock-heat{font-size:12px;color:var(--dusty);}
 .ow-restock-stok{font-size:14px;font-weight:700;min-width:50px;text-align:right;}
 .stok-habis{color:#C0392B;} .stok-kritis{color:#D97706;}
+
+/* ═══ RESPONSIVE DASHBOARD — Mobile (Android & iPhone) ═══ */
+@media(max-width:900px){
+  /* KPI cards */
+  .ow-kpi{padding:16px 16px 14px;}
+  .ow-kpi-val{font-size:22px;}
+  .ow-kpi-label{font-size:10px;}
+  .ow-kpi-sub{font-size:11px;}
+
+  /* Cards */
+  .ow-card{padding:16px 14px;}
+  .ow-card-title{font-size:13px;}
+
+  /* Mini grid */
+  .ow-mini-val{font-size:17px;}
+  .ow-mini{padding:12px 10px;}
+
+  /* Chart stats */
+  .ow-chart-stat-val{font-size:13px;}
+  .ow-chart-stat-label{font-size:10px;}
+  .ow-chart-stats{gap:12px;}
+
+  /* Section title */
+  .ow-sec-title{font-size:13px;}
+
+  /* SKU rows */
+  .ow-sku-name{font-size:12px;}
+  .ow-sku-qty{font-size:13px;}
+
+  /* Channel rows */
+  .ow-ch-name{font-size:12px;min-width:90px;}
+  .ow-ch-val{font-size:12px;min-width:60px;}
+
+  /* Supplier rows — stack jadi list di mobile */
+  .ow-sup-row{
+    grid-template-columns:1fr auto;
+    gap:4px;
+    flex-wrap:wrap;
+  }
+
+  /* Alert */
+  .ow-alert{padding:10px 12px;font-size:12px;}
+  .ow-alert-title{font-size:12px;}
+  .ow-alert-sub{font-size:11px;}
+
+  /* Period bar wrap */
+  .ow-period-bar{gap:6px;}
+  .ow-period-btn{padding:6px 10px;font-size:11px;}
+
+  /* Row gaps */
+  .ow-wrap{gap:14px;}
+}
+
+@media(max-width:480px){
+  .ow-kpi-val{font-size:20px;}
+  .ow-kpi{padding:14px 12px 12px;}
+  .ow-mini-val{font-size:16px;}
+  .ow-mini-label{font-size:10px;}
+  .ow-card{padding:14px 12px;}
+  .ow-chart-stat-val{font-size:12px;}
+  .ow-chart-legend{font-size:11px;}
+
+  /* Dead stock row fix — nilai HPP + qty tidak tumpuk */
+  .ow-stok-right{gap:6px;}
+  .ow-stok-meta{font-size:11px;}
+}
   `;
   document.head.appendChild(st);
 }
@@ -216,10 +284,12 @@ function renderDashboard() {
     return (p && p.hpp) ? p.hpp : 0;
   };
 
-  const omsetHari     = jHari.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
-  const omsetKemarin  = jKemarin.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
-  const omsetBulan    = jBulan.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
-  const omsetBulanLalu= jBulanLalu.reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
+  // Omset = harga jual × qty (bukan HPP)
+  const omsetHari     = jHari.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const omsetKemarin  = jKemarin.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const omsetBulan    = jBulan.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  const omsetBulanLalu= jBulanLalu.reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
+  // Laba = (harga jual - HPP) × qty
   const labaBulan     = jBulan.reduce((s,j)=>s+((j.harga||0)-(getHppProduk(j.var)||0))*(j.qty||0),0);
   const labaBulanLalu = jBulanLalu.reduce((s,j)=>s+((j.harga||0)-(getHppProduk(j.var)||0))*(j.qty||0),0);
   const qtyBulan      = jBulan.reduce((s,j)=>s+(j.qty||0),0);
@@ -252,13 +322,13 @@ function renderDashboard() {
   jBulan.forEach(j=>{
     if(!j.ch) return;
     if(!chMap[j.ch]) chMap[j.ch]={omset:0,qty:0,trx:0};
-    chMap[j.ch].omset+=getHppProduk(j.var)*(j.qty||0);
+    chMap[j.ch].omset+=(j.harga||0)*(j.qty||0);
     chMap[j.ch].qty+=(j.qty||0); chMap[j.ch].trx+=1;
   });
   jBulanLalu.forEach(j=>{
     if(!j.ch) return;
     if(!chMapLalu[j.ch]) chMapLalu[j.ch]={omset:0};
-    chMapLalu[j.ch].omset+=getHppProduk(j.var)*(j.qty||0);
+    chMapLalu[j.ch].omset+=(j.harga||0)*(j.qty||0);
   });
   const channels = Object.entries(chMap).sort((a,b)=>b[1].omset-a[1].omset);
   const totalChOmset = channels.reduce((s,[,v])=>s+v.omset,0);
@@ -391,7 +461,7 @@ function renderDashboard() {
     const d=new Date(); d.setDate(d.getDate()-i);
     const ds=_localDateStr(d);
     const label=d.toLocaleDateString('id-ID',{weekday:'short'});
-    const val=jurnal.filter(j=>j.tgl===ds).reduce((s,j)=>s+getHppProduk(j.var)*(j.qty||0),0);
+    const val=jurnal.filter(j=>j.tgl===ds).reduce((s,j)=>s+(j.harga||0)*(j.qty||0),0);
     trend7.push({label,val,ds});
   }
   const trend7Max=Math.max(...trend7.map(t=>t.val),1);
@@ -1115,7 +1185,7 @@ function renderDashboard() {
   // --- Dead Stock HTML ---
   const deadStockHtml = deadStock.length===0
     ? `<div class="ow-empty">✅ Tidak ada dead stock</div>`
-    : deadStock.slice(0,10).map(r=>`
+    : deadStock.map(r=>`
         <div class="ow-stok-row">
           <span class="ow-stok-sku" ${r.var}>${r.var}</span>
           <div class="ow-stok-right">
@@ -1123,12 +1193,12 @@ function renderDashboard() {
             <span class="ow-stok-num stok-amber">${getAkhir(r)} pcs</span>
           </div>
         </div>`).join('')
-      + (deadStock.length>10?`<div style="font-size:12px;color:var(--dusty);padding-top:8px">+${deadStock.length-10} lainnya</div>`:'');
+;
 
   // --- Stok Habis HTML ---
   const stokHabisHtml = stokHabis.length===0
     ? `<div class="ow-empty">✅ Tidak ada stok habis</div>`
-    : stokHabis.slice(0,10).map(r=>{
+    : stokHabis.map(r=>{
         const p=(DB.produk||[]).find(x=>(x.var||'').toUpperCase()===(r.var||'').toUpperCase());
         return `<div class="ow-stok-row">
           <span class="ow-stok-sku" ${r.var}>${r.var}</span>
@@ -1137,7 +1207,7 @@ function renderDashboard() {
             <span class="ow-stok-num stok-red">HABIS</span>
           </div>
         </div>`;
-      }).join('')+(stokHabis.length>10?`<div style="font-size:12px;color:var(--dusty);padding-top:8px">+${stokHabis.length-10} lainnya</div>`:'');
+      }).join('');
 
   // --- Prioritas Restock BARU: Best Seller Induk rank 1-5, tampil semua variantnya (maks 10 SKU) ---
   // Step 1: hitung total penjualan per induk bulan ini
@@ -1225,10 +1295,11 @@ function renderDashboard() {
 
     /* Scroll jika isi terlalu panjang */
     .ow-col3-scroll{
-      max-height:440px;
+      max-height:460px;
       overflow-y:auto;
       overflow-x:hidden;
       -webkit-overflow-scrolling:touch;
+      scroll-behavior:smooth;
     }
     .ow-col3-scroll::-webkit-scrollbar{width:3px;}
     .ow-col3-scroll::-webkit-scrollbar-track{background:transparent;}
@@ -1236,12 +1307,11 @@ function renderDashboard() {
     /* Responsive: laptop, Android, iPhone */
     @media(max-width:900px){
       .ow-row3col{grid-template-columns:1fr;}
-      .ow-col3-scroll{max-height:320px;}
+      .ow-col3-scroll{max-height:none;overflow-y:visible;}
       .ow-col3-card{padding:14px 14px;}
       .ow-col3-hd{height:auto;margin-bottom:6px;padding:2px 0;}
     }
     @media(max-width:480px){
-      .ow-col3-scroll{max-height:260px;}
       .ow-col3-card{padding:12px 12px;border-radius:12px;}
     }
   </style>
