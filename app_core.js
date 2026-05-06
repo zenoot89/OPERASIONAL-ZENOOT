@@ -1038,8 +1038,8 @@ function toast(msg, type='ok') {
 function _renderDashboardLegacy() {
   const totalStok  = DB.stok.reduce((s,r)=>s+getAkhir(r),0);
   const nilaiStok  = DB.stok.reduce((s,r)=>s+(getAkhir(r)*r.hpp),0);
-  const totalRev   = DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
-  const totalLaba  = DB.jurnal.reduce((s,r)=>s+((r.harga-r.hpp)*r.qty),0);
+  const totalRev   = DB.jurnal.reduce((s,r)=>s+_jOmset(r),0);
+  const totalLaba  = DB.jurnal.reduce((s,r)=>s+(_jOmset(r)-(r.hpp*r.qty)),0);
   const lowCount   = DB.stok.filter(r=>getAkhir(r)>0&&getAkhir(r)<=(r.safety||4)).length;
   const habisCount = DB.stok.filter(r=>getAkhir(r)<=0).length;
 
@@ -1133,7 +1133,7 @@ function renderProgress() {
   const targetPcs=_plan.targetProduksi||0;
   const targetRev=_plan.targetOmset||0;
   const totalKeluar=DB.stok.reduce((s,r)=>s+(r.keluar||0),0);
-  const totalRev=DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
+  const totalRev=DB.jurnal.reduce((s,r)=>s+_jOmset(r),0);
   const pctPcs=targetPcs>0?Math.min(100,Math.round(totalKeluar/targetPcs*100)):0;
   const pctRev=targetRev>0?Math.min(100,Math.round(totalRev/targetRev*100)):0;
   const bar=(pct,color)=>`<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .6s;"></div></div>`;
@@ -1272,7 +1272,7 @@ function renderTargetPerChannel() {
 
   // Hitung omset aktual per channel dari jurnal
   const aktualMap={};
-  DB.jurnal.forEach(r=>{ aktualMap[r.ch]=(aktualMap[r.ch]||0)+(r.hpp*r.qty); });
+  DB.jurnal.forEach(r=>{ aktualMap[r.ch]=(aktualMap[r.ch]||0)+_jOmset(r); });
 
   const rows=channels.map(ch=>{
     const chNama=ch.kode||ch.nama;
@@ -1886,9 +1886,14 @@ function addJurnal() {
   document.getElementById('j-qty').value='';
   const hargaElC=document.getElementById('j-harga'); if(hargaElC) hargaElC.value='';
 
-  // 1. Tutup modal & render LANGSUNG — data sudah ada di DB.jurnal
+  // 1. Tutup modal & pastikan halaman jurnal aktif, lalu render LANGSUNG
   closeModal('modal-tambah-jurnal');
-  renderJurnal();
+  // Navigasi ke halaman jurnal jika belum di sana, lalu render
+  if (_currentPage !== 'jurnal') {
+    go('jurnal');
+  } else {
+    renderJurnal();
+  }
   renderStok();
   renderDashboard();
 
@@ -1962,7 +1967,18 @@ function _populateJurnalChannelFilter(){
   if(cur)sel.value=cur;
 }
 
+
+// ── Helper: hitung omset dari satu record jurnal ──────────────────
+function _jOmset(r) {
+  if (r.harga && r.harga > 0) return r.harga * r.qty;
+  const p = DB.produk.find(x=>x.var===r.var);
+  if (p) return _hitungHarga(p, _getHargaParams()).jual * r.qty;
+  return (r.hpp || 0) * r.qty;
+}
+
 function renderJurnal() {
+  const body = document.getElementById('jurnal-body');
+  if (!body) return; // halaman jurnal belum aktif, skip
   _populateJurnalChannelFilter();
   // Render target global di bawah tabel
   if (typeof renderJurnalTargetGlobal === 'function') renderJurnalTargetGlobal();
@@ -1979,16 +1995,28 @@ function renderJurnal() {
     if(b.tgl < a.tgl) return -1;
     return (b.sid||0)-(a.sid||0);
   });
-  let modal=0,qty=0;
-  rows.forEach(r=>{modal+=r.hpp*r.qty;qty+=r.qty;});
-  document.getElementById('j-rev').textContent=fmt(modal);
-  document.getElementById('j-tot-qty').textContent=qty;
+  const params = _getHargaParams();
+  let totalOmset=0, totalQty=0;
+  rows.forEach(r=>{
+    const p = DB.produk.find(x=>x.var===r.var);
+    // Prioritas: harga yang dicatat saat transaksi (r.harga) jika ada & > 0
+    // fallback: hitung dari BEP formula
+    const hargaJual = (r.harga && r.harga > 0) ? r.harga
+      : (p ? _hitungHarga(p, params).jual : 0);
+    totalOmset += hargaJual * r.qty;
+    totalQty   += r.qty;
+  });
+  document.getElementById('j-rev').textContent=fmt(totalOmset);
+  document.getElementById('j-tot-qty').textContent=totalQty;
   document.getElementById('j-trx').textContent=rows.length;
-  document.getElementById('j-avg').textContent=fmt(rows.length?Math.round(modal/rows.length):0);
+  document.getElementById('j-avg').textContent=fmt(rows.length?Math.round(totalOmset/rows.length):0);
   document.getElementById('jurnal-body').innerHTML=rows.length?rows.map((r,i)=>{
-    const modalKeluar=r.hpp*r.qty;
+    const p = DB.produk.find(x=>x.var===r.var);
+    const hargaJual = (r.harga && r.harga > 0) ? r.harga
+      : (p ? _hitungHarga(p, params).jual : 0);
+    const omset = hargaJual * r.qty;
     const idx=DB.jurnal.indexOf(r);
-    return `<tr><td class="mono">${i+1}</td><td class="mono">${r.tgl}</td><td>${chTag(r.ch)}</td><td>${r.var}</td><td class="mono" style="text-align:center">${r.qty}</td><td class="mono">${fmt(r.hpp)}</td><td class="mono" style="color:var(--brown);font-weight:600">${fmt(modalKeluar)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="openEditJurnal(${idx})">✏️</button><button class="btn btn-d btn-sm" onclick="deleteJurnal(${idx})">🗑</button></td></tr>`;
+    return `<tr><td class="mono">${i+1}</td><td class="mono">${r.tgl}</td><td>${chTag(r.ch)}</td><td>${r.var}</td><td class="mono" style="text-align:center">${r.qty}</td><td class="mono" style="color:var(--sage);font-weight:600">${fmt(hargaJual)}</td><td class="mono" style="color:var(--brown);font-weight:700">${fmt(omset)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="openEditJurnal(${idx})">✏️</button><button class="btn btn-d btn-sm" onclick="deleteJurnal(${idx})">🗑</button></td></tr>`;
   }).join(''):`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--dusty)">Tidak ada transaksi sesuai filter</td></tr>`;
   // Render target global di bawah tabel
   renderJurnalTargetGlobal();
@@ -2794,7 +2822,7 @@ function renderTokoManager() {
         return t==='semua' || t.split(',').map(x=>x.trim()).includes(ch);
       });
       const jurnalToko = DB.jurnal.filter(j=>j.ch===ch);
-      const omset = jurnalToko.reduce((s,j)=>s+(j.hpp*j.qty),0);
+      const omset = jurnalToko.reduce((s,j)=>s+_jOmset(j),0);
       const qty = jurnalToko.reduce((s,j)=>s+j.qty,0);
       return `<div class="card" style="border-left:3px solid var(--brown)">
         <div style="font-weight:700;font-size:15px;margin-bottom:8px">🏪 ${ch}</div>
