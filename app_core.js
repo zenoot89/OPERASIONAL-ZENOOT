@@ -2591,7 +2591,7 @@ let _resetStokMode = 'per-sku'; // 'per-sku' | 'semua'
 function openModalResetStok() {
   // Populate dropdown SKU Induk
   const sel = document.getElementById('reset-stok-induk-select');
-  const indukList = [...new Set((DB.stok || []).map(s => s.induk).filter(Boolean))].sort();
+  const indukList = [...new Set((DB.produk || []).map(p => p.induk).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">— Pilih SKU Induk —</option>';
   indukList.forEach(ind => {
     const opt = document.createElement('option');
