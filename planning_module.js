@@ -681,7 +681,8 @@ async function renderBiayaOpsGlobal() {
     .bg-form-title{font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
     .bg-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
     .bg-form-grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
-    @media(max-width:660px){.bg-form-grid{grid-template-columns:1fr;}.bg-form-grid4{grid-template-columns:1fr 1fr;}}
+    .bg-main-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:20px;}
+    @media(max-width:860px){.bg-main-grid{grid-template-columns:1fr;}.bg-form-grid{grid-template-columns:1fr;}.bg-form-grid4{grid-template-columns:1fr 1fr;}}
     .bg-field-label{font-size:9px;font-weight:700;color:var(--dusty);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;}
     .bg-input-wrap{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden;transition:border-color .2s;}
     .bg-input-wrap:focus-within{border-color:var(--brown);background:var(--card);}
@@ -727,8 +728,10 @@ async function renderBiayaOpsGlobal() {
       </table>
     </div>
 
+    <!-- SECTION 2+3: Grid horizontal -->
+    <div class="bg-main-grid">
     <!-- SECTION 2: PARAMETER BIAYA -->
-    <div class="bg-form-card">
+    <div class="bg-form-card" style="margin-bottom:0;">
       <div class="bg-form-title">⚙️ Parameter Biaya Global</div>
       <div class="bg-form-grid4">
         <div>
@@ -780,7 +783,7 @@ async function renderBiayaOpsGlobal() {
     </div>
 
     <!-- SECTION 3: NPM & RESELLER PER INDUK -->
-    <div class="bg-form-card">
+    <div class="bg-form-card" style="margin-bottom:0;">
       <div class="bg-sec-title">📊 NPM & Margin Reseller per SKU Induk</div>
       <div class="bg-sec-sub">Atur target laba dan margin reseller per produk. Harga jual di Price List otomatis terhitung dari data ini.</div>
 
@@ -817,6 +820,7 @@ async function renderBiayaOpsGlobal() {
         <button class="bg-save-btn" onclick="window._npmSaveAll()" style="background:var(--sage);">💾 Simpan NPM & Reseller</button>
       </div>
     </div>
+    </div><!-- end bg-main-grid -->
   </div>`;
 
   // State npm lokal untuk edit realtime

@@ -1850,14 +1850,23 @@ function populateJVariasi() {
   onJVariasiChange(); // auto-fill harga saat induk berubah
 }
 
-// Auto-fill harga jual saat variasi dipilih
+// Auto-fill harga jual saat variasi dipilih — dari formula BEP
 function onJVariasiChange() {
   const varName=document.getElementById('j-sku-variasi')?.value;
   const hargaEl=document.getElementById('j-harga');
   if (!hargaEl || !varName) return;
   const p=DB.produk.find(x=>x.var===varName);
-  if (p && p.jual>0) hargaEl.value=p.jual;
-  else if (p && p.hpp>0) hargaEl.value=p.hpp;
+  if (!p) return;
+  // Hitung harga jual dari formula BEP (sama dengan Price List)
+  const params = _getHargaParams();
+  const { jual } = _hitungHarga(p, params);
+  if (jual > 0) {
+    hargaEl.value = jual;
+    hargaEl.style.color = 'var(--sage)';
+    hargaEl.title = 'Harga otomatis dari Price List BEP';
+  } else if (p.hpp > 0) {
+    hargaEl.value = p.hpp;
+  }
 }
 
 function addJurnal() {
@@ -1871,13 +1880,24 @@ function addJurnal() {
   // FIX: ambil harga dari field — fallback ke price list (p.jual), terakhir baru 0
   const hargaInput=+document.getElementById('j-harga')?.value||0;
   const harga=hargaInput>0 ? hargaInput : (p&&p.jual>0 ? p.jual : hpp);
-  DB.jurnal.unshift({uuid: DataLayer._uuid(), tgl, ch, var:varName, qty, harga, hpp});
+  const newEntry = {uuid: DataLayer._uuid(), tgl, ch, var:varName, qty, harga, hpp};
+  DB.jurnal.unshift(newEntry);
   if (!DB.stok.find(x=>x.var===varName)) DB.stok.push({var:varName,awal:0,masuk:0,keluar:0,hpp,safety:4});
   recalcStok();
   document.getElementById('j-qty').value='';
-  const hargaEl=document.getElementById('j-harga'); if(hargaEl) hargaEl.value='';
-  closeModal('modal-tambah-jurnal'); saveDB(); renderJurnal(); renderStok(); renderDashboard();
+  const hargaElC=document.getElementById('j-harga'); if(hargaElC) hargaElC.value='';
+  // POIN 3: tutup modal & render DULU — sync cloud di background
+  closeModal('modal-tambah-jurnal');
+  renderJurnal();
+  renderStok();
+  renderDashboard();
   toast(`✅ ${qty} pcs ${varName} @ ${fmt(harga)} disimpan!`);
+  // Simpan ke localStorage & sync cloud background (tidak blokir UI)
+  saveDB();
+  DataLayer._upsert('jurnal',[{
+    uuid:newEntry.uuid, tgl:newEntry.tgl, ch:newEntry.ch,
+    var:newEntry.var, qty:newEntry.qty, harga:newEntry.harga, hpp:newEntry.hpp
+  }],'uuid').catch(()=>{});
 }
 
 // ═══ JURNAL FILTER STATE ═══
