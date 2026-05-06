@@ -954,7 +954,7 @@ function toast(msg, type='ok') {
 // ================================================================
 // DASHBOARD
 // ================================================================
-function renderDashboard() {
+function _renderDashboardLegacy() {
   const totalStok  = DB.stok.reduce((s,r)=>s+getAkhir(r),0);
   const nilaiStok  = DB.stok.reduce((s,r)=>s+(getAkhir(r)*r.hpp),0);
   const totalRev   = DB.jurnal.reduce((s,r)=>s+(r.hpp*r.qty),0);
