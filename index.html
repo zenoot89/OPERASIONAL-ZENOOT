@@ -441,6 +441,7 @@
     <button class="btn btn-o btn-sm" onclick="syncHargaManual()" id="btn-sync-jurnal" style="height:36px;padding:0 12px;flex-shrink:0;">🔄 Sync</button>
     <select class="sel" id="j-fil-ch" style="height:36px;flex:1;min-width:120px;" onchange="filterJurnalChannel()"><option value="">Semua Channel</option></select>
     <button class="btn btn-p" onclick="openModal('modal-tambah-jurnal')" style="height:36px;padding:0 16px;white-space:nowrap;flex-shrink:0;">➕ Tambah</button>
+    <button class="btn btn-d btn-sm" onclick="openModal('modal-reset-jurnal-stok')" style="height:36px;padding:0 12px;flex-shrink:0;" title="Reset Jurnal & Stok">🗑 Reset</button>
   </div>
   <!-- Baris 2: Reset | Dari | – | Sampai -->
   <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;">
@@ -1035,6 +1036,31 @@
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button class="btn btn-d btn-full" onclick="resetProdukSaja()">🗑 Ya, Reset Produk</button>
       <button class="btn btn-o" onclick="closeModal('modal-reset-produk')">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset Jurnal + Stok -->
+<div class="overlay" id="modal-reset-jurnal-stok">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hd">🗑 Reset Jurnal & Stok <button class="modal-close" onclick="closeModal('modal-reset-jurnal-stok')">×</button></div>
+    <div class="alert al-d" style="margin-bottom:14px;"><span>⚠️</span><div><strong>TIDAK BISA DIBATALKAN.</strong> Semua transaksi jurnal akan dihapus dan angka stok keluar/masuk di-nol-kan. Data Produk, Channel, dan Supplier tetap aman.</div></div>
+    <div style="background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--dusty);">
+      <div style="margin-bottom:6px;">Yang akan di-reset:</div>
+      <div>✅ Jurnal Penjualan — semua transaksi dihapus</div>
+      <div>✅ Stok keluar &amp; masuk — di-nol-kan</div>
+      <div style="margin-top:8px;color:var(--sage);">Yang AMAN (tidak ikut terhapus):</div>
+      <div>🔒 Kelola Produk &amp; HPP</div>
+      <div>🔒 Channel / Toko</div>
+      <div>🔒 Stok Awal (awal tetap)</div>
+    </div>
+    <div class="fg" style="margin-bottom:16px;">
+      <label class="lbl">Ketik <strong>RESET</strong> untuk konfirmasi</label>
+      <input class="inp" id="reset-jurnal-confirm" type="text" placeholder="Ketik RESET" oninput="document.getElementById('btn-confirm-reset-jurnal').disabled=this.value!=='RESET'">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-d btn-full" id="btn-confirm-reset-jurnal" disabled onclick="resetJurnalDanStok()">🗑 Ya, Reset Sekarang</button>
+      <button class="btn btn-o" onclick="closeModal('modal-reset-jurnal-stok');document.getElementById('reset-jurnal-confirm').value='';document.getElementById('btn-confirm-reset-jurnal').disabled=true;">Batal</button>
     </div>
   </div>
 </div>

@@ -2581,6 +2581,47 @@ function resetProdukSaja() {
   renderProduk(); renderHarga(); renderDashboard(); toast('✅ Semua produk dihapus.');
 }
 
+// ── Reset Jurnal + Stok Keluar/Masuk ─────────────────────────────
+async function resetJurnalDanStok() {
+  closeModal('modal-reset-jurnal-stok');
+  document.getElementById('reset-jurnal-confirm').value = '';
+  document.getElementById('btn-confirm-reset-jurnal').disabled = true;
+
+  toast('⏳ Menghapus jurnal & reset stok...', 'info');
+
+  // 1. Kosongkan jurnal di local
+  DB.jurnal = [];
+
+  // 2. Reset keluar & masuk stok (awal tetap)
+  DB.stok.forEach(s => { s.keluar = 0; s.masuk = 0; });
+
+  // 3. Simpan lokal dulu
+  saveDB();
+
+  // 4. Hapus jurnal di Supabase
+  if (SUPABASE_URL) {
+    try {
+      await DataLayer._fetch(`${SUPABASE_URL}/rest/v1/jurnal?id=gte.1`, {
+        method: 'DELETE',
+        headers: DataLayer._headers()
+      });
+    } catch(e) {
+      console.warn('[ZENOOT] Reset jurnal cloud gagal:', e.message);
+    }
+    // Sync stok yang sudah di-reset ke cloud
+    try {
+      await DataLayer._replaceAll('stok', DB.stok);
+    } catch(e) {
+      console.warn('[ZENOOT] Reset stok cloud gagal:', e.message);
+    }
+  }
+
+  renderJurnal();
+  renderStok();
+  renderDashboard();
+  toast('✅ Jurnal & stok berhasil di-reset!');
+}
+
 // ================================================================
 // SYNC STOK
 // ================================================================
