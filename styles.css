@@ -2508,7 +2508,7 @@ thead th {
     overflow-y: auto !important;
     overflow-x: hidden !important;
     padding: 8px 10px !important;
-    padding-top: 46px !important; /* kompensasi hamburger */
+    padding-top: 10px !important;
     padding-bottom: 12px !important;
     height: 100vh !important;
     box-sizing: border-box !important;
@@ -2562,16 +2562,33 @@ thead th {
     border-radius: 10px !important;
   }
 
-  /* thead sticky — nempel ke top .main saat scroll */
+  /* thead sticky — mentok tepat di ujung atas layar saat scroll */
   #page-stok .tbl-wrap thead th,
   #page-jurnal .tbl-wrap thead th,
   #page-produk .tbl-wrap thead th,
   #page-harga .tbl-wrap thead th {
     position: sticky !important;
-    top: 46px !important; /* sama dengan padding-top .main */
+    top: 0 !important;
     z-index: 30 !important;
     background: var(--cream, #f0ebe0) !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,.10) !important;
+    border-bottom: 2px solid var(--border, #d5cfc4) !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,.12) !important;
+  }
+
+  /* Baris pertama tbody — gap visual dari thead */
+  #page-stok tbody tr:first-child td,
+  #page-jurnal tbody tr:first-child td,
+  #page-produk tbody tr:first-child td,
+  #page-harga tbody tr:first-child td {
+    border-top: 1px solid var(--border, #e0dbd0) !important;
+  }
+
+  /* Baris tbody — border bawah tipis elegan */
+  #page-stok tbody tr,
+  #page-jurnal tbody tr,
+  #page-produk tbody tr,
+  #page-harga tbody tr {
+    border-bottom: 1px solid var(--border, #e8e3d8) !important;
   }
 
   /* Tabel isi: baris lebih tinggi, font lebih besar */
