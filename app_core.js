@@ -2670,13 +2670,19 @@ async function eksekusiResetStok() {
     // Hapus jurnal yang var-nya ada di set ini
     DB.jurnal = (DB.jurnal || []).filter(j => !varSet.has(j.var));
 
-    saveDB();
+    // PENTING: hapus juga restock untuk var ini
+    // agar recalcStok() tidak rebuild nilai masuk dari restock lama
+    DB.restock = (DB.restock || []).filter(r => !varSet.has(r.var));
 
-    // Sync ke Supabase
+    // Simpan localStorage dulu (tanpa trigger recalcStok)
+    DataLayer.saveLocal(DB);
+
+    // Sync ke Supabase — stok + jurnal + restock
     if (SUPABASE_URL) {
       try {
         await DataLayer._replaceAll('stok', DB.stok);
       } catch(e) { console.warn('[ZENOOT] Reset stok cloud gagal:', e.message); }
+
       // Hapus jurnal di Supabase untuk var terdampak
       for (const varName of varSet) {
         try {
@@ -2686,7 +2692,20 @@ async function eksekusiResetStok() {
           });
         } catch(e) { console.warn('[ZENOOT] Hapus jurnal cloud gagal untuk var ' + varName + ':', e.message); }
       }
+
+      // Hapus restock di Supabase untuk var terdampak
+      for (const varName of varSet) {
+        try {
+          await DataLayer._fetch(`${SUPABASE_URL}/rest/v1/restock?var=eq.${encodeURIComponent(varName)}`, {
+            method: 'DELETE',
+            headers: DataLayer._headers()
+          });
+        } catch(e) { console.warn('[ZENOOT] Hapus restock cloud gagal untuk var ' + varName + ':', e.message); }
+      }
     }
+
+    // Push DB final ke cloud (sync semua tabel)
+    await pushToCloud();
 
     renderStok();
     renderJurnal();
@@ -2699,9 +2718,11 @@ async function eksekusiResetStok() {
     toast('⏳ Mereset semua stok & jurnal...', 'info');
 
     DB.jurnal = [];
+    DB.restock = []; // hapus juga restock agar recalcStok tidak rebuild nilai masuk
     DB.stok.forEach(s => { s.awal = 0; s.masuk = 0; s.keluar = 0; });
 
-    saveDB();
+    // Simpan localStorage dulu (tanpa trigger recalcStok)
+    DataLayer.saveLocal(DB);
 
     if (SUPABASE_URL) {
       try {
@@ -2711,9 +2732,17 @@ async function eksekusiResetStok() {
         });
       } catch(e) { console.warn('[ZENOOT] Reset jurnal cloud gagal:', e.message); }
       try {
+        await DataLayer._fetch(`${SUPABASE_URL}/rest/v1/restock?id=gte.1`, {
+          method: 'DELETE',
+          headers: DataLayer._headers()
+        });
+      } catch(e) { console.warn('[ZENOOT] Reset restock cloud gagal:', e.message); }
+      try {
         await DataLayer._replaceAll('stok', DB.stok);
       } catch(e) { console.warn('[ZENOOT] Reset stok cloud gagal:', e.message); }
     }
+
+    await pushToCloud();
 
     renderStok();
     renderJurnal();
