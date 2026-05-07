@@ -774,25 +774,24 @@ async function renderDashboard() {
         }
         return pts;
       } else if(mode==='realtime' || (mode==='yesterday' && range.from===range.to && range.from!==todayS)){
-        // Hourly breakdown — works for today (realtime) AND single-day compare (kemarin per jam)
+        // Hourly breakdown — selalu tampil 24 jam penuh (00:00–23:00) kayak Shopee
         const targetDs = range.from;
         const isComp   = targetDs !== todayS;
         const pts=[];
         const j=getJurnalInRange({from:targetDs,to:targetDs});
-        const nowH = isComp ? 23 : new Date().getHours();
-        for(let h=0;h<=nowH;h++){
+        // Selalu loop 24 jam — jam yang belum terjadi nilainya null (tidak digambar)
+        const nowH = new Date().getHours();
+        for(let h=0;h<24;h++){
+          const isFuture = !isComp && h > nowH;
           const jh=j.filter(x=>{
-            // Prioritas: field jam (HH:MM), fallback ke tgl_waktu/waktu lama
             const jamField = x.jam || '';
-            if(jamField){
-              return parseInt(jamField.split(':')[0]||'0') === h;
-            }
+            if(jamField) return parseInt(jamField.split(':')[0]||'0') === h;
             const t=(x.tgl_waktu||x.waktu||'');
             const hh=parseInt((t.split(' ')[1]||'').split(':')[0])||0;
             return hh===h;
           });
-          const val=_metric==='omset'?jh.reduce((s,x)=>s+_dashOmset(x),0):jh.reduce((s,x)=>s+(x.qty||0),0);
-          pts.push({label:`${pad2(h)}:00`,ds:targetDs,val,isToday:!isComp});
+          const val=isFuture ? null : (_metric==='omset'?jh.reduce((s,x)=>s+_dashOmset(x),0):jh.reduce((s,x)=>s+(x.qty||0),0));
+          pts.push({label:`${pad2(h)}:00`,ds:targetDs,val,isToday:!isComp,isFuture});
         }
         return pts;
       } else {
@@ -819,14 +818,14 @@ async function renderDashboard() {
       return _metric==='qty'?fmtNum(v)+' pcs':fmtShort(v);
     }
 
-    // ── Draw dual line chart ──
+    // ── Draw dual line chart — Shopee style ──
     function drawChart(data1, data2){
       const cvs=document.getElementById(CVAS_ID);
       if(!cvs)return;
       const par=cvs.parentElement;
       const W=par?par.clientWidth||500:500;
       const isMobile = W < 500;
-      const H = isMobile ? 160 : 190;
+      const H = isMobile ? 160 : 200;
       cvs.width=W; cvs.height=H;
       const ctx=cvs.getContext('2d');
       ctx.clearRect(0,0,W,H);
@@ -834,86 +833,93 @@ async function renderDashboard() {
       const n=data1.length;
       if(n===0)return;
 
-      // Merge max from both
-      const allVals=[...data1.map(d=>d.val),...data2.map(d=>d.val)];
+      // Hanya hitung max dari nilai non-null
+      const allVals=[...data1.map(d=>d.val??0),...data2.map(d=>d.val??0)];
       const maxV=Math.max(...allVals,1);
-      const pad={t:18,r:20,b:32,l:isMobile?44:54};
+      const pad={t:18,r:16,b:28,l:isMobile?42:52};
       const cw=W-pad.l-pad.r;
       const ch=H-pad.t-pad.b;
       const xOf=i=>pad.l+(n===1?cw/2:(i/(n-1))*cw);
-      const yOf=v=>pad.t+ch-(v/maxV)*ch;
+      const yOf=v=>pad.t+ch-((v??0)/maxV)*ch;
 
-      // Grid
-      ctx.strokeStyle='rgba(180,168,155,0.35)'; ctx.lineWidth=1;
+      // ── Grid lines + Y labels ──
+      ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1;
       [0.25,0.5,0.75,1].forEach(f=>{
         const y=pad.t+ch*(1-f);
         ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
-        ctx.fillStyle='#a09880';ctx.font=`${isMobile?9:10}px sans-serif`;ctx.textAlign='right';
+        ctx.fillStyle='#b0a898';ctx.font=`${isMobile?9:10}px sans-serif`;ctx.textAlign='right';
         const lv=Math.round(maxV*f);
         const ls=_metric==='qty'?(lv>=1000?(lv/1000).toFixed(0)+'K':lv):(lv>=1000000?(lv/1000000).toFixed(1)+'Jt':lv>=1000?(lv/1000).toFixed(0)+'K':lv);
         ctx.fillText(ls,pad.l-6,y+3.5);
       });
 
-      // ── Compare line (abu dashed) ──
-      if(data2.some(d=>d.val>0)){
+      // ── Compare line (kemarin) — abu tipis, hanya jam non-null ──
+      const d2valid = data2.filter(d=>d.val!==null&&d.val>0);
+      if(d2valid.length>0){
         ctx.beginPath();
-        ctx.strokeStyle='#C0B8AF';ctx.lineWidth=1.8;
-        ctx.setLineDash([5,4]);ctx.lineJoin='round';
-        data2.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
-        ctx.stroke();ctx.setLineDash([]);
-        // dots compare
+        ctx.strokeStyle='rgba(180,170,160,0.55)';ctx.lineWidth=1.5;
+        ctx.setLineDash([4,4]);ctx.lineJoin='round';ctx.lineCap='round';
+        let moved2=false;
         data2.forEach((d,i)=>{
-          if(!d.val)return;
-          ctx.beginPath();ctx.arc(xOf(i),yOf(d.val),2.5,0,Math.PI*2);
-          ctx.fillStyle='#B0A898';ctx.fill();
-          ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+          if(d.val===null)return;
+          if(!moved2){ctx.moveTo(xOf(i),yOf(d.val));moved2=true;}
+          else ctx.lineTo(xOf(i),yOf(d.val));
         });
+        ctx.stroke();ctx.setLineDash([]);
       }
 
-      // ── Main fill gradient ──
-      const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-      grad.addColorStop(0,'rgba(184,143,73,0.18)');
-      grad.addColorStop(1,'rgba(184,143,73,0.01)');
-      ctx.beginPath();
-      data1.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
-      ctx.lineTo(xOf(n-1),pad.t+ch);ctx.lineTo(xOf(0),pad.t+ch);ctx.closePath();
-      ctx.fillStyle=grad;ctx.fill();
+      // ── Pisahkan segmen: data aktual vs future ──
+      // Aktual = val !== null, Future = isFuture true (null)
+      const aktualPts = data1.filter(d=>!d.isFuture);
+      const lastAktualIdx = data1.reduce((last,d,i)=>(!d.isFuture?i:last),-1);
 
-      // ── Main gradient fill lebih vivid ──
-      const grad2=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-      grad2.addColorStop(0,'rgba(192,57,43,0.22)');
-      grad2.addColorStop(0.5,'rgba(192,57,43,0.08)');
-      grad2.addColorStop(1,'rgba(192,57,43,0.01)');
-      ctx.beginPath();
-      data1.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
-      ctx.lineTo(xOf(n-1),pad.t+ch);ctx.lineTo(xOf(0),pad.t+ch);ctx.closePath();
-      ctx.fillStyle=grad2;ctx.fill();
-
-      // ── Main line (merah) lebih tebal ──
-      ctx.beginPath();
-      ctx.strokeStyle='#C0392B';ctx.lineWidth=isMobile?2.5:2.8;ctx.lineJoin='round';ctx.lineCap='round';
-      data1.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
-      ctx.stroke();
-
-      // Main dots — lebih besar dan jelas
-      data1.forEach((d,i)=>{
-        if(!d.val&&!d.isToday)return;
-        const r=d.isToday?7:4;
+      // ── Gradient fill bawah garis aktual ──
+      if(aktualPts.length>0){
+        const gradFill=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+        gradFill.addColorStop(0,'rgba(192,57,43,0.18)');
+        gradFill.addColorStop(0.6,'rgba(192,57,43,0.06)');
+        gradFill.addColorStop(1,'rgba(192,57,43,0.00)');
         ctx.beginPath();
-        ctx.arc(xOf(i),yOf(d.val),r,0,Math.PI*2);
-        ctx.fillStyle=d.isToday?'#7B1B0A':'#C0392B';
-        ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
-      });
+        let movedF=false;
+        data1.forEach((d,i)=>{
+          if(d.isFuture)return;
+          if(!movedF){ctx.moveTo(xOf(i),yOf(d.val??0));movedF=true;}
+          else ctx.lineTo(xOf(i),yOf(d.val??0));
+        });
+        if(lastAktualIdx>=0){
+          ctx.lineTo(xOf(lastAktualIdx),pad.t+ch);
+          ctx.lineTo(xOf(data1.findIndex(d=>!d.isFuture)),pad.t+ch);
+        }
+        ctx.closePath();
+        ctx.fillStyle=gradFill;ctx.fill();
+      }
 
-      // ── X Labels — thin out if >14 points ──
-      ctx.fillStyle='#8a8070';ctx.font=`${isMobile?9:10}px sans-serif`;ctx.textAlign='center';
-      const step=n>14?Math.ceil(n/7):1;
+      // ── Garis utama aktual — merah solid ──
+      if(aktualPts.length>0){
+        ctx.beginPath();
+        ctx.strokeStyle='#E8402A';ctx.lineWidth=isMobile?2:2.2;
+        ctx.lineJoin='round';ctx.lineCap='round';
+        let movedM=false;
+        data1.forEach((d,i)=>{
+          if(d.isFuture)return;
+          if(!movedM){ctx.moveTo(xOf(i),yOf(d.val??0));movedM=true;}
+          else ctx.lineTo(xOf(i),yOf(d.val??0));
+        });
+        ctx.stroke();
+      }
+
+      // ── Titik DIHILANGKAN — tidak ada dot sama sekali ──
+
+      // ── X Labels — tampil setiap 3 jam: 00,03,06,09,12,15,18,21 ──
+      ctx.fillStyle='#a09888';ctx.font=`${isMobile?9:10}px sans-serif`;ctx.textAlign='center';
       data1.forEach((d,i)=>{
-        if(i%step!==0&&i!==n-1)return;
-        ctx.fillText(d.label,xOf(i),H-5);
+        const h=parseInt(d.label)||0;
+        if(h%3!==0)return;
+        ctx.fillStyle = d.isFuture?'rgba(160,152,136,0.35)':'#a09888';
+        ctx.fillText(d.label,xOf(i),H-4);
       });
 
-      // ── Hover tooltip (canvas mousemove) ──
+      // ── Store meta untuk tooltip ──
       cvs._data1=data1; cvs._data2=data2;
       cvs._meta={pad,cw,ch,xOf,yOf,n,maxV,W,H};
     }
@@ -982,15 +988,17 @@ async function renderDashboard() {
         let best=-1, bestDist=Infinity;
         d1.forEach((_,i)=>{const dx=Math.abs(xOf(i)-mx);if(dx<bestDist){bestDist=dx;best=i;}});
         if(best<0)return;
+        // Jangan tampil tooltip untuk jam future (null)
+        if(d1[best]?.isFuture) return;
         const ctx=cvs.getContext('2d');
         drawChart(d1,d2);
         const tx=xOf(best);
         ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,.08)';ctx.lineWidth=1;
         ctx.moveTo(tx,pad.t);ctx.lineTo(tx,pad.t+H-pad.b-pad.t);ctx.stroke();
-        const v1=d1[best]?.val||0, v2=d2[best]?.val||0;
+        const v1=d1[best]?.val??0, v2=d2[best]?.val??0;
         const lbl1=d1[best]?.label||'';
         const lines=[lbl1, (_metric==='omset'?'Omset: ':'Qty: ')+fmtVFull(v1)];
-        if(d2.some(d=>d.val>0)) lines.push('Compare: '+fmtVFull(v2));
+        if(d2.some(d=>(d.val??0)>0)) lines.push('Kemarin: '+fmtVFull(v2));
         const fSize=10;
         ctx.font=`${fSize}px sans-serif`;
         const bw=Math.max(...lines.map(l=>ctx.measureText(l).width))+20;
@@ -1022,10 +1030,10 @@ async function renderDashboard() {
       if(!wrap)return;
       const statsEl=wrap.querySelector('.ow-chart-stats');
       if(!statsEl)return;
-      const total1=data1.reduce((s,d)=>s+d.val,0);
-      const total2=data2.reduce((s,d)=>s+d.val,0);
-      const max1=Math.max(...data1.map(d=>d.val),0);
-      const nonZero=data1.filter(d=>d.val>0);
+      const total1=data1.reduce((s,d)=>s+(d.val??0),0);
+      const total2=data2.reduce((s,d)=>s+(d.val??0),0);
+      const max1=Math.max(...data1.map(d=>d.val??0),0);
+      const nonZero=data1.filter(d=>(d.val??0)>0);
       const avg1=nonZero.length?Math.round(total1/nonZero.length):0;
       const diff=total2>0?Math.round((total1-total2)/total2*100):null;
       const diffColor=diff===null?'var(--dusty)':diff>=0?'#2D6A4F':'#C0392B';
