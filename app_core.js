@@ -2584,23 +2584,74 @@ function resetProdukSaja() {
 let _resetStokMode = 'per-sku'; // 'per-sku' | 'semua'
 
 function openModalResetStok() {
-  // Populate dropdown SKU Induk
-  const sel = document.getElementById('reset-stok-induk-select');
+  // Populate checkbox list SKU Induk
   const indukList = [...new Set((DB.produk || []).map(p => p.induk).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">— Pilih SKU Induk —</option>';
-  indukList.forEach(ind => {
-    const opt = document.createElement('option');
-    opt.value = ind;
-    opt.textContent = ind;
-    sel.appendChild(opt);
-  });
+  _renderResetStokCheckboxes(indukList, '');
   // Reset state modal
   _resetStokMode = 'per-sku';
   setResetStokMode('per-sku');
   document.getElementById('reset-stok-confirm').value = '';
   document.getElementById('btn-confirm-reset-stok').disabled = true;
-  document.getElementById('reset-stok-preview').style.display = 'none';
+  const srch = document.getElementById('reset-stok-search');
+  if (srch) srch.value = '';
+  _updateResetStokCount();
   openModal('modal-reset-stok-induk');
+}
+
+function _renderResetStokCheckboxes(indukList, q) {
+  const wrap = document.getElementById('reset-stok-checkbox-list');
+  if (!wrap) return;
+  const filtered = q ? indukList.filter(i => i.toLowerCase().includes(q.toLowerCase())) : indukList;
+  if (filtered.length === 0) {
+    wrap.innerHTML = '<div style="padding:14px;text-align:center;color:var(--dusty);font-size:13px;">Tidak ada SKU ditemukan</div>';
+    return;
+  }
+  wrap.innerHTML = filtered.map(ind => {
+    // Hitung jumlah varian untuk info
+    const varCount = (DB.produk || []).filter(p => p.induk === ind).length;
+    return `<label style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--charcoal);" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+      <input type="checkbox" class="reset-stok-chk" value="${ind}" onchange="_updateResetStokCount()"
+        style="width:16px;height:16px;cursor:pointer;accent-color:var(--brown);">
+      <span style="flex:1;">${ind}</span>
+      <span style="font-size:11px;color:var(--dusty);font-weight:400;">${varCount} varian</span>
+    </label>`;
+  }).join('');
+}
+
+function filterResetStokList() {
+  const q = document.getElementById('reset-stok-search')?.value || '';
+  const indukList = [...new Set((DB.produk || []).map(p => p.induk).filter(Boolean))].sort();
+  _renderResetStokCheckboxes(indukList, q);
+  _updateResetStokCount();
+}
+
+function toggleSelectAllResetStok() {
+  const checkboxes = document.querySelectorAll('.reset-stok-chk');
+  const allChecked = [...checkboxes].every(c => c.checked);
+  checkboxes.forEach(c => { c.checked = !allChecked; });
+  _updateResetStokCount();
+}
+
+function _updateResetStokCount() {
+  const checkboxes = document.querySelectorAll('.reset-stok-chk');
+  const selected = [...checkboxes].filter(c => c.checked);
+  const countEl = document.getElementById('reset-stok-selected-count');
+  const confirmEl = document.getElementById('reset-stok-confirm');
+  const btnEl = document.getElementById('btn-confirm-reset-stok');
+
+  if (countEl) {
+    countEl.textContent = selected.length > 0
+      ? `${selected.length} SKU dipilih — ${selected.map(c=>c.value).join(', ')}`
+      : 'Belum ada yang dipilih';
+    countEl.style.color = selected.length > 0 ? 'var(--rust)' : 'var(--dusty)';
+  }
+
+  // Enable/disable confirm button berdasarkan checkbox + ketik RESET
+  if (confirmEl && btnEl) {
+    const val = confirmEl.value;
+    const modeOk = _resetStokMode === 'per-sku' ? selected.length > 0 : true;
+    btnEl.disabled = !(val === 'RESET' && modeOk);
+  }
 }
 
 function closeModalResetStok() {
@@ -2628,7 +2679,10 @@ function setResetStokMode(mode) {
 }
 
 function onResetIndukChange() {
-  const induk = document.getElementById('reset-stok-induk-select').value;
+  // Digantikan oleh checkbox system — tidak dipakai lagi
+  const induk = '';
+  if (!induk) return;
+  const _UNUSED = document.getElementById('reset-stok-induk-select')?.value;
   const preview = document.getElementById('reset-stok-preview');
   const detail = document.getElementById('reset-stok-preview-detail');
   document.getElementById('reset-stok-confirm').value = '';
@@ -2645,22 +2699,23 @@ function onResetIndukChange() {
 }
 
 function onResetStokConfirmInput() {
-  const val = document.getElementById('reset-stok-confirm').value;
-  const induk = document.getElementById('reset-stok-induk-select').value;
-  let valid = val === 'RESET';
-  if (_resetStokMode === 'per-sku' && !induk) valid = false;
-  document.getElementById('btn-confirm-reset-stok').disabled = !valid;
+  _updateResetStokCount();
 }
 
 async function eksekusiResetStok() {
   if (_resetStokMode === 'per-sku') {
-    const induk = document.getElementById('reset-stok-induk-select').value;
-    if (!induk) return;
+    // Ambil semua SKU induk yang dicentang
+    const checkedBoxes = [...document.querySelectorAll('.reset-stok-chk:checked')];
+    const selectedInduks = checkedBoxes.map(c => c.value).filter(Boolean);
+    if (selectedInduks.length === 0) return;
     closeModalResetStok();
-    toast('⏳ Mereset stok & jurnal untuk SKU ' + induk + '...', 'info');
+    toast('⏳ Mereset stok & jurnal untuk ' + selectedInduks.length + ' SKU...', 'info');
 
-    // Cari semua var yang berasal dari induk ini (dari DB.produk sebagai master data)
-    const varSet = new Set((DB.produk || []).filter(p => p.induk === induk).map(p => p.var));
+    // Kumpulkan semua var dari semua induk yang dipilih
+    const varSet = new Set(
+      (DB.produk || []).filter(p => selectedInduks.includes(p.induk)).map(p => p.var)
+    );
+    const induk = selectedInduks.join(', '); // untuk toast akhir
 
     // Reset stok: awal, masuk, keluar = 0
     DB.stok.forEach(s => {

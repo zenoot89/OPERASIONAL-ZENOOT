@@ -1099,21 +1099,31 @@
       <button class="btn btn-o btn-full" id="btn-mode-semua" onclick="setResetStokMode('semua')">🗑 Reset Semua</button>
     </div>
 
-    <!-- Mode: Per SKU -->
+    <!-- Mode: Per SKU — checkbox list -->
     <div id="reset-stok-per-sku-panel">
       <div class="fg" style="margin-bottom:10px;">
         <label class="lbl">Pilih SKU Induk yang akan di-reset</label>
-        <select class="sel" id="reset-stok-induk-select" style="width:100%" onchange="onResetIndukChange()">
-          <option value="">— Pilih SKU Induk —</option>
-        </select>
+        <!-- Toolbar: cari + pilih semua -->
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <input class="inp" id="reset-stok-search" type="text" placeholder="🔍 Cari SKU..." oninput="filterResetStokList()"
+            style="height:34px;font-size:13px;flex:1;">
+          <button class="btn btn-o btn-sm" onclick="toggleSelectAllResetStok()" id="btn-select-all-stok"
+            style="height:34px;font-size:12px;white-space:nowrap;padding:0 12px;">
+            ✓ Semua
+          </button>
+        </div>
+        <!-- Checkbox list -->
+        <div id="reset-stok-checkbox-list"
+          style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--card);padding:4px 0;">
+          <!-- diisi oleh JS -->
+        </div>
+        <div id="reset-stok-selected-count" style="font-size:12px;color:var(--dusty);margin-top:6px;padding:0 2px;">
+          Belum ada yang dipilih
+        </div>
       </div>
-      <div id="reset-stok-preview" style="background:var(--bg2);border-radius:8px;padding:10px;font-size:13px;color:var(--dusty);margin-bottom:14px;display:none;">
-        <div style="margin-bottom:4px;color:var(--fg);">Yang akan terdampak:</div>
-        <div id="reset-stok-preview-detail"></div>
-        <div style="margin-top:8px;color:var(--sage);">Yang AMAN (tidak ikut terhapus):</div>
-        <div>🔒 Data Produk & HPP</div>
-        <div>🔒 Channel / Toko</div>
-        <div>🔒 SKU Induk lainnya</div>
+      <div id="reset-stok-preview" style="background:var(--bg2);border-radius:8px;padding:10px;font-size:13px;color:var(--dusty);margin-bottom:14px;">
+        <div style="color:var(--sage);">Yang AMAN (tidak ikut terhapus):</div>
+        <div>🔒 Data Produk & HPP &nbsp;·&nbsp; 🔒 Channel / Toko &nbsp;·&nbsp; 🔒 SKU Induk lainnya</div>
       </div>
     </div>
 

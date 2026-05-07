@@ -178,10 +178,24 @@ function _owInjectCSS() {
 .ow-metric-tab.active{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
 .ow-chart-legend{display:flex;align-items:center;gap:16px;font-size:11.5px;color:var(--dusty);margin-top:8px;}
 .ow-legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;}
-.ow-chart-stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-.ow-chart-stat{display:flex;flex-direction:column;gap:2px;}
-.ow-chart-stat-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--dusty);font-weight:700;}
-.ow-chart-stat-val{font-size:15px;font-weight:800;color:var(--charcoal);}
+.ow-chart-stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid var(--border);
+}
+.ow-chart-stat{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  background:var(--cream);
+  border-radius:10px;
+  padding:10px 12px;
+}
+.ow-chart-stat-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--dusty);font-weight:700;margin-bottom:2px;}
+.ow-chart-stat-val{font-size:14px;font-weight:800;color:var(--charcoal);line-height:1.2;}
 .ow-chart-stat-compare{font-size:11px;color:var(--dusty);}
 
 /* Restock items */
@@ -211,7 +225,7 @@ function _owInjectCSS() {
   /* Chart stats */
   .ow-chart-stat-val{font-size:13px;}
   .ow-chart-stat-label{font-size:10px;}
-  .ow-chart-stats{gap:12px;}
+  .ow-chart-stats{grid-template-columns:repeat(2,1fr);gap:8px;}
 
   /* Section title */
   .ow-sec-title{font-size:13px;}
@@ -1183,7 +1197,7 @@ async function renderDashboard() {
           </div>
         </div>
         <div class="ow-col3-card" style="flex:1;padding-bottom:10px;">
-          <canvas id="${CVAS_ID}" style="width:100%;height:130px;display:block;"></canvas>
+          <canvas id="${CVAS_ID}" style="width:100%;height:200px;display:block;"></canvas>
           <div class="ow-chart-legend"></div>
           <div class="ow-chart-stats"></div>
         </div>
