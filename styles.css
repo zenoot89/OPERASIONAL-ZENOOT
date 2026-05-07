@@ -2224,15 +2224,3 @@ button, .btn, .bg-fill-btn, .bg-save-btn {
   table { min-width: 520px; }
   .bg-form-grid4 { grid-template-columns: 1fr !important; }
 }
-
-/* ═══ STICKY HEADER TABEL — Stok, Jurnal, Kelola Produk, Price List ═══ */
-#page-stok thead th,
-#page-jurnal thead th,
-#page-produk thead th,
-#page-harga thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--cream);
-  box-shadow: 0 1px 0 var(--border);
-}
