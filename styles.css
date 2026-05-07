@@ -2473,3 +2473,126 @@ button, .btn, .bg-fill-btn, .bg-save-btn {
     flex-wrap: wrap;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   THEAD HEADER — FONT LEBIH BESAR & WARNA LEBIH JELAS (SEMUA HALAMAN)
+   Berlaku di semua ukuran layar
+════════════════════════════════════════════════════════════════ */
+
+/* Override global thead th — lebih besar, lebih jelas */
+thead th {
+  font-size: 12.5px !important;
+  color: var(--charcoal, #2c2c2c) !important;
+  letter-spacing: 0.8px !important;
+  font-weight: 700 !important;
+  padding: 11px 14px !important;
+  background: var(--cream, #f0ebe0) !important;
+  border-bottom: 2px solid var(--border, #ddd) !important;
+}
+
+/* Khusus tabel-tabel tertentu yang punya override sendiri — ikut disesuaikan */
+#page-toko .tbl-wrap thead tr th {
+  font-size: 12px !important;
+  color: var(--charcoal) !important;
+  font-weight: 700 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LANDSCAPE TABLET/HP — THEAD STICKY ONLY
+   Berlaku: max-width 1024px + orientation landscape
+   Laptop TIDAK terpengaruh (laptop landscape > 1024px umumnya)
+════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) and (orientation: landscape) {
+
+  /* tbl-wrap di 4 halaman frozen: jadikan scroll container */
+  #page-stok .tbl-wrap,
+  #page-jurnal .tbl-wrap,
+  #page-produk .tbl-wrap,
+  #page-harga .tbl-wrap {
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    max-height: calc(100vh - 220px);
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* thead sticky di dalam tbl-wrap landscape */
+  #page-stok .tbl-wrap thead th,
+  #page-jurnal .tbl-wrap thead th,
+  #page-produk .tbl-wrap thead th,
+  #page-harga .tbl-wrap thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,.08) !important;
+  }
+
+  /* Toolbar/freeze-bar di landscape — scroll ikut konten (tidak freeze) */
+  .freeze-bar {
+    position: static !important;
+  }
+
+  /* Page landscape: overflow-y auto, tidak fixed height */
+  #page-stok,
+  #page-jurnal,
+  #page-produk,
+  #page-harga {
+    height: auto !important;
+    overflow: visible !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+  }
+
+  /* Main landscape: izinkan scroll */
+  .main {
+    overflow-y: auto !important;
+  }
+
+  /* Freeze bar landscape: lebih compact */
+  .freeze-bar {
+    padding-bottom: 8px !important;
+  }
+
+  /* Jurnal stat cards landscape — tetap 4 kolom tapi lebih compact */
+  #page-jurnal .freeze-bar .grid4 {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  #page-jurnal .freeze-bar .stat {
+    padding: 10px 12px !important;
+  }
+  #page-jurnal .freeze-bar .stat-val {
+    font-size: 15px !important;
+  }
+
+  /* Scroll smooth di semua halaman landscape */
+  .tbl-wrap {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Scrollbar landscape — tipis & smooth */
+@media (max-width: 1024px) and (orientation: landscape) {
+  #page-stok .tbl-wrap::-webkit-scrollbar,
+  #page-jurnal .tbl-wrap::-webkit-scrollbar,
+  #page-produk .tbl-wrap::-webkit-scrollbar,
+  #page-harga .tbl-wrap::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  #page-stok .tbl-wrap::-webkit-scrollbar-thumb,
+  #page-jurnal .tbl-wrap::-webkit-scrollbar-thumb,
+  #page-produk .tbl-wrap::-webkit-scrollbar-thumb,
+  #page-harga .tbl-wrap::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,.18);
+    border-radius: 4px;
+  }
+  #page-stok .tbl-wrap::-webkit-scrollbar-track,
+  #page-jurnal .tbl-wrap::-webkit-scrollbar-track,
+  #page-produk .tbl-wrap::-webkit-scrollbar-track,
+  #page-harga .tbl-wrap::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
