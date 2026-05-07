@@ -782,6 +782,11 @@ async function renderDashboard() {
         const nowH = isComp ? 23 : new Date().getHours();
         for(let h=0;h<=nowH;h++){
           const jh=j.filter(x=>{
+            // Prioritas: field jam (HH:MM), fallback ke tgl_waktu/waktu lama
+            const jamField = x.jam || '';
+            if(jamField){
+              return parseInt(jamField.split(':')[0]||'0') === h;
+            }
             const t=(x.tgl_waktu||x.waktu||'');
             const hh=parseInt((t.split(' ')[1]||'').split(':')[0])||0;
             return hh===h;

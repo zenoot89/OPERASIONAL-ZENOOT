@@ -163,7 +163,7 @@ const DataLayer = {
       // Jurnal — upsert by uuid (aman multi device)
       // FIX: jurnal lama tanpa uuid di-generate uuid-nya, bukan dibuang
       const jurnalRows = (data.jurnal || []).map(j => ({
-        uuid: j.uuid || this._uuid(), tgl: j.tgl, ch: j.ch, var: j.var,
+        uuid: j.uuid || this._uuid(), tgl: j.tgl, jam: j.jam||'', ch: j.ch, var: j.var,
         qty: j.qty || 1, harga: j.harga || 0, hpp: j.hpp || 0
       })).filter(j => j.tgl && j.var); // minimal harus ada tgl dan var
       if (jurnalRows.length > 0) await this._upsert('jurnal', jurnalRows, 'uuid');
@@ -213,7 +213,7 @@ const DataLayer = {
           jurnal: jurnal
             .map(j => ({
               sid: j.id, uuid: j.uuid,
-              tgl: j.tgl, ch: j.ch, var: j.var,
+              tgl: j.tgl, jam: j.jam||'', ch: j.ch, var: j.var,
               qty: j.qty, harga: Number(j.harga), hpp: Number(j.hpp)
             })),
           restock: restock
@@ -2068,7 +2068,10 @@ function addJurnal() {
   const harga=hargaInput>0 ? hargaInput : (p&&p.jual>0 ? p.jual : hpp);
   // sid = microsecond timestamp — dipakai sort agar entry baru selalu di atas jika tgl sama
   const sid = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-  const newEntry = {uuid: DataLayer._uuid(), sid, tgl, ch, var:varName, qty, harga, hpp, _saving: true};
+  // jam = "HH:MM" local time — dipakai buildSeries untuk breakdown per jam di chart realtime
+  const _nowLocal = new Date();
+  const jam = String(_nowLocal.getHours()).padStart(2,'0') + ':' + String(_nowLocal.getMinutes()).padStart(2,'0');
+  const newEntry = {uuid: DataLayer._uuid(), sid, tgl, jam, ch, var:varName, qty, harga, hpp, _saving: true};
   DB.jurnal.unshift(newEntry);
   if (!DB.stok.find(x=>x.var===varName)) DB.stok.push({var:varName,awal:0,masuk:0,keluar:0,hpp,safety:4});
   recalcStok();
@@ -2104,7 +2107,7 @@ function addJurnal() {
   // 4. Sync cloud background — update indikator setelah selesai
   const syncStart = Date.now();
   DataLayer._upsert('jurnal',[{
-    uuid:newEntry.uuid, sid:newEntry.sid, tgl:newEntry.tgl, ch:newEntry.ch,
+    uuid:newEntry.uuid, sid:newEntry.sid, tgl:newEntry.tgl, jam:newEntry.jam, ch:newEntry.ch,
     var:newEntry.var, qty:newEntry.qty, harga:newEntry.harga, hpp:newEntry.hpp
   }],'uuid').then(()=>{
     // Berhasil — restore tombol aksi normal
@@ -2126,7 +2129,7 @@ function addJurnal() {
     // Retry sync setelah 5 detik
     setTimeout(()=>{
       DataLayer._upsert('jurnal',[{
-        uuid:newEntry.uuid, sid:newEntry.sid, tgl:newEntry.tgl, ch:newEntry.ch,
+        uuid:newEntry.uuid, sid:newEntry.sid, tgl:newEntry.tgl, jam:newEntry.jam, ch:newEntry.ch,
         var:newEntry.var, qty:newEntry.qty, harga:newEntry.harga, hpp:newEntry.hpp
       }],'uuid').catch(()=>{});
     }, 5000);
@@ -2398,7 +2401,7 @@ function saveEditJurnal() {
   // Sync edit ke Supabase
   if (uuid && SUPABASE_URL) {
     const j=DB.jurnal[idx];
-    DataLayer._upsert('jurnal',[{uuid,tgl:j.tgl,ch:j.ch,var:j.var,qty:j.qty,harga:j.harga,hpp:j.hpp}],'uuid').catch(e=>console.warn('Edit jurnal gagal sync:',e));
+    DataLayer._upsert('jurnal',[{uuid,tgl:j.tgl,jam:j.jam||'',ch:j.ch,var:j.var,qty:j.qty,harga:j.harga,hpp:j.hpp}],'uuid').catch(e=>console.warn('Edit jurnal gagal sync:',e));
   }
   closeModal('modal-edit-jurnal'); saveDB(); renderJurnal(); renderStok(); renderDashboard(); toast('✅ Transaksi diperbarui!');
 }
