@@ -1157,8 +1157,12 @@
     <div class="modal-hd">📋 Import dari Google Sheets <button class="modal-close" onclick="closeImportSheets()">×</button></div>
     <div id="import-step-1">
       <p style="font-size:13px;color:var(--dusty);margin:0 0 10px">Di Google Sheets, pilih semua data → Ctrl+C → Paste di bawah ini.</p>
-      <div style="background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--dusty)">Kolom yang dikenali: <strong>SKU</strong>, <strong>VARIANT</strong>, <strong>HPP</strong>, <strong>SUPLAIER</strong></div>
-      <textarea id="import-paste-area" class="inp" rows="8" style="width:100%;font-family:monospace;font-size:12px;resize:vertical" placeholder="Paste data dari Google Sheets di sini..."></textarea>
+      <div style="background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--dusty)">
+        💡 <strong>Tanpa header</strong>: langsung paste isi data. Urutan kolom: <strong>Induk → Variasi → HPP → Suplaier</strong><br>
+        <span style="color:var(--sage);">Atau dengan header</span>: baris pertama berisi <strong>SKU, VARIANT, HPP, SUPLAIER</strong> (auto-detect)
+      </div>
+      <textarea id="import-paste-area" class="inp" rows="8" style="width:100%;font-family:monospace;font-size:12px;resize:vertical"
+        placeholder="Contoh tanpa header (langsung paste):&#10;MAYRA&#9;MAYRA_HITAM&#9;25000&#9;ALAN&#10;MAYRA&#9;MAYRA_PUTIH&#9;25000&#9;ALAN&#10;&#10;Atau 1 baris saja:&#10;TURTLENECK&#9;TN_ARMY_XL&#9;41000&#9;ALAN"></textarea>
       <div style="display:flex;gap:10px;margin-top:12px;">
         <button class="btn btn-p btn-full" onclick="parseImportSheets()">🔍 Preview Data</button>
         <button class="btn btn-o" onclick="closeImportSheets()">Batal</button>
@@ -1268,8 +1272,8 @@
 
 <!-- Edit Produk -->
 <div class="overlay" id="modal-edit-produk">
-  <div class="modal">
-    <div class="modal-hd">Edit Produk <button class="modal-close" onclick="closeModal('modal-edit-produk')">×</button></div>
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-hd">✏️ Edit Produk <button class="modal-close" onclick="closeModal('modal-edit-produk')">×</button></div>
     <input type="hidden" id="ep-idx">
     <div class="form-row">
       <div class="fg"><label class="lbl">SKU Induk</label><input class="inp" id="ep-induk"></div>
@@ -1290,9 +1294,56 @@
         </select>
       </div>
     </div>
-    <div style="display:flex;gap:10px;">
+
+    <!-- Aksi utama -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
       <button id="ep-btn-save" class="btn btn-p btn-full" onclick="saveEditProduk()">💾 Simpan</button>
-      <button class="btn btn-d" onclick="closeModal('modal-edit-produk')">Batal</button>
+      <button class="btn btn-o" onclick="closeModal('modal-edit-produk')">Batal</button>
+    </div>
+
+    <!-- Divider -->
+    <div style="border-top:1px solid var(--border);margin:4px 0 12px;"></div>
+
+    <!-- Aksi lanjutan -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="btn btn-s btn-full" onclick="openTambahVarianDariEdit()" style="font-size:12px;">
+        ➕ Tambah Varian Baru
+      </button>
+      <button class="btn btn-d btn-full" onclick="hapusProdukDariEdit()" style="font-size:12px;">
+        🗑 Hapus Varian Ini
+      </button>
+    </div>
+    <div style="font-size:11px;color:var(--dusty);margin-top:6px;text-align:center;">
+      Tambah varian baru ke SKU Induk yang sama · Hapus hanya varian ini
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tambah Varian dari Edit -->
+<div class="overlay" id="modal-tambah-varian">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-hd">➕ Tambah Varian Baru <button class="modal-close" onclick="closeModal('modal-tambah-varian')">×</button></div>
+    <input type="hidden" id="tv-induk-ref">
+    <div style="background:var(--cream);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--dusty);margin-bottom:14px;">
+      SKU Induk: <strong id="tv-induk-label" style="color:var(--charcoal);"></strong>
+    </div>
+    <div class="fg" style="margin-bottom:10px;">
+      <label class="lbl">Nama Variasi Baru <span style="color:var(--rust)">*</span></label>
+      <input class="inp" id="tv-variasi" placeholder="Contoh: MAYRA_HITAM_XL" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="form-row">
+      <div class="fg">
+        <label class="lbl">HPP / pc</label>
+        <input class="inp" type="number" id="tv-hpp" placeholder="0">
+      </div>
+      <div class="fg">
+        <label class="lbl">Suplaier</label>
+        <input class="inp" id="tv-suplaier">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-p btn-full" onclick="saveTambahVarian()">✅ Tambah Varian</button>
+      <button class="btn btn-o" onclick="closeModal('modal-tambah-varian')">Batal</button>
     </div>
   </div>
 </div>

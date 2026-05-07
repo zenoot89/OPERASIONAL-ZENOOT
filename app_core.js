@@ -2533,6 +2533,70 @@ async function saveEditProduk() {
   closeModal('modal-edit-produk'); saveDB(); renderProduk(); renderHarga();
   toast('Produk diperbarui!');
 }
+
+// ── Hapus Varian dari modal Edit ────────────────────────────────────────
+async function hapusProdukDariEdit() {
+  const idx = +document.getElementById('ep-idx').value;
+  const r = DB.produk[idx];
+  if (!r) return;
+  if (!confirm(`Hapus varian "${r.var}" secara permanen?\nData stok dan jurnal terkait TIDAK ikut terhapus.`)) return;
+  closeModal('modal-edit-produk');
+  const varKey = r.var;
+  if (SUPABASE_URL) {
+    try { await DataLayer._deleteByKey('produk','var',varKey); }
+    catch(e) { toast('Gagal hapus dari cloud: '+e.message,'err'); return; }
+  }
+  DB.produk.splice(idx,1);
+  saveDB(); renderProduk(); renderHarga();
+  toast('✅ Varian '+varKey+' dihapus!');
+}
+
+// ── Buka modal Tambah Varian dari Edit ──────────────────────────────────
+function openTambahVarianDariEdit() {
+  const idx = +document.getElementById('ep-idx').value;
+  const r = DB.produk[idx];
+  if (!r) return;
+  // Pre-fill induk dari produk yang sedang diedit
+  document.getElementById('tv-induk-ref').value   = r.induk;
+  document.getElementById('tv-induk-label').textContent = r.induk;
+  document.getElementById('tv-variasi').value     = '';
+  document.getElementById('tv-hpp').value         = r.hpp || '';
+  document.getElementById('tv-suplaier').value    = r.suplaier || '';
+  closeModal('modal-edit-produk');
+  openModal('modal-tambah-varian');
+}
+
+// ── Simpan Varian Baru ───────────────────────────────────────────────────
+async function saveTambahVarian() {
+  const induk    = document.getElementById('tv-induk-ref').value.trim().toUpperCase();
+  const varVal   = document.getElementById('tv-variasi').value.trim().toUpperCase();
+  const hpp      = parseFloat(document.getElementById('tv-hpp').value) || 0;
+  const suplaier = document.getElementById('tv-suplaier').value.trim().toUpperCase();
+
+  if (!varVal) { toast('Nama variasi tidak boleh kosong!','err'); return; }
+  if (DB.produk.find(p => p.var.toUpperCase() === varVal)) {
+    toast('⚠️ Variasi "'+varVal+'" sudah ada!','err'); return;
+  }
+
+  const newProd = { induk, var:varVal, hpp, suplaier, npm:10, jual:0, pasang:0, reseller:0, gm:0, status_produk:'aktif', toko:'semua' };
+  DB.produk.push(newProd);
+
+  // Tambah stok entry kosong
+  if (!DB.stok.find(s => s.var === varVal)) {
+    DB.stok.push({ var:varVal, awal:0, masuk:0, keluar:0, hpp, safety:4 });
+  }
+
+  if (SUPABASE_URL) {
+    try {
+      await DataLayer._upsert('produk',[{var:newProd.var,induk:newProd.induk,hpp:newProd.hpp,suplaier:newProd.suplaier,status_produk:'aktif',toko:'semua'}],'var');
+      await DataLayer._replaceAll('stok', DB.stok);
+    } catch(e) { toast('⚠️ Tersimpan lokal, sync cloud gagal: '+e.message,'err'); }
+  }
+
+  closeModal('modal-tambah-varian');
+  saveDB(); renderProduk(); renderStok(); renderHarga();
+  toast('✅ Varian '+varVal+' berhasil ditambahkan ke '+induk+'!');
+}
 async function arsipProduk(idx) {
   if (!confirm('Arsipkan produk "'+DB.produk[idx].var+'"? Produk tidak akan tampil di operasional tapi data tetap tersimpan.')) return;
   DB.produk[idx].status_produk = 'arsip';
@@ -2971,25 +3035,89 @@ function closeImportSheets() {
   importParsedRows=[]; importColMap={};
 }
 function parseImportSheets() {
-  const raw=document.getElementById('import-paste-area').value.trim();
+  const raw = document.getElementById('import-paste-area').value.trim();
   if (!raw) { toast('Paste dulu data dari Sheets!','err'); return; }
-  const lines=raw.split('\n').map(l=>l.split('\t').map(c=>c.trim()));
-  if (lines.length<2) { toast('Data terlalu sedikit','err'); return; }
-  const headers=lines[0].map(h=>h.toUpperCase().replace(/\s+/g,' '));
-  const aliases={induk:['SKU','NAMA PRODUK','PRODUK','INDUK','NAMA'],var:['VARIANT','VARIASI','SKU VARIASI','VARIAN'],hpp:['HPP','MODAL','COST','HARGA POKOK'],suplaier:['SUPLAIER','SUPPLIER','VENDOR']};
-  importColMap={};
-  for (const [field,names] of Object.entries(aliases)) { const idx=headers.findIndex(h=>names.includes(h)); if(idx!==-1)importColMap[field]=idx; }
-  if (importColMap.induk===undefined&&importColMap.var===undefined) { toast('Tidak menemukan kolom SKU atau VARIANT','err'); return; }
-  importParsedRows=lines.slice(1);
-  document.getElementById('import-step-1').style.display='none';
-  document.getElementById('import-step-2').style.display='';
-  document.getElementById('import-mapping-area').innerHTML=`<p style="font-size:12px;color:var(--dusty);margin:0 0 8px"><strong>Kolom terdeteksi:</strong> ${Object.entries({induk:'SKU Induk',var:'Variasi',hpp:'HPP',suplaier:'Suplaier'}).map(([f,l])=>`${l}: <strong>${importColMap[f]!==undefined?headers[importColMap[f]]:'—'}</strong>`).join(' · ')}</p>`;
-  const getCol=(row,field)=>importColMap[field]!==undefined?(row[importColMap[field]]||''):'';
-  let baru=0,dup=0;
-  const html=importParsedRows.slice(0,8).map((row,i)=>{const induk=getCol(row,'induk').toUpperCase();const varVal=getCol(row,'var').toUpperCase();const hpp=getCol(row,'hpp').replace(/[.,]/g,'').replace(/[^\d]/g,'');const isDup=!!DB.produk.find(p=>p.var.toUpperCase()===varVal);isDup?dup++:baru++;return `<tr><td style="padding:5px 8px">${i+1}</td><td style="padding:5px 8px">${induk||'—'}</td><td style="padding:5px 8px">${varVal||'—'}</td><td style="padding:5px 8px">${hpp?parseInt(hpp).toLocaleString('id'):'-'}</td><td style="padding:5px 8px"><span class="badge ${isDup?'br':'bg'}">${isDup?'Ada':'Baru'}</span></td></tr>`;}).join('');
-  document.getElementById('import-preview-head').innerHTML='<th>No</th><th>Induk</th><th>Variasi</th><th>HPP</th><th>Status</th>';
-  document.getElementById('import-preview-body').innerHTML=html;
-  document.getElementById('import-summary').innerHTML=`Total: <strong>${importParsedRows.length}</strong> baris · Baru: <strong style="color:var(--sage)">${baru}</strong> · Duplikat: <strong style="color:var(--rust)">${dup}</strong>`;
+
+  const allLines = raw.split('\n').map(l => l.split('\t').map(c => c.trim())).filter(l => l.some(c => c));
+  if (allLines.length < 1) { toast('Paste dulu data dari Sheets!','err'); return; }
+
+  // ── Auto-detect: apakah baris pertama adalah header? ──
+  // Header = baris pertama mengandung kata seperti SKU/VARIANT/HPP/SUPPLIER
+  const headerKeywords = ['SKU','VARIANT','VARIASI','HPP','SUPLAIER','SUPPLIER','VARIAN','INDUK','PRODUK','MODAL','COST'];
+  const firstRowUpper = allLines[0].map(c => c.toUpperCase().replace(/\s+/g,' '));
+  const isHeader = firstRowUpper.some(c => headerKeywords.includes(c));
+
+  const aliases = {
+    induk    : ['SKU','NAMA PRODUK','PRODUK','INDUK','NAMA'],
+    var      : ['VARIANT','VARIASI','SKU VARIASI','VARIAN'],
+    hpp      : ['HPP','MODAL','COST','HARGA POKOK'],
+    suplaier : ['SUPLAIER','SUPPLIER','VENDOR']
+  };
+
+  importColMap = {};
+
+  if (isHeader) {
+    // Ada header — map kolom dari header
+    const headers = firstRowUpper;
+    for (const [field, names] of Object.entries(aliases)) {
+      const idx = headers.findIndex(h => names.includes(h));
+      if (idx !== -1) importColMap[field] = idx;
+    }
+    importParsedRows = allLines.slice(1);
+  } else {
+    // Tidak ada header — auto-assign by position
+    // Format: Kolom 0=Induk, 1=Variasi, 2=HPP, 3=Suplaier (opsional)
+    // Atau 1 kolom saja = Variasi (induk=sama dengan variasi atau dikosongkan)
+    const cols = allLines[0].length;
+    if (cols === 1) {
+      // 1 kolom: anggap sebagai Variasi saja, Induk dikosongkan
+      importColMap = { var: 0 };
+    } else if (cols === 2) {
+      // 2 kolom: Induk, Variasi
+      importColMap = { induk: 0, var: 1 };
+    } else if (cols === 3) {
+      // 3 kolom: Induk, Variasi, HPP
+      importColMap = { induk: 0, var: 1, hpp: 2 };
+    } else {
+      // 4+ kolom: Induk, Variasi, HPP, Suplaier
+      importColMap = { induk: 0, var: 1, hpp: 2, suplaier: 3 };
+    }
+    importParsedRows = allLines;
+  }
+
+  if (importColMap.induk === undefined && importColMap.var === undefined) {
+    toast('Tidak bisa membaca data — pastikan format: Induk [TAB] Variasi [TAB] HPP','err');
+    return;
+  }
+
+  const getCol = (row, field) => importColMap[field] !== undefined ? (row[importColMap[field]] || '') : '';
+
+  let baru = 0, dup = 0;
+  const html = importParsedRows.slice(0, 8).map((row, i) => {
+    const induk  = getCol(row,'induk').toUpperCase();
+    const varVal = getCol(row,'var').toUpperCase();
+    const hpp    = getCol(row,'hpp').replace(/[.,]/g,'').replace(/[^\d]/g,'');
+    const isDup  = !!DB.produk.find(p => p.var.toUpperCase() === varVal);
+    isDup ? dup++ : baru++;
+    return `<tr>
+      <td style="padding:5px 8px">${i+1}</td>
+      <td style="padding:5px 8px">${induk||'—'}</td>
+      <td style="padding:5px 8px">${varVal||'—'}</td>
+      <td style="padding:5px 8px">${hpp ? parseInt(hpp).toLocaleString('id') : '-'}</td>
+      <td style="padding:5px 8px"><span class="badge ${isDup?'br':'bg'}">${isDup?'Ada':'Baru'}</span></td>
+    </tr>`;
+  }).join('');
+
+  const modeLabel = isHeader ? 'Header terdeteksi otomatis' : 'Mode tanpa header — urutan: Induk · Variasi · HPP · Suplaier';
+  document.getElementById('import-mapping-area').innerHTML =
+    `<p style="font-size:12px;color:var(--dusty);margin:0 0 8px">ℹ️ ${modeLabel}</p>`;
+  document.getElementById('import-preview-head').innerHTML = '<th>No</th><th>Induk</th><th>Variasi</th><th>HPP</th><th>Status</th>';
+  document.getElementById('import-preview-body').innerHTML = html;
+  document.getElementById('import-summary').innerHTML =
+    `Total: <strong>${importParsedRows.length}</strong> baris · Baru: <strong style="color:var(--sage)">${baru}</strong> · Duplikat: <strong style="color:var(--rust)">${dup}</strong>`;
+
+  document.getElementById('import-step-1').style.display = 'none';
+  document.getElementById('import-step-2').style.display = '';
 }
 function backImportStep1() { document.getElementById('import-step-1').style.display='';document.getElementById('import-step-2').style.display='none'; }
 async function doImportSheets() {
