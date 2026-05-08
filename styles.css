@@ -2868,13 +2868,13 @@ thead th {
 /* ════════════════════════════════════════════════════════════════
    KELOLA PRODUK — HEADER BAR
 ════════════════════════════════════════════════════════════════ */
-.produk-bar-row1 {
+.produk-bar-row2 {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
-.produk-filter-btn {
+.produk-sort-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2888,8 +2888,15 @@ thead th {
   border-radius: 8px;
   cursor: pointer;
   transition: all .15s;
+  white-space: nowrap;
 }
-.produk-filter-btn:hover { background: var(--linen); border-color: var(--brown); }
+.produk-sort-btn:hover { background: var(--linen); border-color: var(--brown); }
+.produk-sort-btn.sort-active {
+  background: var(--brown);
+  border-color: var(--brown);
+  color: #fff;
+}
+.produk-sort-btn.sort-active svg { stroke: #fff; }
 .produk-filter-dot {
   width: 7px; height: 7px;
   background: var(--gold);
@@ -2905,16 +2912,11 @@ thead th {
   border-bottom: 1px solid var(--border);
   margin-bottom: 8px;
 }
-.produk-filter-search,
-.produk-filter-sel {
-  width: 100%;
-  font-size: 13px;
-}
-.produk-bar-row2 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
+.produk-filter-sel { width: 100%; font-size: 13px; }
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
 }
 .produk-edit-btn {
   background: var(--charcoal);
@@ -3061,9 +3063,30 @@ thead th {
 /* ════════════════════════════════════════════════════════════════
    SPLIT VIEW PANEL STYLES
 ════════════════════════════════════════════════════════════════ */
-/* ════════════════════════════════════════════════════════════════
-   SPLIT VIEW PANEL STYLES
-════════════════════════════════════════════════════════════════ */
+
+/* Tombol minimize/expand per group induk */
+.produk-collapse-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+  color: var(--dusty);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.produk-collapse-btn:hover {
+  background: var(--linen);
+  border-color: var(--brown);
+  color: var(--brown);
+}
+.produk-collapse-btn svg { transition: transform .2s ease; }
+.produk-collapse-btn.expanded svg { transform: rotate(180deg); }
+
+/* Baris varian tersembunyi */
+.produk-var-hidden { display: none !important; }
 
 /* Active row highlight ketika split panel terbuka */
 .produk-var-row.produk-split-active {

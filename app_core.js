@@ -2467,10 +2467,25 @@ function deleteJurnal(idx) {
 // ================================================================
 let produkQ='';
 let produkStatusFilter='semua';
-let produkSkuFilter=''; // filter by SKU induk
-let produkSelectedVars=new Set(); // Set of selected SKU Variasi
-let _produkEditMode = false; // Checkbox mode aktif/tidak
-let _produkDisplayRows=[]; // current displayed rows (for index lookup)
+let produkSkuFilter='';
+let produkSelectedVars=new Set();
+let _produkEditMode = false;
+let _produkDisplayRows=[];
+let _produkExpandedGroups=new Set(); // default: semua collapsed
+
+function toggleProdukGroup(induk) {
+  if(_produkExpandedGroups.has(induk)){
+    _produkExpandedGroups.delete(induk);
+  } else {
+    _produkExpandedGroups.add(induk);
+  }
+  // Toggle class langsung di DOM — tanpa full re-render
+  const btn = document.querySelector(`.produk-group-header[data-induk="${induk}"] .produk-collapse-btn`);
+  const varRows = document.querySelectorAll(`.produk-var-row[data-induk="${induk}"]`);
+  const isNowExpanded = _produkExpandedGroups.has(induk);
+  if(btn) btn.classList.toggle('expanded', isNowExpanded);
+  varRows.forEach(tr => tr.classList.toggle('produk-var-hidden', !isNowExpanded));
+}
 
 function filterProdukStatus(v){produkStatusFilter=v;_updateProdukFilterDot();renderProduk();}
 function filterProdukBySku(v){produkSkuFilter=v;_updateProdukFilterDot();renderProduk();}
@@ -2485,9 +2500,11 @@ function _updateProdukFilterDot(){
 
 function toggleProdukFilterPanel(){
   const panel = document.getElementById('produk-filter-panel');
+  const btn = document.getElementById('produk-sort-btn');
   if(!panel) return;
   const open = panel.style.display !== 'none';
   panel.style.display = open ? 'none' : 'flex';
+  if(btn) btn.classList.toggle('sort-active', !open);
 }
 
 function _populateProdukSkuDropdown(){
@@ -2500,42 +2517,63 @@ function _populateProdukSkuDropdown(){
 }
 
 
-// ── Status Produk OTOMATIS (tidak bisa diubah manual) ──
-// Aturan standar industri retail:
-// AKTIF      → terjual dalam 30 hari terakhir & stok > safety
-// SLOW       → tidak terjual 31–60 hari, stok masih ada
-// DEADSTOCK  → tidak terjual >60 hari, stok menumpuk
-// CLEARANCE  → stok ≤ safety stock (menipis)
-// NO STOCK   → stok = 0
-function computeProdukStatus(varName) {
-  const stok = DB.stok.find(s => s.var === varName);
-  const qty = stok ? ((stok.awal||0) + (stok.masuk||0) - (stok.keluar||0)) : 0;
-  const safety = stok ? (stok.safety || 0) : 0;
+// ── Status Produk OTOMATIS per SKU INDUK ──
+// ✅ Aktif     → terjual ≥5 pc dalam 30 hari
+// ⚠️ Slow      → terjual <5 pc dalam 60 hari (tapi ada penjualan)
+// 🔴 Deadstock → tidak terjual sama sekali >60 hari, stok > safety
+// 🏷️ Clearance → tidak terjual sama sekali >60 hari, stok ≤ safety
+// ⬜ No Stock  → total stok semua varian = 0
+// Prioritas terbaik: Aktif > Slow > Deadstock > Clearance > No Stock
 
-  if (qty <= 0) return 'nostock';
+const _STATUS_RANK = { aktif:5, slow:4, deadstock:3, clearance:2, nostock:1 };
 
-  // Hitung hari terakhir terjual dari jurnal
+function computeIndukStatus(indukName) {
+  const vars = (DB.produk||[]).filter(p=>p.induk===indukName);
+  if(!vars.length) return 'nostock';
+
+  // Hitung total stok & safety per induk
+  let totalStok = 0, totalSafety = 0;
+  vars.forEach(v=>{
+    const s = DB.stok.find(x=>x.var===v.var);
+    if(s){
+      totalStok += (s.awal||0)+(s.masuk||0)-(s.keluar||0);
+      totalSafety += (s.safety||0);
+    }
+  });
+  if(totalStok <= 0) return 'nostock';
+
+  // Hitung total terjual per induk dalam 30 & 60 hari
   const now = Date.now();
-  const jurnalVar = (DB.jurnal || []).filter(j =>
-    (j.var || '').toUpperCase() === varName.toUpperCase() && j.qty > 0
-  );
-  let daysSinceLastSale = 999;
-  if (jurnalVar.length > 0) {
-    const lastSaleTs = Math.max(...jurnalVar.map(j => {
-      if (!j.tgl) return 0;
-      return new Date(j.tgl).getTime();
-    }));
-    if (lastSaleTs > 0) daysSinceLastSale = Math.floor((now - lastSaleTs) / 86400000);
-  }
+  const ms30 = 30*86400000, ms60 = 60*86400000;
+  let sold30=0, sold60=0, lastSaleTs=0;
+  (DB.jurnal||[]).forEach(j=>{
+    const varObj = vars.find(v=>v.var===j.var);
+    if(!varObj || !j.qty || j.qty<=0) return;
+    const ts = j.tgl ? new Date(j.tgl).getTime() : 0;
+    if(!ts) return;
+    if(ts > lastSaleTs) lastSaleTs = ts;
+    const age = now - ts;
+    if(age <= ms30) sold30 += j.qty;
+    if(age <= ms60) sold60 += j.qty;
+  });
 
-  if (qty <= safety) return 'clearance';
-  if (daysSinceLastSale <= 30) return 'aktif';
-  if (daysSinceLastSale <= 60) return 'slow';
-  return 'deadstock';
+  const daysSinceSale = lastSaleTs > 0 ? Math.floor((now-lastSaleTs)/86400000) : 999;
+
+  if(sold30 >= 5) return 'aktif';
+  if(sold60 > 0 && sold60 < 5) return 'slow';
+  if(daysSinceSale > 60 && totalStok <= totalSafety) return 'clearance';
+  if(daysSinceSale > 60) return 'deadstock';
+  return 'slow'; // ada stok, belum 60 hari, tapi terjual <5
 }
 
-function getProdukStatusBadge(varName) {
-  const s = computeProdukStatus(varName);
+// Untuk filter per-status — cek apakah induk match filter
+function indukMatchesStatusFilter(indukName, filter) {
+  if(filter==='semua') return true;
+  return computeIndukStatus(indukName) === filter;
+}
+
+function getProdukStatusBadge(indukName) {
+  const s = computeIndukStatus(indukName);
   const map = {
     aktif:     '<span class="badge-status badge-aktif">✅ Aktif</span>',
     slow:      '<span class="badge-status badge-slow">⚠️ Slow</span>',
@@ -2543,14 +2581,18 @@ function getProdukStatusBadge(varName) {
     clearance: '<span class="badge-status badge-clearance">🏷️ Clearance</span>',
     nostock:   '<span class="badge-status badge-nostock">⬜ No Stock</span>',
   };
-  return map[s] || map['aktif'];
+  return map[s] || map['deadstock'];
 }
 
 function renderProduk() {
   _populateProdukSkuDropdown();
   const q=produkQ.toLowerCase();
   let rows=DB.produk.filter(r=>r.var.toLowerCase().includes(q)||r.induk.toLowerCase().includes(q));
-  if(produkStatusFilter!=='semua') rows=rows.filter(r=>computeProdukStatus(r.var)===produkStatusFilter);
+  if(produkStatusFilter!=='semua') {
+    // Filter per induk — hapus seluruh induk yang tidak match
+    const matchInduk = new Set(rows.filter(r=>indukMatchesStatusFilter(r.induk, produkStatusFilter)).map(r=>r.induk));
+    rows = rows.filter(r=>matchInduk.has(r.induk));
+  }
   if(produkSkuFilter) rows=rows.filter(r=>r.induk===produkSkuFilter);
   rows=rows.sort((a,b)=>a.induk.localeCompare(b.induk)||a.var.localeCompare(b.var));
   _produkDisplayRows=rows;
@@ -2566,15 +2608,16 @@ function renderProduk() {
 
   let html=''; let varNo=0;
   Object.entries(groups).forEach(([induk, vars])=>{
-    // Hitung state checkbox induk
     const allChk=vars.every(r=>produkSelectedVars.has(r.var));
     const someChk=vars.some(r=>produkSelectedVars.has(r.var));
     const indeterminate=someChk&&!allChk;
     const supplier=vars[0].suplaier||'—';
     const hppAvg=Math.round(vars.reduce((s,r)=>s+(r.hpp||0),0)/vars.length);
+    const isExpanded = _produkExpandedGroups.has(induk);
+    const statusBadge = getProdukStatusBadge(induk);
 
-    // Baris induk (group header)
-    html+=`<tr class="produk-group-header">
+    // Row induk
+    html+=`<tr class="produk-group-header" data-induk="${induk}">
       <td style="text-align:center;display:${_produkEditMode?'table-cell':'none'}" class="chk-col">
         <input type="checkbox" class="produk-chk-induk" data-induk="${induk}"
           ${allChk?'checked':''} onchange="produkToggleInduk(this,'${induk}')"
@@ -2587,16 +2630,24 @@ function renderProduk() {
       </td>
       <td style="font-size:12px;color:var(--dusty);font-weight:600;">${supplier}</td>
       <td style="font-size:12px;color:var(--dusty);">avg ${fmt(hppAvg)}</td>
-      <td colspan="2"></td>
+      <td>${statusBadge}</td>
+      <td style="text-align:right;padding-right:12px;">
+        <button class="produk-collapse-btn${isExpanded?' expanded':''}"
+          onclick="event.stopPropagation();toggleProdukGroup('${induk}')"
+          title="${isExpanded?'Sembunyikan varian':'Tampilkan varian'}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </td>
     </tr>`;
 
-    // Baris variasi
+    // Baris variasi — hidden by default kecuali expanded
     vars.forEach(r=>{
       varNo++;
       const chk=produkSelectedVars.has(r.var);
       const dbIdx=DB.produk.indexOf(r);
       const isActive=(_splitPanelOpen && _splitPanelIdx===dbIdx);
-      html+=`<tr class="produk-var-row${chk?' produk-row-selected':''}${isActive?' produk-split-active':''}"
+      html+=`<tr class="produk-var-row${chk?' produk-row-selected':''}${isActive?' produk-split-active':''}${isExpanded?'':' produk-var-hidden'}"
+        data-induk="${induk}"
         onclick="if(!event.target.closest('input')){openSplitPanel(${dbIdx})}"
         style="cursor:pointer;">
         <td style="text-align:center;display:${_produkEditMode?'table-cell':'none'}" class="chk-col">
@@ -2608,7 +2659,7 @@ function renderProduk() {
         <td style="padding-left:28px;font-size:13px;">${r.var}</td>
         <td class="mono">${fmt(r.hpp)}</td>
         <td></td>
-        <td>${getProdukStatusBadge(r.var)}</td>
+        <td colspan="2"></td>
       </tr>`;
     });
   });

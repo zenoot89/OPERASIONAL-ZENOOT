@@ -487,15 +487,7 @@
     <button class="fb-toggle" onclick="toggleFreezeBar('fb-produk')" title="Sembunyikan/tampilkan filter">
       <span class="fb-toggle-icon">▲</span>
     </button>
-    <!-- Baris 1: Filter toggle -->
-    <div class="produk-bar-row1">
-      <button class="btn btn-sm produk-filter-btn" id="produk-filter-toggle-btn" onclick="toggleProdukFilterPanel()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        Filter
-        <span id="produk-filter-dot" class="produk-filter-dot" style="display:none"></span>
-      </button>
-    </div>
-    <!-- Filter panel (collapsible) -->
+    <!-- Filter panel (collapsible, default hidden) -->
     <div id="produk-filter-panel" class="produk-filter-panel" style="display:none;">
       <select class="inp produk-filter-sel" onchange="filterProdukStatus(this.value)" id="produk-status-sel">
         <option value="semua">Semua Status</option>
@@ -503,15 +495,21 @@
         <option value="slow">⚠️ Slow Moving</option>
         <option value="deadstock">🔴 Deadstock</option>
         <option value="clearance">🏷️ Clearance</option>
+        <option value="nostock">⬜ No Stock</option>
       </select>
       <select class="inp produk-filter-sel" onchange="filterProdukBySku(this.value)" id="produk-sku-sel">
         <option value="">Semua SKU Induk</option>
       </select>
     </div>
-    <!-- Baris 2: Aksi -->
+    <!-- Baris Aksi: Tambah > Import > Sort -->
     <div class="produk-bar-row2">
       <button class="btn btn-p btn-sm" onclick="openModal('modal-tambah-produk')">➕ Tambah</button>
       <button class="btn btn-o btn-sm" onclick="openModal('modal-import-sheets')">📋 Import</button>
+      <button class="btn btn-sm produk-sort-btn" id="produk-sort-btn" onclick="toggleProdukFilterPanel()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Sort
+        <span id="produk-filter-dot" class="produk-filter-dot" style="display:none"></span>
+      </button>
       <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
         <button class="btn produk-edit-btn" id="produk-edit-btn" onclick="toggleProdukEditMode()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
