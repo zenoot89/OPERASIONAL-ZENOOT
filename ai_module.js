@@ -20,9 +20,8 @@
 
 // Urutan model fallback: mulai dari yang paling generous free tier-nya
 const _GEMINI_MODELS = [
-  'gemini-2.5-flash-preview-05-20', // Terbaru 2025
-  'gemini-1.5-flash',               // Fallback 1
-  'gemini-1.5-pro',                 // Fallback 2
+  'gemini-2.5-flash',      // Model utama terbaru
+  'gemini-2.5-flash-lite', // Fallback lebih ringan
 ];
 
 // Cek apakah error ini adalah quota/rate-limit error (bisa di-retry)
