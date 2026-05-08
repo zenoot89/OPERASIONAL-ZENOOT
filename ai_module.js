@@ -29,7 +29,7 @@ async function _callGLM(prompt, systemInstruction = '', maxTokens = 1500) {
   messages.push({ role: 'user', content: prompt });
 
   const body = {
-    model: 'glm-4-flash',
+    model: 'glm-4-flash-250414',
     messages,
     temperature: 0.5,
     max_tokens: maxTokens,
