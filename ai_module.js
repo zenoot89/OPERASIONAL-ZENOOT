@@ -675,13 +675,12 @@ async function runIntelAIAdvisor() {
     const db = window.DB || {};
     const tokoNama = typeof getTokoAktifNama === 'function' ? getTokoAktifNama() : 'Semua Toko';
 
-    // Ambil data jurnal 30 hari
+    // ── DATA INTERNAL (jurnal, stok) ──────────────────────────────
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
     const recentJurnal = (db.jurnal || []).filter(j => j.tgl >= thirtyDaysAgo);
     const totalRev30 = recentJurnal.reduce((t, j) => t + (j.omzet || 0), 0);
     const totalProfit30 = recentJurnal.reduce((t, j) => t + (j.profit || 0), 0);
 
-    // Revenue per SKU
     const revPerSku = recentJurnal.reduce((acc, j) => {
       acc[j.var] = (acc[j.var] || { rev: 0, qty: 0 });
       acc[j.var].rev += (j.omzet || 0);
@@ -690,64 +689,95 @@ async function runIntelAIAdvisor() {
     }, {});
     const topSku = Object.entries(revPerSku).sort((a, b) => b[1].rev - a[1].rev).slice(0, 5);
 
-    // Revenue per channel
     const revPerChannel = recentJurnal.reduce((acc, j) => {
       const ch = j.channel || 'Unknown';
       acc[ch] = (acc[ch] || 0) + (j.omzet || 0);
       return acc;
     }, {});
 
-    // Stok kritis
     const kritisStok = (db.stok || []).filter(s => {
       const akhir = typeof getAkhir === 'function' ? getAkhir(s) : (s.awal + (s.masuk || 0) - (s.keluar || 0));
       return akhir <= 5;
     });
 
     const fmtNum = n => Number(n || 0).toLocaleString('id-ID');
+    const fmtPct = n => (Number(n) || 0).toFixed(1) + '%';
     const marginPct = totalRev30 > 0 ? ((totalProfit30 / totalRev30) * 100).toFixed(1) : 0;
 
+    // ── DATA SHOPEE (dari upload file teData) ─────────────────────
+    const te = window.teData || {};
+    const skus = te.processedSKUs || [];
+    const hasShopeeData = skus.length > 0;
+
+    let shopeeSection = '';
+    if (hasShopeeData) {
+      const periode = te.periodeLabel || 'Tidak diketahui';
+      const totalSkus = skus.length;
+      const deadSkus = skus.filter(s => s.flag === 'dead');
+      const highSkus = skus.filter(s => s.flag === 'high');
+      const lowMarginSkus = skus.filter(s => s.flag === 'low-margin');
+      const totalShopeeRev = skus.reduce((t, s) => t + (s.salesRev || 0), 0);
+      const avgHealthScore = skus.length > 0
+        ? (skus.reduce((t, s) => t + (s.healthScore || 0), 0) / skus.length).toFixed(0)
+        : 0;
+      const topShopeeSkus = [...skus].sort((a, b) => (b.salesRev || 0) - (a.salesRev || 0)).slice(0, 5);
+      const lowCtrSkus = skus.filter(s => s.views > 100 && s.ctr < 1).slice(0, 3);
+      const highBounceSkus = skus.filter(s => s.bounceRate > 50).slice(0, 3);
+      const signals = te.shopeeSignals || {};
+
+      shopeeSection = `\nDATA SHOPEE (File: ${te.lastFile || 'file Shopee'} | Periode: ${periode}):
+- Total SKU: ${totalSkus} | Avg Health Score: ${avgHealthScore}/100
+- Total Revenue Shopee: Rp ${fmtNum(totalShopeeRev)}
+- High Demand (tumbuh >15%): ${highSkus.length} SKU${highSkus.length > 0 ? ' -> ' + highSkus.slice(0,3).map(s=>s.skuRef||s.name?.substring(0,20)).join(', ') : ''}
+- Dead Stock (tidak terjual): ${deadSkus.length} SKU${deadSkus.length > 0 ? ' -> ' + deadSkus.slice(0,3).map(s=>s.skuRef||s.name?.substring(0,20)).join(', ') : ''}
+- Low Margin (<10%): ${lowMarginSkus.length} SKU${lowMarginSkus.length > 0 ? ' -> ' + lowMarginSkus.slice(0,3).map(s=>s.skuRef||s.name?.substring(0,20)).join(', ') : ''}
+TOP 5 SKU SHOPEE: ${topShopeeSkus.map((s,i) => `${i+1}.${s.skuRef||s.name?.substring(0,20)} Rev:Rp${fmtNum(s.salesRev)} Margin:${fmtPct(s.realProfitPct)} CTR:${fmtPct(s.ctr)} Health:${s.healthScore} Flag:${s.flag}`).join(' | ')}
+${lowCtrSkus.length > 0 ? 'CTR Rendah (optimasi listing): ' + lowCtrSkus.map(s=>`${s.skuRef||s.name?.substring(0,20)} Views:${s.views} CTR:${fmtPct(s.ctr)}`).join(', ') : ''}
+${highBounceSkus.length > 0 ? 'Bounce Rate Tinggi: ' + highBounceSkus.map(s=>`${s.skuRef||s.name?.substring(0,20)} Bounce:${fmtPct(s.bounceRate)}`).join(', ') : ''}
+${signals.iklankan?.length > 0 ? 'Sinyal iklankan: ' + signals.iklankan.slice(0,5).join(', ') : ''}
+${signals.hargaBelumKomp?.length > 0 ? 'Harga belum kompetitif: ' + signals.hargaBelumKomp.slice(0,5).join(', ') : ''}`;
+    }
+
     const systemPrompt = `Kamu adalah analis bisnis e-commerce senior yang membantu pemilik toko Shopee Indonesia membaca data dan mengambil keputusan strategis. Gunakan Bahasa Indonesia yang profesional namun mudah dipahami. Selalu berikan rekomendasi yang konkret dan berbasis angka.`;
+
+    const shopeeInsightPlaceholder = hasShopeeData
+      ? '"Insight spesifik dari data Shopee yang diupload (1-2 kalimat)"'
+      : '"Upload file Shopee di tab AI Strategy untuk insight lebih dalam"';
 
     const prompt = `Analisis Intelligence Dashboard toko Shopee berikut:
 
 TOKO: ${tokoNama}
 PERIODE: 30 hari terakhir
 
-FINANSIAL:
+DATA INTERNAL (Jurnal & Stok):
 - Total Revenue: Rp ${fmtNum(totalRev30)}
 - Total Profit: Rp ${fmtNum(totalProfit30)}
-- Margin Rate: ${marginPct}%
-- Total Transaksi: ${recentJurnal.length}
+- Margin Rate: ${marginPct}% | Total Transaksi: ${recentJurnal.length}
+- Top SKU jurnal: ${topSku.map(([k,v]) => k + ' Rp' + fmtNum(v.rev)).join(', ') || 'Belum ada data'}
+- Channel: ${Object.entries(revPerChannel).map(([k,v]) => k + ':Rp' + fmtNum(v)).join(', ') || 'Belum ada'}
+- Stok Kritis (<=5 pcs): ${kritisStok.length > 0 ? kritisStok.map(s => s.var).join(', ') : 'Tidak ada'}
+${shopeeSection}
+${!hasShopeeData ? 'Catatan: Data Shopee belum diupload. Analisis hanya dari data jurnal internal.' : ''}
 
-TOP 5 SKU (Revenue):
-${topSku.map(([k, v], i) => `${i + 1}. ${k}: Rp ${fmtNum(v.rev)} (${v.qty} pcs)`).join('\n') || 'Belum ada data'}
-
-REVENUE PER CHANNEL:
-${Object.entries(revPerChannel).map(([k, v]) => `- ${k}: Rp ${fmtNum(v)}`).join('\n') || 'Belum ada data'}
-
-STOK KRITIS (≤5 pcs): ${kritisStok.length > 0 ? kritisStok.map(s => s.var).join(', ') : 'Tidak ada'}
-
-Buat analisis dalam format JSON (HANYA JSON):
+Jika data kosong/Rp 0, buat JSON singkat dengan saran mulai isi data. Output HANYA JSON:
 {
-  "diagnosis": "Diagnosis 2-3 kalimat tentang kondisi bisnis berdasarkan data, spesifik dengan angka",
-  "kekuatan": ["Kekuatan bisnis yang terlihat dari data (maks 3)"],
-  "kelemahan": ["Area yang perlu diperbaiki berdasarkan data (maks 3)"],
+  "diagnosis": "Diagnosis 2-3 kalimat gabungkan insight internal dan Shopee jika ada",
+  "sumber_data": "${hasShopeeData ? 'Internal + Shopee Upload' : 'Internal only'}",
+  "kekuatan": ["maks 3 kekuatan berdasarkan data"],
+  "kelemahan": ["maks 3 area perbaikan berdasarkan data"],
   "rekomendasi_30_hari": [
-    {
-      "aksi": "Aksi spesifik",
-      "target": "Target terukur (misal: naikkan margin 5%)",
-      "cara": "Cara konkret melakukannya"
-    }
+    { "aksi": "aksi spesifik", "target": "target terukur dengan angka", "cara": "cara konkret, sebutkan nama SKU jika relevan" }
   ],
   "metric_kunci": [
-    { "label": "Label metric", "nilai": "Nilai + unit", "status": "BAIK|CUKUP|PERLU PERHATIAN" }
-  ]
+    { "label": "label", "nilai": "nilai+unit", "status": "BAIK|CUKUP|PERLU PERHATIAN" }
+  ],
+  "shopee_insight": ${shopeeInsightPlaceholder}
 }`;
 
-    const raw = await _callGemini(prompt, systemPrompt, 1500);
+    const raw = await _callGemini(prompt, systemPrompt, 2500);
     console.log("[AI DEBUG] Raw:", raw?.substring(0,300));
     const parsed = _parseJSON(raw);
-    if (!parsed) { console.error("[AI DEBUG] Parse failed:", raw); throw new Error("Format respons tidak valid: " + (raw?.substring(0,100)||"kosong")); }
+    if (!parsed) { console.error("[AI DEBUG] Parse failed:", raw); throw new Error("Respons AI tidak lengkap (kemungkinan terpotong). Coba lagi."); }
 
     _intelAICache = { ...parsed, generatedAt: new Date().toISOString() };
     _renderIntelAIResult(_intelAICache);
@@ -777,15 +807,17 @@ function _renderIntelAIResult(data) {
   el.innerHTML = `
     <div class="ai-result-wrap">
       <div class="ai-result-header">
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span style="font-size:18px;">🤖</span>
           <div>
             <div style="font-size:12px;font-weight:700;color:#5C3D2E;">AI Intelligence Advisor</div>
             <div style="font-size:10px;color:var(--dusty);">Diperbarui ${time}</div>
           </div>
+          ${data.sumber_data ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:${data.sumber_data.includes('Shopee') ? '#D1FAE5' : '#FEF3C7'};color:${data.sumber_data.includes('Shopee') ? '#065F46' : '#92400E'};">${data.sumber_data.includes('Shopee') ? '🛍️ Internal + Shopee' : '📊 Internal only'}</span>` : ''}
           <button onclick="runIntelAIAdvisor()" class="btn btn-o btn-sm" style="font-size:10px;padding:3px 8px;margin-left:auto;">🔄</button>
         </div>
         <div class="ai-narasi" style="margin-top:10px;">${data.diagnosis}</div>
+        ${data.shopee_insight ? `<div style="margin-top:8px;font-size:11px;background:#EFF6FF;border-left:3px solid #3B82F6;padding:8px 10px;border-radius:0 6px 6px 0;color:#1E40AF;">🛍️ <strong>Shopee:</strong> ${data.shopee_insight}</div>` : ''}
       </div>
 
       <!-- Metric Kunci -->
