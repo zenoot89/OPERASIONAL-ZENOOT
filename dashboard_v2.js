@@ -541,15 +541,24 @@ async function renderDashboard() {
   // ─── 2. KPI STRIP — 4 kartu ───
   const kpis = [
     {label:'Omset Hari Ini', accent:'var(--gold)',
-      val:`${fmtShort(omsetHari)}<span style="font-size:18px;font-weight:500;color:var(--dusty);margin-left:10px;">${qtyHari} pcs</span>`,
+      val:`<div style="display:flex;align-items:flex-start;gap:16px;">
+        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">IDR</div><div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${fmtShort(omsetHari)}</div></div>
+        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">QTY Terjual</div><div style="font-size:26px;font-weight:700;color:var(--dusty);line-height:1.1;">${qtyHari} pcs</div></div>
+      </div>`,
       sub:[deltaBadge(omsetHari,omsetKemarin),'<span>vs kemarin</span>'].join(' ')},
     {label:'Omset Bulan Ini', accent:'var(--brown)',
-      val:`${fmtShort(omsetBulan)}<span style="font-size:18px;font-weight:500;color:var(--dusty);margin-left:10px;">${qtyBulan} pcs</span>`,
+      val:`<div style="display:flex;align-items:flex-start;gap:16px;">
+        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">IDR</div><div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${fmtShort(omsetBulan)}</div></div>
+        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">QTY Terjual</div><div style="font-size:26px;font-weight:700;color:var(--dusty);line-height:1.1;">${qtyBulan} pcs</div></div>
+      </div>`,
       sub:[deltaBadge(omsetBulan,omsetBulanLalu),`<span>vs bln lalu · proyeksi ${fmtShort(proyeksi)}</span>`].join(' ')},
     {label:'Nilai Stok (HPP)', accent:'#3D7EAA',
-      val:`${fmtShort(nilaiStok)}<span style="font-size:18px;font-weight:500;color:var(--dusty);margin-left:10px;">${fmtNum(totalStok)} pcs</span>`,
+      val:`<div style="display:flex;align-items:flex-start;gap:16px;">
+        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">IDR</div><div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${fmtShort(nilaiStok)}</div></div>
+        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">Nilai Stok QTY</div><div style="font-size:26px;font-weight:700;color:var(--dusty);line-height:1.1;">${fmtNum(totalStok)} pcs</div></div>
+      </div>`,
       sub:`<span>${DB.stok.length} SKU</span>`},
-    {label:'Stok Bermasalah', val:`${stokHabis.length+stokKritis.length} SKU`, accent:stokHabis.length>0?'#C0392B':'#E6A817',
+    {label:'Stok Bermasalah', val:`<div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${stokHabis.length+stokKritis.length} SKU</div>`, accent:stokHabis.length>0?'#C0392B':'#E6A817',
       sub:`<span class="stok-red">${stokHabis.length} habis</span> · <span class="stok-amber">${stokKritis.length} kritis</span>`}
   ];
   add(`<div>
