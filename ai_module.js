@@ -133,17 +133,24 @@ async function _callGemini(prompt, systemInstruction = '', maxTokens = 1500) {
 
 function _parseJSON(raw) {
   if (!raw) return null;
-  // Coba berbagai cara parse JSON dari respons AI
-  const attempts = [
-    () => JSON.parse(raw.trim()),
-    () => JSON.parse(raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim()),
-    () => { const match = raw.match(/\{[\s\S]*\}/); return match ? JSON.parse(match[0]) : null; },
-    () => { const start = raw.indexOf("{"); const end = raw.lastIndexOf("}"); if (start === -1 || end === -1) return null; return JSON.parse(raw.substring(start, end + 1)); },
-  ];
-  for (const attempt of attempts) {
-    try { const result = attempt(); if (result) return result; } catch {}
+  try {
+    // Bersihkan semua variasi markdown code block
+    let clean = raw
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim();
+    // Kalau masih ada backtick di tengah, ambil isi antara { dan }
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start !== -1 && end !== -1) {
+      clean = clean.substring(start, end + 1);
+    }
+    return JSON.parse(clean);
+  } catch (e) {
+    console.error('[AI] _parseJSON error:', e.message);
+    return null;
   }
-  return null;
 }
 
 // ═══════════════════════════════════════════════════════
