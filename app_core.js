@@ -2515,6 +2515,7 @@ function toggleJurnalFilterPanel(){
     if(btn) btn.classList.remove('sort-active');
   } else {
     panel.style.display = 'flex';
+    panel.style.zIndex = '9999'; // FIX: pastikan panel di atas semua elemen
     if(btn) btn.classList.add('sort-active');
     setTimeout(()=>{
       document.addEventListener('click', function _jClose(e){
@@ -2542,6 +2543,7 @@ function toggleProdukFilterPanel(){
     _closeProdukFilterPanel();
   } else {
     panel.style.display = 'flex';
+    panel.style.zIndex = '9999'; // FIX: pastikan panel di atas semua elemen
     if(btn) btn.classList.add('sort-active');
     // Posisi: kalau di mobile, panel sesuaikan agar tidak keluar layar
     requestAnimationFrame(()=>{

@@ -262,12 +262,12 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--charcoa
 /* ═══════════════════════════════════════════════
    MAIN AREA
 ════════════════════════════════════════════════ */
-.main{margin-left:220px;padding:30px 34px;min-height:100vh;transition:margin-left .3s ease;display:flex;flex-direction:column;height:100vh;overflow-x:hidden;overflow-y:auto;box-sizing:border-box;}
+.main{margin-left:220px;padding:30px 34px;min-height:100vh;transition:margin-left .3s ease;display:flex;flex-direction:column;height:100vh;overflow-x:clip;overflow-y:auto;box-sizing:border-box;}
 /* Halaman biasa (non-frozen) tetap bisa scroll vertikal */
 .page.active:not(#page-stok):not(#page-jurnal):not(#page-produk):not(#page-harga) {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: clip;
   min-height: 0;
 }
 .main.expanded{margin-left:54px;}
@@ -2256,7 +2256,7 @@ button, .btn, .bg-fill-btn, .bg-save-btn {
   display: none;
   flex-direction: column;
   flex: 1;
-  overflow-x: clip; /* FIX: 'clip' tidak blokir absolute children (dropdown Sort) */
+  overflow-x: clip; /* FIX: clip tidak blokir position:absolute children (dropdown Sort) */
   overflow-y: auto;
   padding-bottom: 0;
   min-height: 0;
@@ -2283,9 +2283,11 @@ button, .btn, .bg-fill-btn, .bg-save-btn {
   box-shadow: 0 2px 8px -2px rgba(0,0,0,.08);
 }
 
-/* FIX: pastikan dropdown Sort panel muncul di atas semua elemen */
-#produk-filter-panel {
+/* FIX: Dropdown filter panel harus tampil di atas semua elemen */
+#produk-filter-panel,
+#jurnal-filter-panel {
   z-index: 9999 !important;
+  position: absolute !important;
 }
 
 /* ── tbl-curve-wrap: flex column container untuk tabel + kurva bawah ── */
@@ -2425,10 +2427,10 @@ button, .btn, .bg-fill-btn, .bg-save-btn {
 /* Mobile utama ≤768px */
 @media (max-width: 768px) {
 
-  /* Main harus overflow:hidden agar frozen bisa kerja */
+  /* Main harus overflow:clip agar frozen bisa kerja tapi dropdown Sort tidak terpotong */
   .main {
     overflow-y: hidden !important;
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
   }
 
   /* Freeze bar lebih compact di HP */
@@ -2580,7 +2582,7 @@ thead th {
   /* === MAIN: tetap flex container — frozen system tetap aktif === */
   .main {
     overflow-y: hidden !important;
-    overflow-x: hidden !important;
+    overflow-x: clip !important; /* FIX: clip bukan hidden agar dropdown Sort tidak terpotong */
     padding: 4px 8px 8px 8px !important;
     height: 100vh !important;
     box-sizing: border-box !important;
@@ -2605,7 +2607,8 @@ thead th {
     display: none !important;
     flex-direction: column !important;
     flex: 1 !important;
-    overflow: hidden !important;
+    overflow-x: clip !important; /* FIX: clip agar dropdown Sort tidak terpotong */
+    overflow-y: hidden !important;
     min-height: 0 !important;
   }
   #page-stok.active,
