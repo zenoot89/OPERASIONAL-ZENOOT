@@ -343,7 +343,16 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <input class="search-bar" style="max-width:280px;margin:0" placeholder="🔍 Cari SKU..." oninput="filterStok(this.value)" id="stok-search">
       <select class="sel" id="stok-fil-supplier" style="max-width:160px" onchange="onSupplierFilterChange()"><option value="">Semua Supplier</option></select>
-      <select class="sel" id="stok-fil-induk" style="max-width:160px" onchange="renderStok()"><option value="">Semua Produk</option></select>
+      <div style="position:relative;display:inline-block;">
+        <button class="sel" id="stok-induk-btn" onclick="toggleStokIndukDropdown()" style="width:160px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+          <span id="stok-induk-label">Semua Produk</span>
+          <svg width="10" height="10" viewBox="0 0 12 8" fill="none"><path d="M1 1l5 5 5-5" stroke="#8C7B6B" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </button>
+        <div id="stok-induk-panel" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--card);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:180px;max-height:228px;overflow-y:auto;">
+          <div class="stok-induk-opt" onclick="selectStokInduk('','Semua Produk')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);">Semua Produk</div>
+          <div id="stok-induk-opts"></div>
+        </div>
+      </div>
       <select class="sel" id="stok-fil-status" style="max-width:130px" onchange="renderStok()">
         <option value="">Semua Status</option><option>Aman</option><option>Rendah</option><option>Kritis</option><option>Habis</option>
       </select>
@@ -493,20 +502,6 @@
     <button class="fb-toggle" onclick="toggleFreezeBar('fb-produk')" title="Sembunyikan/tampilkan filter">
       <span class="fb-toggle-icon">▲</span>
     </button>
-    <!-- Filter panel (collapsible, default hidden) -->
-    <div id="produk-filter-panel" class="produk-filter-panel" style="display:none;">
-      <select class="inp produk-filter-sel" onchange="filterProdukStatus(this.value)" id="produk-status-sel">
-        <option value="semua">Semua Status</option>
-        <option value="aktif">✅ Aktif</option>
-        <option value="slow">⚠️ Slow Moving</option>
-        <option value="deadstock">🔴 Deadstock</option>
-        <option value="clearance">🏷️ Clearance</option>
-        <option value="nostock">⬜ No Stock</option>
-      </select>
-      <select class="inp produk-filter-sel" onchange="filterProdukBySku(this.value)" id="produk-sku-sel">
-        <option value="">Semua SKU Induk</option>
-      </select>
-    </div>
     <!-- Baris Aksi: Tambah > Import > Sort -->
     <div class="produk-bar-row2" style="position:relative;">
       <button class="btn btn-p btn-sm" onclick="openModal('modal-tambah-produk')">➕ Tambah</button>

@@ -1506,20 +1506,59 @@ function getStokStatus3(akhir,safety){
   return 'Aman';
 }
 
+let _stokIndukFil = ''; // state custom dropdown
+
+function toggleStokIndukDropdown() {
+  const panel = document.getElementById('stok-induk-panel');
+  if(!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if(isOpen){ panel.style.display='none'; return; }
+  panel.style.display = 'block';
+  setTimeout(()=>{
+    document.addEventListener('click', function _closeInduk(e){
+      const p = document.getElementById('stok-induk-panel');
+      const b = document.getElementById('stok-induk-btn');
+      if(!p) return;
+      if(!p.contains(e.target) && !b?.contains(e.target)){
+        p.style.display='none';
+      } else {
+        setTimeout(()=>document.addEventListener('click',_closeInduk,{once:true}),50);
+      }
+    },{once:true});
+  },50);
+}
+
+function selectStokInduk(val, label) {
+  _stokIndukFil = val;
+  const lbl = document.getElementById('stok-induk-label');
+  if(lbl) lbl.textContent = label || 'Semua Produk';
+  const panel = document.getElementById('stok-induk-panel');
+  if(panel) panel.style.display = 'none';
+  // highlight active
+  document.querySelectorAll('.stok-induk-opt').forEach(el=>{
+    el.style.background = el.dataset.val === val ? 'var(--linen)' : '';
+    el.style.fontWeight = el.dataset.val === val ? '700' : '';
+  });
+  renderStok();
+}
+
 function _updateIndukDropdown(supVal, resetCur) {
-  const indukSel=document.getElementById('stok-fil-induk');
-  if(!indukSel) return;
-  const cur = resetCur ? '' : indukSel.value;
+  if(resetCur){ _stokIndukFil=''; const lbl=document.getElementById('stok-induk-label'); if(lbl) lbl.textContent='Semua Produk'; }
+  const opts = document.getElementById('stok-induk-opts');
+  if(!opts) return;
   const norm = s => (s||'').toUpperCase().trim();
-  const filtered = supVal
-    ? DB.produk.filter(p => norm(p.suplaier) === norm(supVal))
-    : DB.produk;
-  const indukList=[...new Set(filtered.map(p=>p.induk))].sort();
-  // Fallback: kalau tidak ada hasil, tetap tampilkan semua
+  const filtered = supVal ? DB.produk.filter(p=>norm(p.suplaier)===norm(supVal)) : DB.produk;
+  const indukList = [...new Set(filtered.map(p=>p.induk))].sort();
   const finalList = indukList.length ? indukList : [...new Set(DB.produk.map(p=>p.induk))].sort();
-  indukSel.innerHTML='<option value="">Semua Produk</option>'+finalList.map(s=>`<option>${s}</option>`).join('');
-  if(cur && finalList.includes(cur)) indukSel.value=cur;
-  else indukSel.value='';
+  opts.innerHTML = finalList.map(s=>
+    `<div class="stok-induk-opt" data-val="${s}" onclick="selectStokInduk('${s}','${s}')"
+      style="padding:8px 12px;cursor:pointer;font-size:13px;${_stokIndukFil===s?'background:var(--linen);font-weight:700;':''}">${s}</div>`
+  ).join('');
+  // hover effect
+  opts.querySelectorAll('.stok-induk-opt').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ if(el.dataset.val!==_stokIndukFil) el.style.background='var(--bg)'; });
+    el.addEventListener('mouseleave',()=>{ if(el.dataset.val!==_stokIndukFil) el.style.background=''; });
+  });
 }
 function populateStokFilters() {
   const suppliers=[...new Set(DB.produk.map(p=>p.suplaier||'').filter(Boolean))].sort();
@@ -1538,14 +1577,20 @@ function onSupplierFilterChange() {
   renderStok();
 }
 function applyStokFilter() { renderStok(); }
-function resetStokFilter() { ['stok-fil-supplier','stok-fil-induk','stok-fil-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});stokQ='';const sb=document.getElementById('stok-search');if(sb)sb.value='';renderStok(); }
+function resetStokFilter() {
+  ['stok-fil-supplier','stok-fil-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  _stokIndukFil='';
+  const lbl=document.getElementById('stok-induk-label'); if(lbl) lbl.textContent='Semua Produk';
+  stokQ=''; const sb=document.getElementById('stok-search'); if(sb)sb.value='';
+  renderStok();
+}
 function sortStok(col) { if(_stokSortCol===col){_stokSortDir*=-1;}else{_stokSortCol=col;_stokSortDir=1;}renderStok(); }
 
 function renderStok() {
   populateStokFilters();
   const q=stokQ.toLowerCase();
   const supFil=(document.getElementById('stok-fil-supplier')||{}).value||'';
-  const indukFil=(document.getElementById('stok-fil-induk')||{}).value||'';
+  const indukFil=_stokIndukFil||'';
   const statusFil=(document.getElementById('stok-fil-status')||{}).value||'';
   const normStr = s => (s||'').toUpperCase().trim();
   let rows=DB.stok.filter(r=>{
@@ -2152,7 +2197,7 @@ function filterJurnalChannel(){
 }
 function resetJurnalFilter(){
   jurnalQ=''; jurnalDateFrom=''; jurnalDateTo=''; jurnalChFil='';
-  ['j-search','j-fil-from','j-fil-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['j-fil-from','j-fil-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const ch=document.getElementById('j-fil-ch');if(ch)ch.value='';
   renderJurnal();
 }

@@ -3090,8 +3090,11 @@ thead th {
    SPLIT VIEW PANEL STYLES
 ════════════════════════════════════════════════════════════════ */
 
-/* Tombol minimize/expand per group induk */
-.produk-collapse-btn {
+/* Custom dropdown stok induk — max 6 item (228px = 6×38px) */
+.stok-induk-opt:first-child { border-radius: 6px 6px 0 0; }
+.stok-induk-opt:last-child  { border-radius: 0 0 6px 6px; }
+
+
   background: none;
   border: 1px solid var(--border);
   border-radius: 6px;
