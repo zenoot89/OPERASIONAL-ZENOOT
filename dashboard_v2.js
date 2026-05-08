@@ -49,7 +49,7 @@ function _owInjectCSS() {
 .ow-kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px 18px;position:relative;overflow:hidden;}
 .ow-kpi-accent{position:absolute;top:0;left:0;width:5px;height:100%;border-radius:16px 0 0 16px;}
 .ow-kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--dusty);font-weight:700;margin-bottom:8px;}
-.ow-kpi-val{font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;}
+.ow-kpi-val{font-weight:700;color:var(--charcoal);line-height:1.1;}
 .ow-kpi-sub{font-size:12px;color:var(--dusty);margin-top:9px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 
 /* Delta badge */
@@ -262,7 +262,7 @@ function _owInjectCSS() {
 }
 
 @media(max-width:480px){
-  .ow-kpi-val{font-size:20px;}
+  .ow-kpi-val{font-size:inherit;}
   .ow-kpi{padding:14px 12px 12px;}
   .ow-mini-val{font-size:16px;}
   .ow-mini-label{font-size:10px;}
@@ -539,26 +539,29 @@ async function renderDashboard() {
   // ─── 1. INSIGHT ALERTS — DIHAPUS (clean dashboard) ───
 
   // ─── 2. KPI STRIP — 4 kartu ───
+  const _kpiRow=(lbl1,val1,lbl2,val2,clr2='var(--dusty)')=>`
+    <div style="display:flex;width:100%;justify-content:space-between;align-items:flex-end;gap:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:4px;">${lbl1}</div>
+        <div style="font-size:clamp(20px,2.2vw,32px);font-weight:700;color:var(--charcoal);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${val1}</div>
+      </div>
+      <div style="flex:0 0 auto;text-align:right;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:4px;">${lbl2}</div>
+        <div style="font-size:clamp(20px,2.2vw,32px);font-weight:700;color:${clr2};line-height:1.05;white-space:nowrap;">${val2}</div>
+      </div>
+    </div>`;
   const kpis = [
     {label:'Omset Hari Ini', accent:'var(--gold)',
-      val:`<div style="display:flex;align-items:flex-start;gap:16px;">
-        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">IDR</div><div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${fmtShort(omsetHari)}</div></div>
-        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">QTY Terjual</div><div style="font-size:26px;font-weight:700;color:var(--dusty);line-height:1.1;">${qtyHari} pcs</div></div>
-      </div>`,
+      val:_kpiRow('IDR',fmtShort(omsetHari),'QTY Terjual',`${qtyHari} pcs`),
       sub:[deltaBadge(omsetHari,omsetKemarin),'<span>vs kemarin</span>'].join(' ')},
     {label:'Omset Bulan Ini', accent:'var(--brown)',
-      val:`<div style="display:flex;align-items:flex-start;gap:16px;">
-        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">IDR</div><div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${fmtShort(omsetBulan)}</div></div>
-        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">QTY Terjual</div><div style="font-size:26px;font-weight:700;color:var(--dusty);line-height:1.1;">${qtyBulan} pcs</div></div>
-      </div>`,
+      val:_kpiRow('IDR',fmtShort(omsetBulan),'QTY Terjual',`${qtyBulan} pcs`),
       sub:[deltaBadge(omsetBulan,omsetBulanLalu),`<span>vs bln lalu · proyeksi ${fmtShort(proyeksi)}</span>`].join(' ')},
     {label:'Nilai Stok (HPP)', accent:'#3D7EAA',
-      val:`<div style="display:flex;align-items:flex-start;gap:16px;">
-        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">IDR</div><div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${fmtShort(nilaiStok)}</div></div>
-        <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dusty);font-weight:700;margin-bottom:3px;">Nilai Stok QTY</div><div style="font-size:26px;font-weight:700;color:var(--dusty);line-height:1.1;">${fmtNum(totalStok)} pcs</div></div>
-      </div>`,
+      val:_kpiRow('IDR',fmtShort(nilaiStok),'Nilai Stok QTY',`${fmtNum(totalStok)} pcs`),
       sub:`<span>${DB.stok.length} SKU</span>`},
-    {label:'Stok Bermasalah', val:`<div style="font-size:26px;font-weight:700;color:var(--charcoal);line-height:1.1;">${stokHabis.length+stokKritis.length} SKU</div>`, accent:stokHabis.length>0?'#C0392B':'#E6A817',
+    {label:'Stok Bermasalah', accent:stokHabis.length>0?'#C0392B':'#E6A817',
+      val:`<div style="font-size:clamp(24px,2.8vw,38px);font-weight:700;color:var(--charcoal);line-height:1.05;">${stokHabis.length+stokKritis.length} SKU</div>`,
       sub:`<span class="stok-red">${stokHabis.length} habis</span> · <span class="stok-amber">${stokKritis.length} kritis</span>`}
   ];
   add(`<div>
