@@ -4129,8 +4129,8 @@ async function chSimpan() {
 
   if (!kode) { statusEl.innerHTML = '<span style="color:#C0392B">⚠️ Kode wajib diisi</span>'; return; }
 
-  // Validasi format kode
-  if (!/^[A-Z0-9._-]+$/.test(kode)) {
+  // Validasi format kode — hanya saat tambah baru
+  if (!_chEditKode && !/^[A-Z0-9._-]+$/.test(kode)) {
     statusEl.innerHTML = '<span style="color:#C0392B">⚠️ Kode hanya boleh huruf kapital, angka, titik, atau strip</span>'; return;
   }
 
