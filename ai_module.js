@@ -6,7 +6,7 @@
    ✅ FEATURE 2: Daily Checklist AI Chat — asisten operasional harian
    ✅ FEATURE 3: Intelligence AI Advisor — insight otomatis dari data
    ✅ Unified AI engine dengan retry + fallback otomatis
-   ✅ Model priority: gemini-1.5-flash → gemini-1.5-pro → gemini-1.0-pro
+   ✅ Model priority: gemini-2.5-flash → gemini-2.5-flash-lite (auto-retry & fallback)
    ✅ Context-aware (baca DB, teData, rkData)
 
    Depends on: app_core.js (window.DB, SUPABASE_URL, SUPABASE_KEY)
@@ -163,7 +163,7 @@ let _blueprintAICache = {}; // cache per skuRef
 async function runAIBlueprintAnalysis() {
   if (!window._geminiKey) window._geminiKey = localStorage.getItem('gemini_api_key') || '';
   if (!window._geminiKey) {
-    const key = prompt('🔑 Masukkan Gemini API Key (dari z.ai):\n\nKey akan disimpan permanen.');
+    const key = prompt('🔑 Masukkan Gemini API Key dari Google AI Studio:\n\nhttps://aistudio.google.com/app/apikey\n\nKey akan disimpan permanen di browser.');
     if (!key || !key.trim()) { toast('❌ API Key kosong.', 'err'); return; }
     window._geminiKey = key.trim();
     localStorage.setItem('gemini_api_key', window._geminiKey);
@@ -465,7 +465,7 @@ function initAIChat() {
 
       ${!window._geminiKey ? `
         <div style="background:#FEF3C7;border:1px solid #d97706;border-radius:8px;padding:10px;margin-top:8px;font-size:11px;color:#92400E;">
-          ⚙️ <strong>API Key belum diset.</strong> Buka Intelligence → AI Settings untuk mengaktifkan chat.
+          ⚙️ <strong>API Key belum diset.</strong> Buka Intelligence → AI Settings, lalu input Gemini API Key dari <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#92400E;">aistudio.google.com</a>.
         </div>` : ''}
     </div>`;
 }
@@ -479,7 +479,7 @@ async function sendAIChat(prefillText = null) {
 
   if (!window._geminiKey) window._geminiKey = localStorage.getItem('gemini_api_key') || '';
   if (!window._geminiKey) {
-    const key = prompt('🔑 Masukkan Gemini API Key (dari z.ai):\n\nKey akan disimpan permanen.');
+    const key = prompt('🔑 Masukkan Gemini API Key dari Google AI Studio:\n\nhttps://aistudio.google.com/app/apikey\n\nKey akan disimpan permanen di browser.');
     if (!key || !key.trim()) { toast('❌ API Key kosong.', 'err'); return; }
     window._geminiKey = key.trim();
     localStorage.setItem('gemini_api_key', window._geminiKey);
@@ -615,7 +615,7 @@ async function runIntelAIAdvisor() {
   }
   // Kalau masih kosong, minta input via prompt
   if (!window._geminiKey) {
-    const key = prompt('🔑 Masukkan Gemini API Key (dari z.ai):\n\nKey akan disimpan permanen di browser.');
+    const key = prompt('🔑 Masukkan Gemini API Key dari Google AI Studio:\n\nhttps://aistudio.google.com/app/apikey\n\nKey akan disimpan permanen di browser.');
     if (!key || !key.trim()) {
       toast('❌ API Key kosong, dibatalkan.', 'err');
       return;
@@ -1022,14 +1022,14 @@ function renderAIDrawer() {
       else{b.style.display='none';c.textContent='▼';}
     ">
       <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">
-        ⚙️ AI Settings — Gemini API Key
+        ⚙️ AI Settings — Google Gemini API Key
       </div>
       <span id="ai-drawer-chevron" style="font-size:12px;color:var(--dusty,#9ca3af);">▼</span>
     </div>
     <div id="ai-drawer-body" style="display:none;margin-top:16px;">
       <p style="font-size:12px;color:var(--dusty,#9ca3af);margin:0 0 12px;">
-        Masukkan API Key dari <strong>z.ai</strong> (ZhipuAI) untuk mengaktifkan semua fitur AI.
-        Gratis, daftar di <a href="https://z.ai" target="_blank" style="color:var(--accent,#6366f1);">z.ai</a>.
+        Masukkan API Key dari <strong>Google AI Studio</strong> untuk mengaktifkan semua fitur AI.
+        Gratis, daftar di <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent,#6366f1);">aistudio.google.com</a>.
       </p>
       <div style="display:flex;gap:8px;align-items:center;">
         <input id="gemini-key-input" type="password" placeholder="Paste API Key di sini..." value="${saved}"
@@ -1114,7 +1114,7 @@ window.openAISettings = openAISettings;
 window.addEventListener('DOMContentLoaded', () => {
   _injectAIStyles();
 
-  // Load GLM key dari localStorage
+  // Load Gemini key dari localStorage
   if (!window._geminiKey && localStorage.getItem('gemini_api_key')) {
     window._geminiKey = localStorage.getItem('gemini_api_key');
   }
