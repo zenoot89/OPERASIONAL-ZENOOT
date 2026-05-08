@@ -67,7 +67,13 @@ async function _callGeminiModel(model, prompt, systemInstruction, maxTokens) {
   }
 
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // Gemini 2.5 Flash (thinking model) bisa punya multiple parts
+  // Ambil semua text parts dan gabungkan, skip bagian "thought"
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const text = parts
+    .filter(p => p.text && !p.thought) // skip thinking parts
+    .map(p => p.text)
+    .join('') || parts.map(p => p.text || '').join('');
   if (!text) throw new Error('Respons AI kosong');
   return text;
 }
