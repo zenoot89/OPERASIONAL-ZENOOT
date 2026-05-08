@@ -1984,7 +1984,7 @@ function onJChChange() {
 
   const indukList = [...new Set(DB.produk
     .filter(p => {
-      if ((p.status_produk||'aktif') === 'arsip') return false;
+      if (false) return false;
       // Jika tidak ada data assignChannel sama sekali → tampilkan semua produk
       if (Object.keys(assignCh).length === 0) return true;
       // Cek apakah SKU ini di-assign ke channel yang dipilih
@@ -2011,7 +2011,7 @@ function onJIndukChange() {
   // Update variasi dropdown
   const varEl = document.getElementById('j-sku-variasi');
   if (varEl) {
-    const produkInduk = DB.produk.filter(p=>p.induk===induk && (p.status_produk||'aktif')!=='arsip');
+    const produkInduk = DB.produk.filter(p=>p.induk===induk && true);
     varEl.innerHTML = produkInduk.map(p=>`<option>${p.var}</option>`).join('');
   }
 }
@@ -2032,7 +2032,7 @@ function populateJVariasi() {
   const induk=document.getElementById('j-sku-induk')?.value;
   const varEl=document.getElementById('j-sku-variasi');
   if(varEl && induk) varEl.innerHTML=DB.produk
-    .filter(p=>p.induk===induk&&(p.status_produk||'aktif')!=='arsip')
+    .filter(p=>p.induk===induk&&true)
     .map(p=>`<option>${p.var}</option>`).join('');
   onJVariasiChange(); // auto-fill harga saat induk berubah
 }
@@ -2499,26 +2499,58 @@ function _populateProdukSkuDropdown(){
     indukList.map(i=>`<option value="${i}"${i===cur?' selected':''}>${i}</option>`).join('');
 }
 
-function _initProdukBarDate(){
-  const el = document.getElementById('produk-bar-date');
-  if(!el) return;
-  const now = new Date();
-  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-  el.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+// ── Status Produk OTOMATIS (tidak bisa diubah manual) ──
+// Aturan standar industri retail:
+// AKTIF      → terjual dalam 30 hari terakhir & stok > safety
+// SLOW       → tidak terjual 31–60 hari, stok masih ada
+// DEADSTOCK  → tidak terjual >60 hari, stok menumpuk
+// CLEARANCE  → stok ≤ safety stock (menipis)
+// NO STOCK   → stok = 0
+function computeProdukStatus(varName) {
+  const stok = DB.stok.find(s => s.var === varName);
+  const qty = stok ? ((stok.awal||0) + (stok.masuk||0) - (stok.keluar||0)) : 0;
+  const safety = stok ? (stok.safety || 0) : 0;
+
+  if (qty <= 0) return 'nostock';
+
+  // Hitung hari terakhir terjual dari jurnal
+  const now = Date.now();
+  const jurnalVar = (DB.jurnal || []).filter(j =>
+    (j.var || '').toUpperCase() === varName.toUpperCase() && j.qty > 0
+  );
+  let daysSinceLastSale = 999;
+  if (jurnalVar.length > 0) {
+    const lastSaleTs = Math.max(...jurnalVar.map(j => {
+      if (!j.tgl) return 0;
+      return new Date(j.tgl).getTime();
+    }));
+    if (lastSaleTs > 0) daysSinceLastSale = Math.floor((now - lastSaleTs) / 86400000);
+  }
+
+  if (qty <= safety) return 'clearance';
+  if (daysSinceLastSale <= 30) return 'aktif';
+  if (daysSinceLastSale <= 60) return 'slow';
+  return 'deadstock';
 }
 
-function getProdukStatusBadge(s){
-  const map={aktif:'<span class="badge-status badge-aktif">✅ Aktif</span>',slow:'<span class="badge-status badge-slow">⚠️ Slow</span>',deadstock:'<span class="badge-status badge-dead">🔴 Deadstock</span>',clearance:'<span class="badge-status badge-clearance">🏷️ Clearance</span>',arsip:'<span class="badge-status badge-arsip">📦 Arsip</span>'};
-  return map[s]||map['aktif'];
+function getProdukStatusBadge(varName) {
+  const s = computeProdukStatus(varName);
+  const map = {
+    aktif:     '<span class="badge-status badge-aktif">✅ Aktif</span>',
+    slow:      '<span class="badge-status badge-slow">⚠️ Slow</span>',
+    deadstock: '<span class="badge-status badge-dead">🔴 Deadstock</span>',
+    clearance: '<span class="badge-status badge-clearance">🏷️ Clearance</span>',
+    nostock:   '<span class="badge-status badge-nostock">⬜ No Stock</span>',
+  };
+  return map[s] || map['aktif'];
 }
 
 function renderProduk() {
-  _initProdukBarDate();
   _populateProdukSkuDropdown();
   const q=produkQ.toLowerCase();
   let rows=DB.produk.filter(r=>r.var.toLowerCase().includes(q)||r.induk.toLowerCase().includes(q));
-  if(produkStatusFilter!=='semua') rows=rows.filter(r=>(r.status_produk||'aktif')===produkStatusFilter);
+  if(produkStatusFilter!=='semua') rows=rows.filter(r=>computeProdukStatus(r.var)===produkStatusFilter);
   if(produkSkuFilter) rows=rows.filter(r=>r.induk===produkSkuFilter);
   rows=rows.sort((a,b)=>a.induk.localeCompare(b.induk)||a.var.localeCompare(b.var));
   _produkDisplayRows=rows;
@@ -2576,7 +2608,7 @@ function renderProduk() {
         <td style="padding-left:28px;font-size:13px;">${r.var}</td>
         <td class="mono">${fmt(r.hpp)}</td>
         <td></td>
-        <td>${getProdukStatusBadge(r.status_produk||'aktif')}</td>
+        <td>${getProdukStatusBadge(r.var)}</td>
       </tr>`;
     });
   });
@@ -2810,48 +2842,6 @@ async function execBulkSupplier(){
   saveDB();renderProduk();
 }
 
-function produkBulkEditStatus(){
-  if(!_checkBulkSel('ubah status')) return;
-  document.getElementById('bulk-status-info').textContent=`${produkSelectedVars.size} SKU dipilih — Status baru berlaku ke semua.`;
-  openModal('modal-bulk-status');
-}
-async function execBulkStatus(){
-  const st=document.getElementById('bulk-status-val').value;
-  const rows=_getSelectedProdukRows();
-  rows.forEach(r=>r.status_produk=st);
-  closeModal('modal-bulk-status');
-  if(SUPABASE_URL){
-    try{
-      await DataLayer._upsert('produk',rows.map(r=>({var:r.var,induk:r.induk,hpp:r.hpp,suplaier:r.suplaier,status_produk:r.status_produk,toko:r.toko||'semua'})),'var');
-      toast(`✅ Status → ${st} disimpan & sync ke cloud (${rows.length} SKU)`);
-    }catch(e){toast('⚠️ Disimpan lokal, sync cloud gagal','warn');}
-  }
-  produkSelectedVars.clear();
-  saveDB();renderProduk();
-}
-
-async function produkBulkArsip(){
-  if(!_checkBulkSel('arsip')) return;
-  const n = produkSelectedVars.size;
-  const lbl = document.getElementById('konfirm-arsip-label');
-  if(lbl) lbl.textContent = `${n} SKU`;
-  openModal('modal-konfirm-arsip');
-}
-
-async function _execBulkArsipKonfirm(){
-  const rows=_getSelectedProdukRows();
-  rows.forEach(r=>r.status_produk='arsip');
-  closeModal('modal-konfirm-arsip');
-  if(SUPABASE_URL){
-    try{
-      await DataLayer._upsert('produk',rows.map(r=>({var:r.var,induk:r.induk,hpp:r.hpp,suplaier:r.suplaier,status_produk:'arsip',toko:r.toko||'semua'})),'var');
-      toast(`📦 ${rows.length} SKU diarsipkan & sync ke cloud`);
-    }catch(e){toast('⚠️ Diarsipkan lokal, sync cloud gagal','warn');}
-  }
-  produkSelectedVars.clear();
-  saveDB();renderProduk();
-}
-
 async function produkBulkHapus(){
   if(!_checkBulkSel('hapus')) return;
   const n = produkSelectedVars.size;
@@ -2916,7 +2906,6 @@ async function saveEditProduk() {
     var:document.getElementById('ep-variasi').value.trim().toUpperCase(),
     hpp:+document.getElementById('ep-hpp').value||0,
     suplaier:document.getElementById('ep-suplaier').value.trim().toUpperCase(),
-    status_produk:document.getElementById('ep-status').value||'aktif'
   };
   if (!updated.var)   { toast('Nama variasi tidak boleh kosong!','err'); return; }
   if (!updated.induk) { toast('Nama induk tidak boleh kosong!','err'); return; }
@@ -2924,7 +2913,7 @@ async function saveEditProduk() {
   if (btnSave) { btnSave.disabled=true; btnSave.textContent='Menyimpan...'; }
   if (SUPABASE_URL) {
     try {
-      await DataLayer._upsert('produk',[{var:updated.var,induk:updated.induk,hpp:updated.hpp,suplaier:updated.suplaier,status_produk:updated.status_produk,toko:updated.toko||'semua'}],'var');
+      await DataLayer._upsert('produk',[{var:updated.var,induk:updated.induk,hpp:updated.hpp,suplaier:updated.suplaier,toko:updated.toko||'semua'}],'var');
     } catch(e) {
       toast('Gagal simpan ke cloud: '+e.message,'err');
       if (btnSave) { btnSave.disabled=false; btnSave.textContent='Simpan'; }
@@ -2999,25 +2988,6 @@ async function saveTambahVarian() {
   saveDB(); renderProduk(); renderStok(); renderHarga();
   toast('✅ Varian '+varVal+' berhasil ditambahkan ke '+induk+'!');
 }
-async function arsipProduk(idx) {
-  if (!confirm('Arsipkan produk "'+DB.produk[idx].var+'"? Produk tidak akan tampil di operasional tapi data tetap tersimpan.')) return;
-  DB.produk[idx].status_produk = 'arsip';
-  if (SUPABASE_URL) {
-    try {
-      const produkRows = DB.produk.map(p => ({
-        induk:p.induk, var:p.var, hpp:p.hpp||0,
-        suplaier:p.suplaier||'', npm:p.npm||10,
-        jual:p.jual||0, pasang:p.pasang||0,
-        reseller:p.reseller||0, gm:p.gm||0,
-        status_produk:p.status_produk||'aktif',
-        toko:p.toko||'semua'
-      }));
-      await DataLayer._replaceAll('produk', produkRows);
-    } catch(e) { toast('Gagal arsip ke cloud: '+e.message, 'err'); DB.produk[idx].status_produk='aktif'; return; }
-  }
-  saveDB(); renderProduk(); toast('Produk diarsipkan');
-}
-
 async function deleteProduk(idx) {
   if (!confirm('Hapus produk "'+DB.produk[idx].var+'"? Data akan dihapus permanen.')) return;
   const varKey = DB.produk[idx].var;
@@ -3655,7 +3625,7 @@ function renderTokoManager() {
   }
 
   let produkList = DB.produk.filter(p=>
-    (p.status_produk||'aktif')!=='arsip' &&
+    true &&
     (p.var.toLowerCase().includes(q) || p.induk.toLowerCase().includes(q))
   );
   if (filterToko!=='semua') {
@@ -4412,7 +4382,7 @@ function _buildProdukGroups() {
   const groups = {};
   // Gunakan getProdukFiltered() agar sinkron dengan toko aktif,
   // lalu filter produk arsip agar sinkron dengan halaman Kelola Produk
-  const produkAktif = getProdukFiltered().filter(p => (p.status_produk || 'aktif') !== 'arsip');
+  const produkAktif = getProdukFiltered().filter(p => true);
   produkAktif.forEach(p => {
     if (!groups[p.induk]) groups[p.induk] = [];
     groups[p.induk].push(p);

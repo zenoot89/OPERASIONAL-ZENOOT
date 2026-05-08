@@ -484,9 +484,11 @@
 ════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-produk">
   <div class="freeze-bar" id="fb-produk">
-    <!-- Baris 1: Tanggal + Filter -->
+    <button class="fb-toggle" onclick="toggleFreezeBar('fb-produk')" title="Sembunyikan/tampilkan filter">
+      <span class="fb-toggle-icon">▲</span>
+    </button>
+    <!-- Baris 1: Filter toggle -->
     <div class="produk-bar-row1">
-      <span id="produk-bar-date" class="produk-bar-date"></span>
       <button class="btn btn-sm produk-filter-btn" id="produk-filter-toggle-btn" onclick="toggleProdukFilterPanel()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         Filter
@@ -495,14 +497,12 @@
     </div>
     <!-- Filter panel (collapsible) -->
     <div id="produk-filter-panel" class="produk-filter-panel" style="display:none;">
-      <input class="inp produk-filter-search" placeholder="🔍 Cari SKU / nama produk..." oninput="filterProduk(this.value)" id="produk-search-inp">
       <select class="inp produk-filter-sel" onchange="filterProdukStatus(this.value)" id="produk-status-sel">
         <option value="semua">Semua Status</option>
         <option value="aktif">✅ Aktif</option>
         <option value="slow">⚠️ Slow Moving</option>
         <option value="deadstock">🔴 Deadstock</option>
         <option value="clearance">🏷️ Clearance</option>
-        <option value="arsip">📦 Arsip</option>
       </select>
       <select class="inp produk-filter-sel" onchange="filterProdukBySku(this.value)" id="produk-sku-sel">
         <option value="">Semua SKU Induk</option>
@@ -549,26 +549,6 @@
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn btn-p btn-full" onclick="execBulkSupplier()">✅ Simpan & Sync</button>
         <button class="btn btn-o" onclick="closeModal('modal-bulk-supplier')">Batal</button>
-      </div>
-    </div>
-  </div>
-  <!-- Modal Bulk Edit Status -->
-  <div class="overlay" id="modal-bulk-status">
-    <div class="modal" style="max-width:380px;">
-      <div class="modal-hd">🔄 Ubah Status Massal <button class="modal-close" onclick="closeModal('modal-bulk-status')">×</button></div>
-      <p style="font-size:13px;color:var(--dusty);margin-bottom:12px;" id="bulk-status-info">—</p>
-      <div class="fg"><label class="lbl">Status Baru</label>
-        <select class="sel" id="bulk-status-val">
-          <option value="aktif">✅ Aktif</option>
-          <option value="slow">⚠️ Slow Moving</option>
-          <option value="deadstock">🔴 Deadstock</option>
-          <option value="clearance">🏷️ Clearance</option>
-          <option value="arsip">📦 Arsip</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button class="btn btn-p btn-full" onclick="execBulkStatus()">✅ Simpan & Sync</button>
-        <button class="btn btn-o" onclick="closeModal('modal-bulk-status')">Batal</button>
       </div>
     </div>
   </div>
@@ -1367,17 +1347,6 @@
       <div class="fg"><label class="lbl">HPP / pc</label><input class="inp" type="number" id="ep-hpp"></div>
       <div class="fg"><label class="lbl">Suplaier</label><input class="inp" id="ep-suplaier"></div>
     </div>
-    <div class="form-row">
-      <div class="fg"><label class="lbl">Status Produk</label>
-        <select class="inp" id="ep-status">
-          <option value="aktif">✅ Aktif</option>
-          <option value="slow">⚠️ Slow Moving</option>
-          <option value="deadstock">🔴 Deadstock</option>
-          <option value="clearance">🏷️ Clearance</option>
-          <option value="arsip">📦 Arsip</option>
-        </select>
-      </div>
-    </div>
 
     <!-- Aksi utama -->
     <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1594,28 +1563,10 @@ setTimeout(applyFreezeBarLandscape, 400);
   <button class="pctx-item" id="pctx-sup" onclick="_hideProdukCtx();produkBulkEditSupplier();">
     <span class="pctx-icon">🏭</span><span>Edit Supplier</span>
   </button>
-  <button class="pctx-item" id="pctx-status" onclick="_hideProdukCtx();produkBulkEditStatus();">
-    <span class="pctx-icon">🔄</span><span>Edit Status</span>
-  </button>
   <div class="pctx-divider"></div>
-  <button class="pctx-item pctx-warn" id="pctx-arsip" onclick="_hideProdukCtx();produkBulkArsip();">
-    <span class="pctx-icon">📦</span><span>Arsipkan Produk</span>
-  </button>
   <button class="pctx-item pctx-danger" id="pctx-hapus" onclick="_hideProdukCtx();produkBulkHapus();">
     <span class="pctx-icon">🗑️</span><span>Hapus Produk</span>
   </button>
-</div>
-
-<!-- ── DIALOG KONFIRMASI ARSIP ─────────────────────── -->
-<div class="overlay" id="modal-konfirm-arsip">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-hd">📦 Arsipkan Produk <button class="modal-close" onclick="closeModal('modal-konfirm-arsip')">×</button></div>
-    <div class="alert al-d"><span>⚠️</span><div>Produk yang diarsipkan tidak akan muncul di laporan aktif. <strong id="konfirm-arsip-label"></strong> akan diarsipkan.</div></div>
-    <div style="display:flex;gap:10px;margin-top:14px;">
-      <button class="btn btn-p btn-full" onclick="_execBulkArsipKonfirm()">📦 Yakin, Arsipkan</button>
-      <button class="btn btn-o" onclick="closeModal('modal-konfirm-arsip')">Batal</button>
-    </div>
-  </div>
 </div>
 
 <!-- ── DIALOG KONFIRMASI HAPUS ─────────────────────── -->
