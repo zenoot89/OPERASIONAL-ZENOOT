@@ -1510,10 +1510,30 @@ let _stokIndukFil = ''; // state custom dropdown
 
 function toggleStokIndukDropdown() {
   const panel = document.getElementById('stok-induk-panel');
+  const btn = document.getElementById('stok-induk-btn');
   if(!panel) return;
   const isOpen = panel.style.display !== 'none';
   if(isOpen){ panel.style.display='none'; return; }
+  // FIX: position:fixed agar tidak terpotong overflow dari parent manapun
+  const rect = btn.getBoundingClientRect();
+  panel.style.position = 'fixed';
+  panel.style.top = (rect.bottom + 4) + 'px';
+  panel.style.left = rect.left + 'px';
+  panel.style.right = 'auto';
+  panel.style.zIndex = '99999';
+  // Max 6 item terlihat langsung (~36px per item), sisanya scroll
+  panel.style.maxHeight = (6 * 37) + 'px';
+  panel.style.overflowY = 'auto';
+  panel.style.WebkitOverflowScrolling = 'touch';
   panel.style.display = 'block';
+  // Sesuaikan kalau mepet kanan layar
+  requestAnimationFrame(()=>{
+    const pr = panel.getBoundingClientRect();
+    if(pr.right > window.innerWidth){
+      panel.style.left = 'auto';
+      panel.style.right = (window.innerWidth - rect.right) + 'px';
+    }
+  });
   setTimeout(()=>{
     document.addEventListener('click', function _closeInduk(e){
       const p = document.getElementById('stok-induk-panel');
