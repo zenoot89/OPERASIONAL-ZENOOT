@@ -78,10 +78,10 @@ function goIntel(id, el) {
     'intel-cashflow':  typeof renderCashflow       === 'function' ? renderCashflow       : null,
     'intel-ai-settings': function() {
       // Load existing key ke input
-      const inp = document.getElementById('glm-settings-input');
-      const existing = localStorage.getItem('glm_api_key') || window._glmKey || '';
+      const inp = document.getElementById('gemini-settings-input');
+      const existing = localStorage.getItem('gemini_api_key') || window._geminiKey || '';
       if (inp) inp.value = existing;
-      const status = document.getElementById('glm-settings-status');
+      const status = document.getElementById('gemini-settings-status');
       if (status && existing) status.innerHTML = '<span style="color:#16a34a">✅ API Key aktif — GLM-4-Flash siap digunakan</span>';
     },
   };

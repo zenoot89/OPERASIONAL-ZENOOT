@@ -1,16 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════
    ai_module.js — zenOt Operasional V2
-   UPGRADE AI — GLM-4.5 untuk semua fitur AI
+   UPGRADE AI — Gemini 2.0 Flash untuk semua fitur AI
 
    ✅ FEATURE 1: AI Blueprint Analyzer — analisis SKU + action plan
    ✅ FEATURE 2: Daily Checklist AI Chat — asisten operasional harian
    ✅ FEATURE 3: Intelligence AI Advisor — insight otomatis dari data
-   ✅ Unified AI engine (GLM-4.5)
+   ✅ Unified AI engine (Gemini 2.0 Flash)
    ✅ Streaming support untuk chat
    ✅ Context-aware (baca DB, teData, rkData)
 
    Depends on: app_core.js (window.DB, SUPABASE_URL, SUPABASE_KEY)
-               intelligence_module.js (window._glmKey, _configGet, _configSet)
+               intelligence_module.js (window._geminiKey, _configGet, _configSet)
                trend_engine.js (window.teData)
    ════════════════════════════════════════════════════════════════ */
 
@@ -18,46 +18,36 @@
 // UNIFIED AI CALL ENGINE
 // ═══════════════════════════════════════════════════════
 
-async function _callGLM(prompt, systemInstruction = '', maxTokens = 1500) {
-  const key = window._glmKey;
-  if (!key) throw new Error('GLM API Key belum diset. Buka Intelligence → Settings AI.');
-
-  const messages = [];
-  if (systemInstruction) {
-    messages.push({ role: 'system', content: systemInstruction });
-  }
-  messages.push({ role: 'user', content: prompt });
+async function _callGemini(prompt, systemInstruction = '', maxTokens = 1500) {
+  const key = window._geminiKey;
+  if (!key) throw new Error('Gemini API Key belum diset. Buka Intelligence → Settings AI.');
 
   const body = {
-    model: 'glm-4.5',
-    messages,
-    temperature: 0.5,
-    max_tokens: maxTokens,
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.5, maxOutputTokens: maxTokens },
   };
 
+  if (systemInstruction) {
+    body.system_instruction = { parts: [{ text: systemInstruction }] };
+  }
+
   const res = await fetch(
-    'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }
   );
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `GLM error HTTP ${res.status}`);
+    throw new Error(err?.error?.message || `Gemini error HTTP ${res.status}`);
   }
 
   const data = await res.json();
-  return data?.choices?.[0]?.message?.content || '';
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
-
-// Alias untuk backward compatibility
-const _callGemini = _callGLM;
 
 function _parseJSON(raw) {
   try {
@@ -75,13 +65,13 @@ function _parseJSON(raw) {
 let _blueprintAICache = {}; // cache per skuRef
 
 async function runAIBlueprintAnalysis() {
-  if (!window._glmKey) window._glmKey = localStorage.getItem('glm_api_key') || '';
-  if (!window._glmKey) {
-    const key = prompt('🔑 Masukkan GLM API Key (dari z.ai):\n\nKey akan disimpan permanen.');
+  if (!window._geminiKey) window._geminiKey = localStorage.getItem('gemini_api_key') || '';
+  if (!window._geminiKey) {
+    const key = prompt('🔑 Masukkan Gemini API Key (dari z.ai):\n\nKey akan disimpan permanen.');
     if (!key || !key.trim()) { toast('❌ API Key kosong.', 'err'); return; }
-    window._glmKey = key.trim();
-    localStorage.setItem('glm_api_key', window._glmKey);
-    toast('✅ GLM API Key tersimpan!', 'ok');
+    window._geminiKey = key.trim();
+    localStorage.setItem('gemini_api_key', window._geminiKey);
+    toast('✅ Gemini API Key tersimpan!', 'ok');
   }
 
   const skus = (window.teData && window.teData.processedSKUs) || [];
@@ -219,7 +209,7 @@ function _renderBlueprintAIResult(data) {
           <div style="font-size:22px;">🤖</div>
           <div>
             <div style="font-size:13px;font-weight:700;color:#5C3D2E;">AI Strategic Blueprint</div>
-            <div style="font-size:10px;color:var(--dusty);">Dibuat ${time} · Powered by GLM-4.5</div>
+            <div style="font-size:10px;color:var(--dusty);">Dibuat ${time} · Powered by Gemini 2.0 Flash</div>
           </div>
           <div style="margin-left:auto;text-align:right;">
             <div style="font-size:22px;font-weight:800;color:${kesehatanColor};">${data.skor_toko}/100</div>
@@ -299,7 +289,7 @@ function _injectBlueprintAIButton() {
   wrap.id = 'ai-blueprint-inject';
   wrap.innerHTML = `
     <div class="card" style="margin-bottom:0;">
-      <div class="card-title">🤖 AI Strategic Blueprint <span style="font-size:10px;font-weight:400;color:var(--dusty);margin-left:6px;">Powered by GLM-4.5</span></div>
+      <div class="card-title">🤖 AI Strategic Blueprint <span style="font-size:10px;font-weight:400;color:var(--dusty);margin-left:6px;">Powered by Gemini 2.0 Flash</span></div>
       <p style="font-size:12px;color:var(--dusty);margin-bottom:12px;">
         AI akan menganalisis semua SKU kamu dan menghasilkan blueprint strategis — prioritas aksi, insight tersembunyi, dan quick wins yang bisa langsung dikerjakan.
       </p>
@@ -369,7 +359,7 @@ function initAIChat() {
         <button onclick="sendAIChat()" class="btn btn-p" style="padding:8px 14px;font-size:12px;flex-shrink:0;">➤</button>
       </div>
 
-      ${!window._glmKey ? `
+      ${!window._geminiKey ? `
         <div style="background:#FEF3C7;border:1px solid #d97706;border-radius:8px;padding:10px;margin-top:8px;font-size:11px;color:#92400E;">
           ⚙️ <strong>API Key belum diset.</strong> Buka Intelligence → AI Settings untuk mengaktifkan chat.
         </div>` : ''}
@@ -383,13 +373,13 @@ async function sendAIChat(prefillText = null) {
   const text = prefillText || (inputEl ? inputEl.value.trim() : '');
   if (!text) return;
 
-  if (!window._glmKey) window._glmKey = localStorage.getItem('glm_api_key') || '';
-  if (!window._glmKey) {
-    const key = prompt('🔑 Masukkan GLM API Key (dari z.ai):\n\nKey akan disimpan permanen.');
+  if (!window._geminiKey) window._geminiKey = localStorage.getItem('gemini_api_key') || '';
+  if (!window._geminiKey) {
+    const key = prompt('🔑 Masukkan Gemini API Key (dari z.ai):\n\nKey akan disimpan permanen.');
     if (!key || !key.trim()) { toast('❌ API Key kosong.', 'err'); return; }
-    window._glmKey = key.trim();
-    localStorage.setItem('glm_api_key', window._glmKey);
-    toast('✅ GLM API Key tersimpan!', 'ok');
+    window._geminiKey = key.trim();
+    localStorage.setItem('gemini_api_key', window._geminiKey);
+    toast('✅ Gemini API Key tersimpan!', 'ok');
   }
 
   if (inputEl) inputEl.value = '';
@@ -516,19 +506,19 @@ let _intelAICache = null;
 
 async function runIntelAIAdvisor() {
   // Load dari localStorage dulu
-  if (!window._glmKey) {
-    window._glmKey = localStorage.getItem('glm_api_key') || '';
+  if (!window._geminiKey) {
+    window._geminiKey = localStorage.getItem('gemini_api_key') || '';
   }
   // Kalau masih kosong, minta input via prompt
-  if (!window._glmKey) {
-    const key = prompt('🔑 Masukkan GLM API Key (dari z.ai):\n\nKey akan disimpan permanen di browser.');
+  if (!window._geminiKey) {
+    const key = prompt('🔑 Masukkan Gemini API Key (dari z.ai):\n\nKey akan disimpan permanen di browser.');
     if (!key || !key.trim()) {
       toast('❌ API Key kosong, dibatalkan.', 'err');
       return;
     }
-    window._glmKey = key.trim();
-    localStorage.setItem('glm_api_key', window._glmKey);
-    toast('✅ GLM API Key tersimpan!', 'ok');
+    window._geminiKey = key.trim();
+    localStorage.setItem('gemini_api_key', window._geminiKey);
+    toast('✅ Gemini API Key tersimpan!', 'ok');
   }
 
   const resultEl = document.getElementById('intel-ai-result');
@@ -710,7 +700,7 @@ function _injectIntelAIAdvisor() {
   panel.className = 'card';
   panel.style.marginBottom = '16px';
   panel.innerHTML = `
-    <div class="card-title">🤖 AI Intelligence Advisor <span style="font-size:10px;font-weight:400;color:var(--dusty);margin-left:6px;">Powered by GLM-4.5</span></div>
+    <div class="card-title">🤖 AI Intelligence Advisor <span style="font-size:10px;font-weight:400;color:var(--dusty);margin-left:6px;">Powered by Gemini 2.0 Flash</span></div>
     <p style="font-size:12px;color:var(--dusty);margin-bottom:12px;">AI akan menganalisis data 30 hari terakhir dan memberikan diagnosis bisnis, kekuatan/kelemahan, serta rekomendasi konkret.</p>
     <button id="btn-intel-ai" class="btn btn-p btn-sm" onclick="runIntelAIAdvisor()">🤖 Generate AI Insight</button>
     <div id="intel-ai-result" style="display:none;margin-top:12px;"></div>`;
@@ -893,11 +883,11 @@ function _injectAIStyles() {
 })();
 
 // ═══════════════════════════════════════════════════════
-// renderAIDrawer — inject UI settings GLM API Key
+// renderAIDrawer — inject UI settings Gemini API Key
 // ═══════════════════════════════════════════════════════
 function renderAIDrawer() {
   // Jika sudah ada, skip
-  if (document.getElementById('ai-glm-drawer')) return;
+  if (document.getElementById('ai-gemini-drawer')) return;
 
   // Cari container Intel Dashboard
   const container = document.getElementById('intel-dashboard') ||
@@ -906,10 +896,10 @@ function renderAIDrawer() {
                     document.querySelector('.page.active');
   if (!container) return;
 
-  const saved = window._glmKey || localStorage.getItem('glm_api_key') || '';
+  const saved = window._geminiKey || localStorage.getItem('gemini_api_key') || '';
 
   const drawerHTML = `
-  <div id="ai-glm-drawer" style="
+  <div id="ai-gemini-drawer" style="
     background: var(--card,#fff);
     border: 1.5px solid var(--border,#e5e7eb);
     border-radius: 12px;
@@ -924,7 +914,7 @@ function renderAIDrawer() {
       else{b.style.display='none';c.textContent='▼';}
     ">
       <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">
-        ⚙️ AI Settings — GLM API Key
+        ⚙️ AI Settings — Gemini API Key
       </div>
       <span id="ai-drawer-chevron" style="font-size:12px;color:var(--dusty,#9ca3af);">▼</span>
     </div>
@@ -934,7 +924,7 @@ function renderAIDrawer() {
         Gratis, daftar di <a href="https://z.ai" target="_blank" style="color:var(--accent,#6366f1);">z.ai</a>.
       </p>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input id="glm-key-input" type="password" placeholder="Paste API Key di sini..." value="${saved}"
+        <input id="gemini-key-input" type="password" placeholder="Paste API Key di sini..." value="${saved}"
           style="
             flex:1;padding:10px 14px;border:1.5px solid var(--border,#e5e7eb);
             border-radius:8px;font-size:13px;background:var(--bg,#f9fafb);
@@ -942,11 +932,11 @@ function renderAIDrawer() {
           "
         />
         <button onclick="
-          const v=document.getElementById('glm-key-input').value.trim();
+          const v=document.getElementById('gemini-key-input').value.trim();
           if(!v){toast('❌ API Key kosong!','err');return;}
-          window._glmKey=v;
-          localStorage.setItem('glm_api_key',v);
-          toast('✅ GLM API Key tersimpan!','ok');
+          window._geminiKey=v;
+          localStorage.setItem('gemini_api_key',v);
+          toast('✅ Gemini API Key tersimpan!','ok');
           document.getElementById('ai-drawer-body').style.display='none';
           document.getElementById('ai-drawer-chevron').textContent='▼';
         " style="
@@ -954,7 +944,7 @@ function renderAIDrawer() {
           border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
         ">Simpan</button>
       </div>
-      ${saved ? `<p style="font-size:11px;color:#16a34a;margin:8px 0 0;">✅ API Key aktif — GLM-4.5 siap digunakan</p>` : ''}
+      ${saved ? `<p style="font-size:11px;color:#16a34a;margin:8px 0 0;">✅ API Key aktif — Gemini 2.0 Flash siap digunakan</p>` : ''}
     </div>
   </div>`;
 
@@ -962,8 +952,8 @@ function renderAIDrawer() {
   container.insertAdjacentHTML('afterbegin', drawerHTML);
 
   // Load key dari localStorage jika belum di-set
-  if (!window._glmKey && localStorage.getItem('glm_api_key')) {
-    window._glmKey = localStorage.getItem('glm_api_key');
+  if (!window._geminiKey && localStorage.getItem('gemini_api_key')) {
+    window._geminiKey = localStorage.getItem('gemini_api_key');
   }
 }
 
@@ -995,12 +985,12 @@ function openAISettings() {
     }
 
     // Scroll ke drawer
-    const drawer = document.getElementById('ai-glm-drawer');
+    const drawer = document.getElementById('ai-gemini-drawer');
     if (drawer) drawer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     // Focus ke input API key
     setTimeout(() => {
-      const keyInput = document.getElementById('glm-key-input');
+      const keyInput = document.getElementById('gemini-key-input');
       if (keyInput) keyInput.focus();
     }, 300);
   }, 200);
@@ -1017,8 +1007,8 @@ window.addEventListener('DOMContentLoaded', () => {
   _injectAIStyles();
 
   // Load GLM key dari localStorage
-  if (!window._glmKey && localStorage.getItem('glm_api_key')) {
-    window._glmKey = localStorage.getItem('glm_api_key');
+  if (!window._geminiKey && localStorage.getItem('gemini_api_key')) {
+    window._geminiKey = localStorage.getItem('gemini_api_key');
   }
 
   // Jika daily sudah aktif
