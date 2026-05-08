@@ -75,9 +75,13 @@ function _parseJSON(raw) {
 let _blueprintAICache = {}; // cache per skuRef
 
 async function runAIBlueprintAnalysis() {
+  if (!window._glmKey) window._glmKey = localStorage.getItem('glm_api_key') || '';
   if (!window._glmKey) {
-    toast('⚙️ Masukkan GLM API Key dulu di Intelligence > AI Settings', 'err');
-    return;
+    const key = prompt('🔑 Masukkan GLM API Key (dari z.ai):\n\nKey akan disimpan permanen.');
+    if (!key || !key.trim()) { toast('❌ API Key kosong.', 'err'); return; }
+    window._glmKey = key.trim();
+    localStorage.setItem('glm_api_key', window._glmKey);
+    toast('✅ GLM API Key tersimpan!', 'ok');
   }
 
   const skus = (window.teData && window.teData.processedSKUs) || [];
@@ -379,9 +383,13 @@ async function sendAIChat(prefillText = null) {
   const text = prefillText || (inputEl ? inputEl.value.trim() : '');
   if (!text) return;
 
+  if (!window._glmKey) window._glmKey = localStorage.getItem('glm_api_key') || '';
   if (!window._glmKey) {
-    toast('⚙️ Masukkan GLM API Key dulu di Intelligence > AI Settings', 'err');
-    return;
+    const key = prompt('🔑 Masukkan GLM API Key (dari z.ai):\n\nKey akan disimpan permanen.');
+    if (!key || !key.trim()) { toast('❌ API Key kosong.', 'err'); return; }
+    window._glmKey = key.trim();
+    localStorage.setItem('glm_api_key', window._glmKey);
+    toast('✅ GLM API Key tersimpan!', 'ok');
   }
 
   if (inputEl) inputEl.value = '';
@@ -507,9 +515,20 @@ Tanggal Hari Ini: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', da
 let _intelAICache = null;
 
 async function runIntelAIAdvisor() {
+  // Load dari localStorage dulu
   if (!window._glmKey) {
-    toast('⚙️ Masukkan GLM API Key dulu di Intelligence > AI Settings', 'err');
-    return;
+    window._glmKey = localStorage.getItem('glm_api_key') || '';
+  }
+  // Kalau masih kosong, minta input via prompt
+  if (!window._glmKey) {
+    const key = prompt('🔑 Masukkan GLM API Key (dari z.ai):\n\nKey akan disimpan permanen di browser.');
+    if (!key || !key.trim()) {
+      toast('❌ API Key kosong, dibatalkan.', 'err');
+      return;
+    }
+    window._glmKey = key.trim();
+    localStorage.setItem('glm_api_key', window._glmKey);
+    toast('✅ GLM API Key tersimpan!', 'ok');
   }
 
   const resultEl = document.getElementById('intel-ai-result');
