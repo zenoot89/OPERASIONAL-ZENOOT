@@ -557,9 +557,9 @@ async function _retryCloudLoad() {
       _normalizeJurnalChannel();
       recalcKeluar();
       setCloudStatus(true);
-      // Re-render halaman aktif dengan data terbaru
-      if (typeof renderDashboard === 'function') renderDashboard();
-      if (typeof renderJurnal === 'function') renderJurnal();
+      DataLayer.saveLocal(DB);
+      _normalizeJurnalChannel(); recalcKeluar();
+      if (typeof _reRenderCurrentPage === 'function') _reRenderCurrentPage();
     }
   } catch(e) { /* tetap offline, coba lagi nanti */ }
 }
@@ -645,74 +645,93 @@ function recalcStok() {
 function recalcKeluar() { recalcStok(); }
 
 async function loadDB() {
+  // ════ CACHE-FIRST STRATEGY ════
+  // 1. Load dari localStorage DULU → UI langsung tampil
+  // 2. Cloud sync di background → update kalau ada data baru
+
+  // Step 1: Load dari cache lokal (instant, 0ms)
+  const local = DataLayer.loadLocal();
+  if (local) {
+    if (local.produk)  DB.produk  = local.produk;
+    if (local.stok)    DB.stok    = local.stok;
+    if (local.jurnal)  DB.jurnal  = local.jurnal;
+    if (local.restock) DB.restock = local.restock;
+    if (local.channel) DB.channel = local.channel;
+    try { const ac = localStorage.getItem('zenot_assign_channel'); if (ac) DB.assignChannel = JSON.parse(ac); } catch(e) {}
+    _normalizeJurnalChannel();
+    recalcKeluar();
+    console.info(`[ZENOOT] 💾 Cache lokal: produk:${DB.produk.length} stok:${DB.stok.length} jurnal:${DB.jurnal.length}`);
+  }
+
+  // Step 2: Sync cloud di background (tidak blokir UI)
   if (SUPABASE_URL) {
-    try {
-      showLoadingOverlay("☁️ Memuat data dari cloud...");
-      console.info('[ZENOOT] Mencoba connect ke Supabase:', SUPABASE_URL.split('.')[0] + '...');
+    _syncCloudBackground();
+  } else {
+    setCloudStatus(false);
+  }
+}
 
-      // Timeout 15 detik — HP 4G butuh lebih lama (dari 8s → 15s)
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 15000)
-      );
-      const result = await Promise.race([DataLayer.fetch(), timeoutPromise]);
+async function _syncCloudBackground() {
+  try {
+    console.info('[ZENOOT] ☁️ Background sync ke Supabase...');
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout")), 15000)
+    );
+    const result = await Promise.race([DataLayer.fetch(), timeoutPromise]);
 
-      if (result && result.ok && result.data) {
-        const saved = result.data;
-        if (saved.produk)  DB.produk  = saved.produk;
-        if (saved.stok)    DB.stok    = saved.stok;
-        if (saved.jurnal)  DB.jurnal  = saved.jurnal;
-        if (saved.restock) DB.restock = saved.restock;
-        if (saved.channel) DB.channel = saved.channel; // legacy fallback
-        console.info(`[ZENOOT] ✅ Cloud load OK — produk:${DB.produk.length} stok:${DB.stok.length} jurnal:${DB.jurnal.length} channel:${DB.channel.length}`);
-        if (DB.channel.length === 0) console.warn('[ZENOOT] ⚠️ Channel kosong! Cek tabel "toko" di Supabase — pastikan ada row dengan status=aktif');
-        // Simpan ke localStorage sebagai cache
-        DataLayer.saveLocal(DB);
-        // Load assignChannel dari cache lokal dulu (instant)
-        try { const ac = localStorage.getItem('zenot_assign_channel'); if (ac) DB.assignChannel = JSON.parse(ac); } catch(e) {}
-        _normalizeJurnalChannel();
-        recalcKeluar();
-        setCloudStatus(true);
-        hideLoadingOverlay();
-        // Fetch produk_toko di background — tidak blokir rendering
-        _sbFetch(`${SUPABASE_URL}/rest/v1/produk_toko?select=var,toko_kode,aktif`)
-          .then(r => r.ok ? r.json() : [])
-          .then(chRows => {
-            if (chRows && chRows.length > 0) {
-              DB.assignChannel = {};
-              chRows.forEach(r => {
-                if (!DB.assignChannel[r.var]) DB.assignChannel[r.var] = {};
-                DB.assignChannel[r.var][r.toko_kode] = r.aktif;
-              });
-              localStorage.setItem('zenot_assign_channel', JSON.stringify(DB.assignChannel));
-            }
-          }).catch(()=>{});
-        return;
-      }
-    } catch(e) {
-      console.error('[ZENOOT] ❌ Cloud load GAGAL:', e.message, '— fallback ke localStorage');
-      hideLoadingOverlay();
-    }
-
-    // Fallback: coba load dari localStorage
-    const local = DataLayer.loadLocal();
-    if (local) {
-      if (local.produk)  DB.produk  = local.produk;
-      if (local.stok)    DB.stok    = local.stok;
-      if (local.jurnal)  DB.jurnal  = local.jurnal;
-      if (local.restock) DB.restock = local.restock;
-      if (local.channel) DB.channel = local.channel; // legacy fallback
-      // Load assignChannel dari localStorage
-      try {
-        const ac = localStorage.getItem('zenot_assign_channel');
-        if (ac) DB.assignChannel = JSON.parse(ac);
-      } catch(e) {}
+    if (result && result.ok && result.data) {
+      const saved = result.data;
+      if (saved.produk)  DB.produk  = saved.produk;
+      if (saved.stok)    DB.stok    = saved.stok;
+      if (saved.jurnal)  DB.jurnal  = saved.jurnal;
+      if (saved.restock) DB.restock = saved.restock;
+      if (saved.channel) DB.channel = saved.channel;
+      console.info(`[ZENOOT] ✅ Cloud sync OK — produk:${DB.produk.length} stok:${DB.stok.length} jurnal:${DB.jurnal.length} channel:${DB.channel.length}`);
+      if (DB.channel.length === 0) console.warn('[ZENOOT] ⚠️ Channel kosong!');
+      DataLayer.saveLocal(DB);
+      // assignChannel dari cache dulu, fetch produk_toko di background
+      try { const ac = localStorage.getItem('zenot_assign_channel'); if (ac) DB.assignChannel = JSON.parse(ac); } catch(e) {}
       _normalizeJurnalChannel();
       recalcKeluar();
-      console.info("Data dimuat dari cache lokal (cloud tidak tersedia)");
+      setCloudStatus(true);
+      // Re-render halaman aktif dengan data terbaru dari cloud
+      _reRenderCurrentPage();
+      // Fetch produk_toko di background (tidak blokir)
+      _sbFetch(`${SUPABASE_URL}/rest/v1/produk_toko?select=var,toko_kode,aktif`)
+        .then(r => r.ok ? r.json() : [])
+        .then(chRows => {
+          if (chRows && chRows.length > 0) {
+            DB.assignChannel = {};
+            chRows.forEach(r => {
+              if (!DB.assignChannel[r.var]) DB.assignChannel[r.var] = {};
+              DB.assignChannel[r.var][r.toko_kode] = r.aktif;
+            });
+            localStorage.setItem('zenot_assign_channel', JSON.stringify(DB.assignChannel));
+          }
+        }).catch(()=>{});
     }
+  } catch(e) {
+    console.warn('[ZENOOT] ⚠️ Cloud sync gagal:', e.message, '— pakai cache lokal');
     setCloudStatus(false);
-    hideLoadingOverlay();
   }
+}
+
+function _reRenderCurrentPage() {
+  const p = _currentPage;
+  if      (p==='dashboard' && typeof renderDashboard==='function') renderDashboard();
+  else if (p==='produk'    && typeof renderProduk   ==='function') renderProduk();
+  else if (p==='stok'      && typeof renderStok     ==='function') renderStok();
+  else if (p==='jurnal'    && typeof renderJurnal   ==='function') { populateJInduk(); renderJurnal(); }
+  else if (p==='restock'   && typeof renderRestock  ==='function') { renderRestock(); if(typeof renderLowStock==='function') renderLowStock(); }
+  else if (p==='harga'     && typeof renderHarga    ==='function') renderHarga();
+  else if (p==='channel'   && typeof renderChannel  ==='function') renderChannel();
+  else if (p==='daily'     && typeof renderDailyChecklist==='function') renderDailyChecklist();
+  else if (p==='biaya-ops-global' && typeof renderBiayaOpsGlobal==='function') renderBiayaOpsGlobal();
+  else if (p==='planning-kpi'     && typeof renderPlanningKPI   ==='function') renderPlanningKPI();
+  else if (p==='planning-ops'     && typeof renderPlanningOps   ==='function') renderPlanningOps();
+  else if (p==='laporan'          && typeof renderLaporan        ==='function') renderLaporan();
+  // Selalu update dashboard stats di background
+  if (p !== 'dashboard' && typeof renderDashboard==='function') renderDashboard();
 }
 
 function _normalizeJurnalChannel() {
@@ -746,14 +765,7 @@ function _applyCloudData(d) {
       }).catch(() => {});
   }
   setCloudStatus(true);
-  const p = _currentPage;
-  if      (p==='dashboard' && typeof renderDashboard==='function') renderDashboard();
-  else if (p==='produk'    && typeof renderProduk   ==='function') renderProduk();
-  else if (p==='stok'      && typeof renderStok     ==='function') renderStok();
-  else if (p==='toko'      && typeof renderTokoManager==='function') renderTokoManager();
-  else if (p==='jurnal'    && typeof renderJurnal   ==='function') renderJurnal();
-  else if (p==='restock'   && typeof renderRestock  ==='function') { renderRestock(); if(typeof renderLowStock==='function') renderLowStock(); }
-  else if (p==='channel'   && typeof renderChannel  ==='function') renderChannel();
+  if (typeof _reRenderCurrentPage === 'function') _reRenderCurrentPage();
 }
 
 async function syncHargaRealtime() {
