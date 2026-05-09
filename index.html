@@ -462,8 +462,8 @@
         <button class="jfb-mini-btn" id="jfb-toggle-btn" onclick="toggleJurnalFreeze()" title="Perluas/Perkecil">
           <span id="jfb-toggle-icon">▲</span>
         </button>
-        <button class="btn btn-sm jfb-btn" onclick="resetJurnalFilter()">↺ Reset</button>
-        <div style="position:relative;">
+        <button class="btn btn-sm jfb-btn jfb-reset-btn" onclick="resetJurnalFilter()">↺ Reset</button>
+        <div class="jfb-filter-wrap" style="position:relative;">
           <button class="btn produk-filter-main-btn jfb-btn" id="jurnal-sort-btn" onclick="toggleJurnalFilterPanel()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filter
@@ -481,7 +481,7 @@
             </div>
           </div>
         </div>
-        <button class="btn btn-p jfb-btn" onclick="openModal('modal-tambah-jurnal')">➕ Tambah</button>
+        <button class="btn btn-p jfb-btn jfb-tambah" onclick="openModal('modal-tambah-jurnal')">➕ Tambah</button>
       </div>
       <!-- Kanan: Target Harian -->
       <div class="jfb-target-wrap">
