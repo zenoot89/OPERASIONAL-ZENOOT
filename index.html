@@ -1513,7 +1513,8 @@
    FREEZE-BAR COLLAPSE — khusus landscape HP
    Auto-collapse saat masuk landscape, expand saat portrait
 ═══════════════════════════════════════════════════════ */
-const _fbIds = ['fb-stok','fb-jurnal','fb-produk','fb-harga'];
+// fb-jurnal dikelola sistem baru (jfb-state), tidak pakai fb-collapsed
+const _fbIds = ['fb-stok','fb-produk','fb-harga'];
 
 function isLandscapeHP() {
   return window.innerWidth <= 1024
