@@ -17,14 +17,20 @@ function _sbHeaders() {
   };
 }
 
+const _sbFetchOpts = (extra = {}) => ({
+  mode: 'cors',
+  credentials: 'omit',
+  ...extra
+});
+
 async function _sbUpsertLaporan(row) {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/laporan_keuangan?on_conflict=toko,bulan`,
-    {
+    _sbFetchOpts({
       method: 'POST',
       headers: { ..._sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify([row])
-    }
+    })
   );
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -32,7 +38,7 @@ async function _sbUpsertLaporan(row) {
 
 async function _sbGetLaporan(toko, bulan) {
   const url = `${SUPABASE_URL}/rest/v1/laporan_keuangan?toko=eq.${encodeURIComponent(toko)}&bulan=eq.${bulan}&select=*`;
-  const res = await fetch(url, { headers: _sbHeaders() });
+  const res = await fetch(url, _sbFetchOpts({ headers: _sbHeaders() }));
   if (!res.ok) throw new Error(await res.text());
   const rows = await res.json();
   return rows[0] || null;
@@ -40,14 +46,14 @@ async function _sbGetLaporan(toko, bulan) {
 
 async function _sbGetAllLaporan(toko) {
   const url = `${SUPABASE_URL}/rest/v1/laporan_keuangan?toko=eq.${encodeURIComponent(toko)}&select=*&order=bulan.desc`;
-  const res = await fetch(url, { headers: _sbHeaders() });
+  const res = await fetch(url, _sbFetchOpts({ headers: _sbHeaders() }));
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 async function _sbGetAllToko() {
   const url = `${SUPABASE_URL}/rest/v1/laporan_keuangan?select=toko,bulan&order=toko.asc,bulan.desc`;
-  const res = await fetch(url, { headers: _sbHeaders() });
+  const res = await fetch(url, _sbFetchOpts({ headers: _sbHeaders() }));
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -373,7 +379,7 @@ function renderLaporan() {
   if (!el) return;
 
   const channels = (typeof DB !== 'undefined' ? DB.channel||[] : [])
-    .filter(c => c.nama !== '__assign__' && c.status === 'Aktif');
+    .filter(c => c.nama !== '__assign__' && (c.status||'aktif').toLowerCase() !== 'nonaktif');
 
   // Default toko = pertama
   if (!_laporanState.toko && channels.length > 0) {
@@ -802,7 +808,7 @@ function _laporanUpload(type, input) {
         // Auto-match toko dari username
         if (username) {
           const channels = (typeof DB !== 'undefined' ? DB.channel||[] : [])
-            .filter(c => c.nama !== '__assign__' && c.status === 'Aktif');
+            .filter(c => c.nama !== '__assign__' && (c.status||'aktif').toLowerCase() !== 'nonaktif');
           const uLow = username.toLowerCase().replace(/[^a-z0-9]/g,'');
 
           // Deteksi platform dari nama file / username

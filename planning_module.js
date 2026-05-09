@@ -30,7 +30,7 @@ const PLAN = {
     try {
       const res = await fetch(
         `${SUPABASE_URL}/rest/v1/planning?toko=eq.${encodeURIComponent(toko)}&bulan=eq.${bulan}&select=data`,
-        { headers: PLAN._h() }
+        { mode: 'cors', credentials: 'omit', headers: PLAN._h() }
       );
       if (!res.ok) return null;
       const rows = await res.json();
@@ -44,6 +44,8 @@ const PLAN = {
         `${SUPABASE_URL}/rest/v1/planning?on_conflict=toko,bulan`,
         {
           method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
           headers: { ...PLAN._h(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify([{ toko, bulan, data, updated_at: new Date().toISOString() }])
         }

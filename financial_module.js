@@ -625,7 +625,7 @@ window.addEventListener('load', () => {
 function initSkuPerformaToko() {
   const sel = document.getElementById('skuPerformaToko');
   if (!sel) return;
-  const channels = (DB.channel||[]).filter(c=>c.status==='Aktif').map(c=>c.nama);
+  const channels = (DB.channel||[]).filter(c=>(c.status||'aktif').toLowerCase()!=='nonaktif').map(c=>c.nama);
   sel.innerHTML = '<option value="">Pilih Toko...</option>' +
     channels.map(c=>`<option value="${c}">${c}</option>`).join('');
   // Set bulan default = bulan lalu
@@ -713,11 +713,15 @@ function handleSkuPerformaUpload(input) {
         // Delete existing data for this toko+bulan
         await fetch(`${SUPABASE_URL}/rest/v1/sku_performa?toko=eq.${encodeURIComponent(toko)}&bulan=eq.${encodeURIComponent(bulan)}`, {
           method: 'DELETE',
+          mode: 'cors',
+          credentials: 'omit',
           headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`}
         });
         // Insert baru
         const res = await fetch(`${SUPABASE_URL}/rest/v1/sku_performa`, {
           method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
           headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
           body: JSON.stringify(hasil)
         });

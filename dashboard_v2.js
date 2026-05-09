@@ -309,7 +309,7 @@ async function renderDashboard() {
   const bulanStr     = getBulanStr();
   const bulanLaluStr = getBulanLaluStr();
 
-  const jurnal = (typeof getFilteredJurnal==='function') ? getFilteredJurnal() : DB.jurnal;
+  const jurnal = (typeof getJurnalFiltered==='function') ? getJurnalFiltered() : DB.jurnal;
 
   const jHari      = jurnal.filter(j => j.tgl===todayStr);
   const jKemarin   = jurnal.filter(j => j.tgl===kemarinStr);

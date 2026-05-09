@@ -68,10 +68,14 @@ const DataLayer = {
     return res;
   },
 
-  // Helper: fetch dari satu tabel
+  // Helper: fetch dari satu tabel — dengan Range header agar tidak terpotong di 1000 rows (default Supabase)
   async _getTable(table) {
     const res = await this._fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id.desc`, {
-      headers: this._headers('return=representation')
+      headers: {
+        ...this._headers('return=representation'),
+        'Range-Unit': 'items',
+        'Range': '0-9999999'   // fetch hingga ~10jt rows, aman untuk skala UMKM
+      }
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => res.status);
@@ -156,7 +160,7 @@ const DataLayer = {
 
       // Channel — upsert by nama (unique)
       const channelRows = (data.channel || []).map(c => ({
-        nama: c.nama, platform: c.platform, status: c.status || 'Aktif'
+        nama: c.nama, platform: c.platform, status: (c.status || 'aktif').toLowerCase()
       }));
       await this._upsert('toko', channelRows.map(r=>({kode:r.nama||r.kode,brand:r.brand||'zenOt',platform:(r.platform||'shopee').toLowerCase(),grup:(r.platform||'SHOPEE').toUpperCase(),username:r.username||'',warna:r.warna||'#5C3D2E',urutan:r.urutan||99,status:r.status||'aktif'})), 'kode');
 
@@ -218,7 +222,7 @@ const DataLayer = {
               qty: r.qty, catatan: r.catatan
             })),
           channel: channel
-            .filter(t => t.status === 'aktif')  // filter toko aktif
+            .filter(t => (t.status||'aktif').toLowerCase() !== 'nonaktif')  // filter toko aktif (case-insensitive)
             .map(c => ({
               nama:     c.kode,                          // FIX: tabel 'toko' pakai kolom 'kode', bukan 'nama'
               kode:     c.kode,
@@ -228,7 +232,7 @@ const DataLayer = {
               username: c.username || '',
               warna:    c.warna    || '#5C3D2E',
               urutan:   c.urutan   || 99,
-              status:   c.status   || 'aktif'
+              status:   (c.status  || 'aktif').toLowerCase()  // normalize ke lowercase selalu
             }))
         }
       };
@@ -385,7 +389,6 @@ function getProdukFiltered() {
 // ── Render dropdown toko di topbar ──
 function renderTokoDropdown() {
   const el = document.getElementById('toko-dropdown-wrap');
-  if (!el) return; // elemen sudah dihapus
   if (!el) return;
 
   const toko = window._tokoAktif
@@ -4681,7 +4684,7 @@ function _renderSplitChannelList() {
             });
           }).length;
           const isActive = _splitActiveChannel === ch.nama ? ' active' : '';
-          const statusDot = ch.status === 'Aktif'
+          const statusDot = (ch.status||'aktif').toLowerCase() !== 'nonaktif'
             ? '<span class="ch-item-status-dot aktif"></span>'
             : '<span class="ch-item-status-dot nonaktif"></span>';
           return `<div class="ch-split-ch-item${isActive}" style="background:${blushItem};" onclick="_splitSelectChannel('${ch.nama}')">
@@ -4747,7 +4750,7 @@ function _splitSelectChannel(chNama) {
   // Status badge
   if (badge) {
     badge.textContent = ch.status;
-    badge.className = 'ch-split-status-badge' + (ch.status !== 'Aktif' ? ' nonaktif' : '');
+    badge.className = 'ch-split-status-badge' + ((ch.status||'aktif').toLowerCase() === 'nonaktif' ? ' nonaktif' : '');
   }
 
   // Counter — angka saja, besar
@@ -4765,7 +4768,7 @@ function _splitSelectChannel(chNama) {
   const chIdx = window._tokoList.findIndex(t => t.kode === chNama);
   if (toggleBtn) {
     toggleBtn.style.display = chIdx >= 0 ? 'inline-block' : 'none';
-    if (ch.status === 'Aktif') {
+    if ((ch.status||'aktif').toLowerCase() !== 'nonaktif') {
       toggleBtn.textContent = 'Nonaktifkan';
       toggleBtn.classList.remove('aktifkan');
     } else {
