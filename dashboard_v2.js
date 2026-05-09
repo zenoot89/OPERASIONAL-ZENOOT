@@ -749,7 +749,7 @@ async function renderDashboard() {
         const isComp   = targetDs !== todayS;
         const pts=[];
         const j=getJurnalInRange({from:targetDs,to:targetDs});
-        const nowH = isComp ? 23 : new Date().getHours();
+        const nowH = 23; // selalu render 24 jam penuh (00:00–23:00)
         for(let h=0;h<=nowH;h++){
           const jh=j.filter(x=>{
             const t=(x.tgl_waktu||x.waktu||'');
@@ -791,7 +791,7 @@ async function renderDashboard() {
       const par=cvs.parentElement;
       const W=par?par.clientWidth||500:500;
       const isMobile = W < 500;
-      const H = isMobile ? 160 : 190;
+      const H = isMobile ? 200 : 240;
       cvs.width=W; cvs.height=H;
       const ctx=cvs.getContext('2d');
       ctx.clearRect(0,0,W,H);
@@ -1184,7 +1184,7 @@ async function renderDashboard() {
           </div>
         </div>
         <div style="background:#fff;border:1.5px solid #8B5A2B;border-top:none;border-radius:0 0 14px 14px;flex:1;padding:14px 16px 14px;">
-          <canvas id="${CVAS_ID}" style="width:100%;height:150px;display:block;"></canvas>
+          <canvas id="${CVAS_ID}" style="width:100%;height:220px;display:block;"></canvas>
           <div class="ow-chart-legend"></div>
           <div class="ow-chart-stats"></div>
         </div>
