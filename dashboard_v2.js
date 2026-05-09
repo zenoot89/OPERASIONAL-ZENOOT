@@ -598,29 +598,20 @@ async function renderDashboard() {
       </div>
     </div>
 
-    <!-- SKU DECLINING -->
+    <!-- TREN PRODUK (Per Hari / 7 Hari / Per Bulan) -->
     <div class="ow-col3">
       <div class="ow-col3-hd">
-        <span class="ow-sec-title">📉 SKU Menurun</span>
-        <span class="ow-card-badge ow-badge-amber">${skuDeclining.length} SKU</span>
+        <span class="ow-sec-title">📊 Tren Produk</span>
+        <span class="ow-card-badge ow-badge-amber" id="trenProdukBadge">${skuDeclining.length} SKU</span>
       </div>
       <div class="ow-col3-card">
-        <div style="font-size:12px;padding:9px 12px;background:#FFFBF0;border-radius:8px;border-left:3px solid #D97706;margin-bottom:10px;color:#92400E;font-weight:600;">
-          ⚠️ Penjualan turun vs bulan lalu. Cek harga, stok, atau promosi.
+        <!-- Tab filter -->
+        <div style="display:flex;gap:0;margin-bottom:12px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;">
+          <div id="trenTab_hari" onclick="_trenSetMode('hari')" style="flex:1;text-align:center;padding:6px 0;font-size:11.5px;font-weight:700;cursor:pointer;background:var(--charcoal);color:#fff;transition:all .15s;">Per Hari</div>
+          <div id="trenTab_7d"   onclick="_trenSetMode('7d')"  style="flex:1;text-align:center;padding:6px 0;font-size:11.5px;font-weight:700;cursor:pointer;background:var(--card);color:var(--dusty);border-left:1px solid var(--border);transition:all .15s;">7 Hari</div>
+          <div id="trenTab_bulan" onclick="_trenSetMode('bulan')" style="flex:1;text-align:center;padding:6px 0;font-size:11.5px;font-weight:700;cursor:pointer;background:var(--card);color:var(--dusty);border-left:1px solid var(--border);transition:all .15s;">Per Bulan</div>
         </div>
-        <div class="ow-col3-scroll">
-          ${skuDeclining.length===0
-            ? `<div class="ow-empty">✅ Tidak ada SKU yang menurun signifikan</div>`
-            : skuDeclining.map(s=>`
-              <div class="ow-stok-row">
-                <span class="ow-stok-sku">${s.sku}</span>
-                <div class="ow-stok-right" style="gap:8px;">
-                  <span class="ow-stok-meta">${s.prev} → ${s.qty} pcs</span>
-                  <span style="font-size:13px;font-weight:700;color:#C0392B;min-width:42px;text-align:right;">▼${s.drop}%</span>
-                </div>
-              </div>`).join('')
-          }
-        </div>
+        <div id="trenProdukBody" class="ow-col3-scroll"></div>
       </div>
     </div>
 
@@ -837,39 +828,29 @@ async function renderDashboard() {
         });
       }
 
-      // ── Main fill gradient ──
+      // ── Main fill gradient — warna kopi tipis ──
       const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-      grad.addColorStop(0,'rgba(238,77,45,0.22)');
-      grad.addColorStop(0.5,'rgba(238,77,45,0.08)');
-      grad.addColorStop(1,'rgba(238,77,45,0.01)');
+      grad.addColorStop(0,'rgba(139,90,43,0.13)');
+      grad.addColorStop(1,'rgba(139,90,43,0.01)');
       ctx.beginPath();
       data1.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
       ctx.lineTo(xOf(n-1),pad.t+ch);ctx.lineTo(xOf(0),pad.t+ch);ctx.closePath();
       ctx.fillStyle=grad;ctx.fill();
 
-      // ── Main gradient fill vivid ──
-      const grad2=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
-      grad2.addColorStop(0,'rgba(255,120,67,0.18)');
-      grad2.addColorStop(1,'rgba(255,120,67,0.01)');
+      // ── Main line — kopi coklat tipis seperti Shopee ──
       ctx.beginPath();
-      data1.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
-      ctx.lineTo(xOf(n-1),pad.t+ch);ctx.lineTo(xOf(0),pad.t+ch);ctx.closePath();
-      ctx.fillStyle=grad2;ctx.fill();
-
-      // ── Main line (Shopee orange) ──
-      ctx.beginPath();
-      ctx.strokeStyle='#EE4D2D';ctx.lineWidth=isMobile?2.5:2.8;ctx.lineJoin='round';ctx.lineCap='round';
+      ctx.strokeStyle='#8B5A2B';ctx.lineWidth=isMobile?1.5:1.8;ctx.lineJoin='round';ctx.lineCap='round';
       data1.forEach((d,i)=>{ i===0?ctx.moveTo(xOf(i),yOf(d.val)):ctx.lineTo(xOf(i),yOf(d.val)); });
       ctx.stroke();
 
-      // Main dots
+      // Main dots — kecil dan tipis
       data1.forEach((d,i)=>{
         if(!d.val&&!d.isToday)return;
-        const r=d.isToday?7:4;
+        const r=d.isToday?4.5:2.5;
         ctx.beginPath();
         ctx.arc(xOf(i),yOf(d.val),r,0,Math.PI*2);
-        ctx.fillStyle=d.isToday?'#c93a1a':'#EE4D2D';
-        ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+        ctx.fillStyle=d.isToday?'#5C3317':'#8B5A2B';
+        ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.2;ctx.stroke();
       });
 
       // ── X Labels — thin out if >14 points ──
@@ -925,7 +906,7 @@ async function renderDashboard() {
         if(ctx.roundRect)ctx.roundRect(bx,by,bw,bh,6);else ctx.rect(bx,by,bw,bh);
         ctx.fill();
         lines.forEach((l,li)=>{
-          ctx.fillStyle=li===1?'#ff7843':li===2?'#bbb':'#fff';
+          ctx.fillStyle=li===1?'#c8955a':li===2?'#bbb':'#fff';
           ctx.font=li===0?`bold ${fSize}px sans-serif`:`${fSize}px sans-serif`;
           ctx.textAlign='left';
           ctx.fillText(l,bx+10,by+15+li*15);
@@ -994,7 +975,7 @@ async function renderDashboard() {
       if(legendEl){
         const lbl1=_mode==='realtime'?'Hari Ini':_mode==='yesterday'?'Kemarin':_mode==='7d'?'7 Hari Ini':_mode==='30d'?'30 Hari Ini':'Periode Ini';
         const lbl2=_mode==='realtime'?'Kemarin':_mode==='yesterday'?'2 Hari Lalu':_mode==='7d'?'7 Hari Lalu':_mode==='30d'?'30 Hari Lalu':'Periode Lalu';
-        legendEl.innerHTML=`<span><span class="ow-legend-dot" style="background:#EE4D2D;"></span>${lbl1}</span><span><span class="ow-legend-dot" style="background:#ddd;border:1px dashed #bbb;"></span>${lbl2}</span>`;
+        legendEl.innerHTML=`<span><span class="ow-legend-dot" style="background:#8B5A2B;"></span>${lbl1}</span><span><span class="ow-legend-dot" style="background:#ddd;border:1px dashed #bbb;"></span>${lbl2}</span>`;
       }
 
       requestAnimationFrame(()=>{
@@ -1233,7 +1214,112 @@ async function renderDashboard() {
 
   })(); // end IIFE buildTrendWidget
 
-  // ─── 4. DEAD STOCK | STOK HABIS | PRIORITAS RESTOCK (3 kolom) ───
+  // ─── 3b. TREN PRODUK — Per Hari / 7 Hari / Per Bulan ───
+  (function buildTrenProduk(){
+    // Siapkan data per periode
+    const todayS   = _localDateStr(new Date());
+    const kemarinS = (()=>{ const d=new Date(); d.setDate(d.getDate()-1); return _localDateStr(d); })();
+    const bulanS   = (()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
+    const bulanLaluS=(()=>{ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
+
+    // 7 hari ke belakang (tidak termasuk hari ini) untuk compare
+    const sevenFrom=(()=>{ const d=new Date(); d.setDate(d.getDate()-7); return _localDateStr(d); })();
+    const fourteenFrom=(()=>{ const d=new Date(); d.setDate(d.getDate()-14); return _localDateStr(d); })();
+
+    const jurnal = DB.jurnal||[];
+
+    function soldInRange(from, to){
+      const map={};
+      jurnal.filter(j=>j.tgl&&j.tgl>=from&&j.tgl<=to).forEach(j=>{
+        map[j.var]=(map[j.var]||0)+(j.qty||0);
+      });
+      return map;
+    }
+
+    function buildList(mode){
+      let mapNow={}, mapPrev={}, labelPrev='', labelNow='';
+      if(mode==='hari'){
+        mapNow  = soldInRange(todayS, todayS);
+        mapPrev = soldInRange(kemarinS, kemarinS);
+        labelNow='Hari ini'; labelPrev='Kemarin';
+      } else if(mode==='7d'){
+        mapNow  = soldInRange(sevenFrom, todayS);
+        mapPrev = soldInRange(fourteenFrom, kemarinS);
+        labelNow='7 Hari Ini'; labelPrev='7 Hari Lalu';
+      } else {
+        mapNow  = soldInRange(bulanS+'-01', todayS);
+        mapPrev = soldInRange(bulanLaluS+'-01', bulanLaluS+'-31');
+        labelNow='Bulan Ini'; labelPrev='Bulan Lalu';
+      }
+
+      // Gabungkan semua SKU yang ada di salah satu periode
+      const allSku = new Set([...Object.keys(mapNow), ...Object.keys(mapPrev)]);
+      const rows = [];
+      allSku.forEach(sku=>{
+        const now  = mapNow[sku]||0;
+        const prev = mapPrev[sku]||0;
+        if(prev<1) return; // hanya tampilkan yang sebelumnya ada aktivitas
+        const delta = now - prev;
+        const pct   = Math.round(delta/prev*100);
+        rows.push({sku, now, prev, delta, pct});
+      });
+
+      // Sort: penurunan terbesar dulu, lalu kenaikan terbesar
+      rows.sort((a,b)=>a.pct-b.pct);
+      const turun = rows.filter(r=>r.pct<0).slice(0,5);
+      const naik  = rows.filter(r=>r.pct>0).sort((a,b)=>b.pct-a.pct).slice(0,3);
+
+      let html = '';
+      if(turun.length===0 && naik.length===0){
+        html=`<div class="ow-empty">✅ Tidak ada pergerakan SKU signifikan</div>`;
+      } else {
+        if(turun.length){
+          html+=`<div style="font-size:10.5px;font-weight:700;color:#C0392B;letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;">▼ Menurun vs ${labelPrev}</div>`;
+          html+=turun.map(s=>`
+            <div class="ow-stok-row">
+              <span class="ow-stok-sku">${s.sku}</span>
+              <div class="ow-stok-right" style="gap:8px;">
+                <span class="ow-stok-meta">${s.prev}→${s.now} pcs</span>
+                <span style="font-size:12px;font-weight:700;color:#C0392B;min-width:38px;text-align:right;">▼${Math.abs(s.pct)}%</span>
+              </div>
+            </div>`).join('');
+        }
+        if(naik.length){
+          html+=`<div style="font-size:10.5px;font-weight:700;color:#2D6A4F;letter-spacing:.6px;text-transform:uppercase;margin:${turun.length?'10px 0 4px':'0 0 4px'};">▲ Naik vs ${labelPrev}</div>`;
+          html+=naik.map(s=>`
+            <div class="ow-stok-row">
+              <span class="ow-stok-sku">${s.sku}</span>
+              <div class="ow-stok-right" style="gap:8px;">
+                <span class="ow-stok-meta">${s.prev}→${s.now} pcs</span>
+                <span style="font-size:12px;font-weight:700;color:#2D6A4F;min-width:38px;text-align:right;">▲${s.pct}%</span>
+              </div>
+            </div>`).join('');
+        }
+      }
+
+      // Update badge
+      const badge=document.getElementById('trenProdukBadge');
+      if(badge) badge.textContent=`${turun.length} turun · ${naik.length} naik`;
+
+      return html;
+    }
+
+    window._trenSetMode = function(mode){
+      // Update tab style
+      ['hari','7d','bulan'].forEach(m=>{
+        const el=document.getElementById('trenTab_'+m);
+        if(!el)return;
+        const active=m===mode;
+        el.style.background=active?'var(--charcoal)':'var(--card)';
+        el.style.color=active?'#fff':'var(--dusty)';
+      });
+      const body=document.getElementById('trenProdukBody');
+      if(body) body.innerHTML=buildList(mode);
+    };
+
+    // Render default
+    setTimeout(()=>{ window._trenSetMode('hari'); }, 100);
+  })();
 
   // --- Dead Stock HTML ---
   const deadStockHtml = deadStock.length===0
