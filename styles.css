@@ -3323,13 +3323,9 @@ body {
 }
 
 /* ── PRODUK & JURNAL FILTER ROW — full-width filter button ─── */
-#page-produk .freeze-bar,
-#page-jurnal .freeze-bar {
-  display: flex;
-  flex-direction: column;
-}
 .produk-filter-row {
-  padding-top: 4px;
+  margin-top: 6px;
+  width: 100%;
 }
 .produk-filter-main-btn svg:first-child {
   flex-shrink: 0;
