@@ -1163,6 +1163,17 @@ function go(id, el) {
   if (page) page.classList.add('active');
   if (el) el.classList.add('active');
   document.getElementById('ph').innerHTML = ptitles[id]||id;
+  // Toggle topbar visibility untuk jurnal di portrait
+  const topbar = document.querySelector('.topbar');
+  if (topbar) {
+    if (id === 'jurnal') {
+      topbar.setAttribute('data-hidden-by-jurnal', '1');
+      topbar.style.display = 'none';
+    } else if (topbar.getAttribute('data-hidden-by-jurnal')) {
+      topbar.removeAttribute('data-hidden-by-jurnal');
+      topbar.style.display = '';
+    }
+  }
   if (id==='stok')    renderStok();
   if (id==='harga')   renderHarga();
   if (id==='jurnal')  { populateJInduk(); renderJurnal(); }

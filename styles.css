@@ -3458,3 +3458,60 @@ body {
     transform: rotate(180deg);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   JURNAL PORTRAIT — freeze-bar rapat ke atas (burger area)
+════════════════════════════════════════════════════════════════ */
+
+/* Portrait mobile: hapus gap atas, freeze-bar langsung di bawah burger */
+@media (max-width: 768px) and (orientation: portrait) {
+
+  /* Sembunyikan topbar global saat di halaman jurnal */
+  #page-jurnal.active ~ * .topbar,
+  #page-jurnal.active + .topbar {
+    display: none;
+  }
+
+  /* Kurangi padding-top .main khusus jurnal aktif */
+  #page-jurnal.active {
+    margin-top: -26px; /* kompensasi margin-bottom topbar */
+  }
+
+  /* freeze-bar: sticky ke atas, padding-top untuk clearance burger */
+  #page-jurnal .freeze-bar {
+    padding-top: 10px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  /* Mini cards: 2x2 grid rapat */
+  #page-jurnal .jfb-layer1 .grid4 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+}
+
+/* Portrait: saat topbar jurnal hidden, page-jurnal naik ke atas */
+@media (max-width: 768px) and (orientation: portrait) {
+  #page-jurnal.active {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* freeze-bar: beri padding-top untuk clearance burger (60px) */
+  #page-jurnal .freeze-bar {
+    padding-top: 60px !important;
+  }
+
+  /* Mini cards 2x2 */
+  #page-jurnal .jfb-layer1 .grid4 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  /* Kurangi margin-bottom topbar yang sudah hidden */
+  .main {
+    padding-top: 0 !important;
+  }
+}
