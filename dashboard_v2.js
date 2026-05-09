@@ -309,7 +309,9 @@ async function renderDashboard() {
   const bulanStr     = getBulanStr();
   const bulanLaluStr = getBulanLaluStr();
 
-  const jurnal = (typeof getJurnalFiltered==='function') ? getJurnalFiltered() : DB.jurnal;
+  // Dashboard pakai SEMUA jurnal (bukan filter per toko aktif)
+  // Filter toko aktif hanya untuk halaman produk/stok, bukan untuk overview omset
+  const jurnal = DB.jurnal || [];
 
   const jHari      = jurnal.filter(j => j.tgl===todayStr);
   const jKemarin   = jurnal.filter(j => j.tgl===kemarinStr);

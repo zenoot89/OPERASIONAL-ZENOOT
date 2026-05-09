@@ -285,7 +285,8 @@ async function loadTokoList() {
   try {
     // Ambil SEMUA toko dulu, filter di client (handle variasi status: aktif/AKTIF/null)
     const res = await _sbFetch(
-      `${SUPABASE_URL}/rest/v1/toko?select=*&order=urutan.asc`
+      `${SUPABASE_URL}/rest/v1/toko?select=*&order=urutan.asc`,
+      { headers: { 'Range-Unit': 'items', 'Range': '0-9999999' } }
     );
     if (!res.ok) return;
     const rows = await res.json();
@@ -306,11 +307,12 @@ async function loadTokoList() {
     }));
     // Restore toko aktif dari localStorage
     const saved = localStorage.getItem('zenot_toko_aktif');
-    if (saved && window._tokoList.find(t => t.kode === saved)) {
+    if (saved && saved !== 'null' && window._tokoList.find(t => t.kode === saved)) {
       window._tokoAktif = saved;
-    } else if (window._tokoList.length > 0) {
-      window._tokoAktif = window._tokoList[0].kode;
-      localStorage.setItem('zenot_toko_aktif', window._tokoAktif);
+    } else {
+      // Default: null = semua toko (tidak filter) — user bisa pilih sendiri via dropdown
+      window._tokoAktif = null;
+      localStorage.removeItem('zenot_toko_aktif');
     }
     renderTokoDropdown();
   } catch(e) {
@@ -341,7 +343,11 @@ async function deleteToko(kode) {
 // ── Switch toko aktif ──
 function switchToko(kode) {
   window._tokoAktif = kode || null;
-  localStorage.setItem('zenot_toko_aktif', kode || '');
+  if (kode) {
+    localStorage.setItem('zenot_toko_aktif', kode);
+  } else {
+    localStorage.removeItem('zenot_toko_aktif');
+  }
   renderTokoDropdown();
 
   // Re-render halaman aktif dengan filter baru
@@ -4003,7 +4009,19 @@ const CH_COLORS = ['#5C3D2E','#C9785A','#9D4EDD','#3D7EAA','#2A5F8A','#7C3AED','
 async function renderChannel() {
   const wrap = document.getElementById('page-channel');
   if (!wrap) return;
+
+  // Tampilkan loading state dulu supaya tidak blank
+  if (!window._tokoList || window._tokoList.length === 0) {
+    wrap.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--dusty);font-size:13px;">⏳ Memuat data channel...</div>`;
+  }
+
   await loadPlatformList();
+
+  // Jika _tokoList masih kosong setelah loadPlatformList, coba load ulang
+  if (!window._tokoList || window._tokoList.length === 0) {
+    await loadTokoList();
+  }
+
   const grups = [...new Set(window._tokoList.map(t => t.platform ? t.platform.toUpperCase() : 'LAINNYA'))];
   const total = window._tokoList.length;
 
