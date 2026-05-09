@@ -2351,6 +2351,12 @@ function renderTargetHarian() {
   const done = omsetHariIni >= targetHarian;
   const barColor = done ? '#27ae60' : pct >= 60 ? '#f39c12' : '#c0392b';
   const pctColor = done ? '#27ae60' : pct >= 60 ? 'var(--gold,#c9a84c)' : '#c0392b';
+  // Hitung rata-rata nilai per transaksi hari ini → estimasi pesanan lagi
+  const trxHariIni = jHariIni.length;
+  const avgPerTrx = trxHariIni > 0 ? omsetHariIni / trxHariIni : 0;
+  const pesananLagi = (!done && avgPerTrx > 0) ? Math.ceil(sisa / avgPerTrx) : 0;
+  const pesananInfo = done ? 'Target tercapai!' :
+    (avgPerTrx > 0 ? '~' + pesananLagi + ' pesanan lagi' : fmtRp(sisa) + ' lagi');
   el.innerHTML =
     '<div class="jth-header">' +
       '<span class="jth-title">Target Harian</span>' +
@@ -2359,7 +2365,7 @@ function renderTargetHarian() {
     '<div class="jth-bar-bg"><div class="jth-bar-fill" style="width:' + pct + '%;background:' + barColor + ';"></div></div>' +
     '<div class="jth-footer">' +
       '<span class="jth-pct" style="color:' + pctColor + ';">' + pct + '% tercapai</span>' +
-      '<span class="jth-info">' + (done ? 'Target tercapai!' : fmtRp(sisa) + ' lagi') + ' &middot; ' + qtyHariIni + ' pcs hari ini</span>' +
+      '<span class="jth-info">' + pesananInfo + ' &middot; ' + trxHariIni + ' trx · ' + qtyHariIni + ' pcs</span>' +
     '</div>';
 }
 function openEditJurnal(idx) {

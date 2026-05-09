@@ -3402,10 +3402,20 @@ body {
     gap: 6px;
   }
 
-  /* Target harian di kanan toolbar */
+  /* Actions: pastikan semua tombol tampil, tidak terpotong */
+  .jfb-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    overflow: visible !important;
+  }
+
+  /* Target harian di kanan toolbar — beri ruang agar tidak tertutup burger */
   .jfb-target-wrap {
     flex: 1;
     min-width: 0;
+    padding-right: 60px; /* ruang untuk hamburger fixed di kanan */
   }
 
   /* Target card: compact 1 baris di landscape */
