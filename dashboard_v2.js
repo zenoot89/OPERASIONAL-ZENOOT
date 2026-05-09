@@ -615,7 +615,7 @@ async function renderDashboard() {
           </div>
         </div>
         <!-- Indicator label sejajar -->
-        <span id="trenIndicatorLabel" style="flex:1;font-size:10px;font-weight:700;color:#C0392B;letter-spacing:.6px;text-transform:uppercase;text-align:right;white-space:nowrap;line-height:1;">▼ MENURUN VS KEMARIN</span>
+        <span id="trenProdukBadge" style="font-size:10px;font-weight:700;color:var(--dusty);white-space:nowrap;"></span>
       </div>
       <div class="ow-col3-card">
         <div id="trenProdukBody" class="ow-col3-scroll"></div>
@@ -1131,32 +1131,18 @@ async function renderDashboard() {
           <span style="font-weight:700;color:${pctOmset>=70?'#2D6A4F':'#D97706'}">${pctOmset}% tercapai</span>
           <span>${daysLeft} hari tersisa</span>
         </div>
-        <div class="ow-mini-grid" style="margin-bottom:18px;">
-          <div class="ow-mini"><div class="ow-mini-label">Sisa Target</div><div class="ow-mini-val" style="font-size:15px;color:${sisaTarget>0?'#C0392B':'#2D6A4F'}">${fmtShort(sisaTarget)}</div></div>
-          <div class="ow-mini"><div class="ow-mini-label">Per Hari Perlu</div><div class="ow-mini-val" style="font-size:15px;color:#D97706">${perHariHarus>0?fmtShort(perHariHarus):'🎉 Done!'}</div></div>
-        </div>
-
-        <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
-
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-          <span style="font-weight:700">☀️ Target Harian</span>
-          <span style="color:var(--dusty);font-size:12px;">${fmtShort(omsetHari)} / ${fmtShort(targetHarian)}</span>
-        </div>
-        ${progressBar(pctHari, hariColor)}
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dusty);margin-bottom:16px;">
-          <span style="font-weight:700;color:${hariColor}">${pctHari}% tercapai</span>
-          <span>${sisaHari>0?fmtShort(sisaHari)+' lagi':'✅ Done!'}</span>
-        </div>
-        <div class="ow-mini-grid">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:0;">
+          <div class="ow-mini"><div class="ow-mini-label">Sisa Target</div><div class="ow-mini-val" style="font-size:14px;color:${sisaTarget>0?'#C0392B':'#2D6A4F'}">${fmtShort(sisaTarget)}</div></div>
+          <div class="ow-mini"><div class="ow-mini-label">Per Hari Perlu</div><div class="ow-mini-val" style="font-size:14px;color:#D97706">${perHariHarus>0?fmtShort(perHariHarus):'🎉 Done!'}</div></div>
           <div class="ow-mini">
             <div class="ow-mini-label">Omset Hari Ini</div>
-            <div class="ow-mini-val" style="font-size:15px;color:${hariColor}">${fmtShort(omsetHari)}</div>
-            <div style="font-size:10px;color:var(--dusty);margin-top:4px;">${deltaBadge(omsetHari,omsetKemarin)} vs kemarin</div>
+            <div class="ow-mini-val" style="font-size:14px;color:${hariColor}">${fmtShort(omsetHari)}</div>
+            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">${deltaBadge(omsetHari,omsetKemarin)} vs kemarin</div>
           </div>
           <div class="ow-mini">
             <div class="ow-mini-label">Sisa Target Hari</div>
-            <div class="ow-mini-val" style="font-size:15px;color:${sisaHari>0?'#C0392B':'#2D6A4F'}">${sisaHari>0?fmtShort(sisaHari):'✅ Done!'}</div>
-            <div style="font-size:10px;color:var(--dusty);margin-top:4px;">target ${fmtShort(targetHarian)}/hari</div>
+            <div class="ow-mini-val" style="font-size:14px;color:${sisaHari>0?'#C0392B':'#2D6A4F'}">${sisaHari>0?fmtShort(sisaHari):'✅ Done!'}</div>
+            <div style="font-size:10px;color:var(--dusty);margin-top:3px;">target ${fmtShort(targetHarian)}/hari</div>
           </div>
         </div>`;
     } else {
@@ -1275,6 +1261,7 @@ async function renderDashboard() {
 
       let html='';
       if(turun.length){
+        html+='<div style="font-size:10px;font-weight:700;color:#C0392B;letter-spacing:.7px;text-transform:uppercase;padding:0 0 6px;border-bottom:1px solid var(--border);margin-bottom:2px;">▼ MENURUN VS '+labelPrev+'</div>';
         html+=turun.map((s,i)=>
           '<div class="ow-stok-row" style="padding:8px 0;">'+
             '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">'+
@@ -1289,8 +1276,8 @@ async function renderDashboard() {
         ).join('');
       }
       if(naik.length){
-        const sep=turun.length?'border-top:1px solid var(--border);padding-top:8px;':'';;
-        html+='<div style="'+sep+'"></div>';
+        const sep=turun.length?'border-top:1px solid var(--border);':'';;
+        html+='<div style="font-size:10px;font-weight:700;color:#2D6A4F;letter-spacing:.7px;text-transform:uppercase;padding:'+(turun.length?'10px 0 6px':'0 0 6px')+';border-bottom:1px solid var(--border);margin-bottom:2px;'+sep+'">▲ NAIK VS '+labelPrev+'</div>';
         html+=naik.map((s,i)=>
           '<div class="ow-stok-row" style="padding:8px 0;">'+
             '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">'+
@@ -1342,10 +1329,8 @@ async function renderDashboard() {
         el.style.fontWeight = on ? '700' : '500';
       });
 
-      // Update indicator label (sejajar header)
+      // Update badge count
       const prevMap = {hari:'KEMARIN', '7d':'7 HARI LALU', bulan:'BULAN LALU'};
-      const indic = document.getElementById('trenIndicatorLabel');
-      if(indic) indic.textContent = '▼ MENURUN VS ' + (prevMap[mode]||'KEMARIN');
 
       // Close dropdown
       const menu = document.getElementById('trenDropMenu');
@@ -1353,9 +1338,17 @@ async function renderDashboard() {
       if(menu) menu.style.display='none';
       if(arrow) arrow.style.transform='';
 
-      // Render body (tanpa header section di dalam body)
+      // Render body
       const body=document.getElementById('trenProdukBody');
       if(body) body.innerHTML=buildList(mode);
+
+      // Update badge setelah build (turun/naik count sudah terhitung)
+      const badge=document.getElementById('trenProdukBadge');
+      if(badge){
+        const bodyEl=document.getElementById('trenProdukBody');
+        const turunCount=(bodyEl?.querySelectorAll('.ow-stok-row')||[]).length;
+        badge.textContent='';
+      }
     };
 
     // Render langsung — tidak pakai setTimeout
