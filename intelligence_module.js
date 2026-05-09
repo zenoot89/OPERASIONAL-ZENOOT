@@ -520,7 +520,7 @@ function renderSKUDetail() {
         <div class="intel-card-title">🎯 Conversion Funnel</div>
         ${views > 0 ? `
           <div style="margin-bottom:8px;font-size:11px;color:var(--dusty)">CTR: <strong>${ctr}%</strong> · View→Beli: <strong>${convView}%</strong> · Klik→Beli: <strong>${convKlik}%</strong></div>
-        ` : `<div class="intel-tip">💡 Upload data Shopee di tab AI Strategy untuk melihat funnel lengkap. Data di bawah dari jurnal internal.</div>`}
+        ` : `<div class="intel-tip">💡 Upload data Shopee di tab Strategy & Blueprint untuk melihat funnel lengkap. Data di bawah dari jurnal internal.</div>`}
         <div class="sku-funnel">${funnelHTML}</div>
       </div>
 

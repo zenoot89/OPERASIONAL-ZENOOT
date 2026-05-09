@@ -442,7 +442,7 @@ label.lbl{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1
 .rekap-row-even .rekap-td-label{background:#f8f8f8;}
 
 /* ═══════════════════════════════════════════════
-   ANALISIS & PROYEKSI — AI STRATEGY MODULE
+   ANALISIS & PROYEKSI — STRATEGY MODULE
 ════════════════════════════════════════════════ */
 .ap-page{display:none;}.ap-page.active{display:block;animation:fadeIn .22s ease;}
 

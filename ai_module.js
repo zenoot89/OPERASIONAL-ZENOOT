@@ -1,20 +1,10 @@
-// AI module disabled
-// Semua fitur AI telah dinonaktifkan
+// AI module — disabled
+// Semua fitur AI telah dinonaktifkan dari sistem ini.
 
 window._geminiKey = null;
-
-function runIntelAIAdvisor() {
-  console.log('[AI] Fitur AI dinonaktifkan.');
-}
-
-function runAIBlueprintAnalysis() {
-  console.log('[AI] Fitur AI dinonaktifkan.');
-}
-
-function sendAIChat() {
-  console.log('[AI] Fitur AI dinonaktifkan.');
-}
-
+function runIntelAIAdvisor() {}
+function runAIBlueprintAnalysis() {}
+function sendAIChat() {}
 function initAIChat() {}
 function openAISettings() {}
 function renderAIDrawer() {}

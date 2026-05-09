@@ -1150,7 +1150,7 @@ const ptitles = {
   keuangan:'Laporan <span>Keuangan</span>',
   blueprint:'Blueprint <span>Strategi</span>',
   'analisis-upload':'Analisis <span>&amp; Proyeksi</span>',
-  'analisis-blueprint':'AI <span>Blueprint</span>',
+  'analisis-blueprint':'Blueprint <span>Strategi</span>',
   'analisis-profit':'Profit <span>Guard</span>',
   daily:'Daily <span>Checklist</span>',
 };

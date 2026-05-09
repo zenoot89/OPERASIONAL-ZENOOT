@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════
    dashboard_v2.js — zenOt Operasional
    REDESIGN: Owner's Command Center — Insight tajam untuk pengambil keputusan
-   by BURHANMOLOGY × Claude
+   by BURHANMOLOGY
 ════════════════════════════════════════════════════════════════════ */
 
 // ── Helpers ──

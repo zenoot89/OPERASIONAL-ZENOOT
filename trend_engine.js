@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    trend_engine.js — zenOt Operasional V2  [UPGRADED]
-   AI Strategy & Blueprint Module — Full Insight Edition
+   Strategy & Blueprint Module — Full Insight Edition
 
    BARU di versi ini:
    ✅ Multi-sheet reader (baca semua sheet Shopee sekaligus)
@@ -55,9 +55,9 @@ function _autoLoadTESettings() {
 }
 
 const TE_NAV_TITLES = {
-  'te-upload':    'AI Strategy <span>Upload</span>',
-  'te-blueprint': 'AI Strategy <span>Blueprint</span>',
-  'te-profit':    'AI Strategy <span>Profit Guard</span>',
+  'te-upload':    'Strategy <span>Upload</span>',
+  'te-blueprint': 'Strategy <span>Blueprint</span>',
+  'te-profit':    'Strategy <span>Profit Guard</span>',
 };
 
 // ═══════════════════════════════════════════════════════
